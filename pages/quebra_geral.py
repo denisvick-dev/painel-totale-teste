@@ -1709,7 +1709,10 @@ def render_matriz_executiva_html(
     for _, linha in df.iterrows():
         primeiro_valor = linha.iloc[0]
         is_total = str(primeiro_valor).strip().upper() == "TOTAL GERAL"
-        html += f"<tr {"class='total-row'" if is_total else ''}>"
+        # Aspas aninhadas dentro de f-string só são válidas no Python 3.12+,
+        # e o projeto roda no 3.11 (devcontainer) — string extraída do f-string.
+        atributo_total = " class='total-row'" if is_total else " "
+        html += f"<tr{atributo_total}>"
         for posicao, coluna in enumerate(df.columns):
             valor = linha.iloc[posicao]
             coluna_upper = str(coluna).strip().upper()
@@ -1732,7 +1735,14 @@ def render_matriz_executiva_html(
             elif coluna_upper in {"TOTAL TASKS", "TOTAL_TASKS"}:
                 html += f"<td><strong>{_fmt_int_br(valor)}</strong></td>"
             else:
-                html += f"<td>{_html(valor) if not _is_missing_scalar(valor) else "<span style='color:#94A3B8;'>—</span>"}</td>"
+                # Mesmo caso da linha do TOTAL GERAL: mantém compatibilidade
+                # com Python 3.11 extraindo a string de dentro do f-string.
+                celula = (
+                    _html(valor)
+                    if not _is_missing_scalar(valor)
+                    else "<span style='color:#94A3B8;'>—</span>"
+                )
+                html += f"<td>{celula}</td>"
         html += "</tr>"
     html += """</tbody></table></div>"""
     st.markdown(html, unsafe_allow_html=True)
