@@ -422,6 +422,7 @@ def carregar_arquivo(
             if score > melhor_score:
                 melhor_score, melhor_df, melhor_cfg = score, df, cfg
         except Exception:  # noqa: BLE001, S112
+            logger.debug("Tentativa de leitura do CSV falhou; tentando próximo formato.", exc_info=True)
             continue
 
     if melhor_df is None or melhor_score == 0:

@@ -31,6 +31,9 @@ from openpyxl.utils import get_column_letter
 from streamlit_gsheets import GSheetsConnection
 
 from components.componentes import aplicar_estilo as aplicar_estilo_ds
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ═══════════════════════════════════════════════════════
 # CONFIGURAÇÃO
@@ -418,8 +421,9 @@ def fmt_hora(t: time) -> str:
             return "-"
         if isinstance(t, (np.floating,)) and np.isnan(t):
             return "-"
-    except Exception:
-        pass
+    except (TypeError, ValueError, AttributeError):
+        # Valor não reconhecido como NaT/NaN; segue para a formatação padrão.
+        logger.debug("Verificação de valor ausente falhou em fmt_hora.", exc_info=True)
 
     return t.strftime("%H:%M:%S")
 
@@ -439,7 +443,8 @@ def carregar_lista_ativos() -> pd.DataFrame:
         if "GSHEETS_ID" in st.secrets:
             sheet_id = st.secrets["GSHEETS_ID"]
     except Exception:
-        pass
+        # Sem secrets configurados (ex.: execução local) — segue com o ID padrão.
+        logger.debug("GSHEETS_ID não configurado em st.secrets; usando ID padrão.", exc_info=True)
 
     df = None
 
@@ -580,6 +585,7 @@ def carregar_arquivo(file_bytes: bytes, filename: str) -> pd.DataFrame:
                 if len(df.columns) > 1:
                     return df
             except Exception:
+                logger.debug("Tentativa de leitura do arquivo falhou; tentando próxima configuração.", exc_info=True)
                 continue
 
     raise ValueError("Não foi possível ler o arquivo. Verifique o formato.")
@@ -862,7 +868,8 @@ def aplicar_cor_horario(valor: Any) -> str:
             return "background-color: #FEF3C7; color: #92400E; font-weight: 600;"
         else:
             return "background-color: #FEE2E2; color: #991B1B; font-weight: 600;"
-    except:
+    except (TypeError, ValueError, AttributeError, IndexError):
+        logger.debug("Horário inválido; célula fica sem cor.", exc_info=True)
         return ""
 
 

@@ -46,6 +46,9 @@ from components.componentes import (
 # ROBÔ DE MONITORAMENTO AUTOMÁTICO
 # ==========================================================
 from robo.robo_local import renderizar_robo_local
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ==========================================================
 # CONFIGURAÇÃO DE PÁGINA
@@ -287,6 +290,7 @@ class DataLoader:
             )
             return df_gs.drop_duplicates("__LOGIN_KEY")
         except Exception:
+            logger.warning("Hierarquia via Google Sheets indisponível; seguindo sem ela.", exc_info=True)
             return pd.DataFrame()
 
     @staticmethod

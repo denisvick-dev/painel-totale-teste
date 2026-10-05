@@ -21,6 +21,9 @@ from components.componentes import (
 from components.componentes import (
     aplicar_estilo as aplicar_estilo_corp,
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ============ CONFIGURAÇÕES DE IMAGEM ============
 
@@ -155,7 +158,8 @@ def carregar_fonte(tamanho: int, negrito: bool = False):
         try:
             fonte = ImageFont.truetype(caminho_fonte, tamanho)
             return fonte, f"{nome_fonte} (fallback)"
-        except OSError:
+        except Exception:
+            logger.debug("Fonte do sistema indisponível; seguindo com a próxima opção.", exc_info=True)
             continue
 
     return ImageFont.load_default(), "DEFAULT (bitmap)"

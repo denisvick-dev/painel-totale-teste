@@ -696,6 +696,8 @@ def ler_arquivo_detalhado(
     except ArquivoBloqueadoError:
         raise
     except Exception as e:
+        # A mensagem vai para a UI do robô; o log guarda o traceback completo.
+        logger.debug("Falha ao ler %s: %s", nome, e, exc_info=True)
         return LeituraArquivo(None, f"{nome}: {type(e).__name__} — {e}", None)
 
     if df.empty:

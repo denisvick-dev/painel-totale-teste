@@ -119,7 +119,8 @@ def format_datetime(
         return dt
     try:
         return dt.strftime(format_str)
-    except Exception:
+    except (ValueError, TypeError, AttributeError, OverflowError):
+        logger.debug("strftime falhou para valor; usando str().", exc_info=True)
         return str(dt)
 
 

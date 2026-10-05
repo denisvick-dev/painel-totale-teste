@@ -34,6 +34,9 @@ try:
     from components.componentes import COR_LARANJA_SUAVE  # type: ignore
 except ImportError:
     COR_LARANJA_SUAVE = "#FFB86B"
+import logging
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from streamlit.runtime.uploaded_file_manager import UploadedFile
@@ -228,6 +231,7 @@ class DataProcessor:
                 if len(df.columns) > 1:
                     return df
             except Exception:
+                logger.debug("Tentativa de leitura CSV falhou; tentando próximo separador/encoding.", exc_info=True)
                 continue
         raise ValueError("Não foi possível identificar o formato/encoding do CSV.")
 
@@ -238,7 +242,7 @@ class DataProcessor:
         try:
             return pd.read_excel(BytesIO(conteudo_bytes), engine="openpyxl")
         except Exception:
-            pass
+            logger.debug("Leitura via openpyxl falhou; tentando engine alternativo.", exc_info=True)
         try:
             texto = conteudo_bytes.decode("utf-8")
         except UnicodeDecodeError:

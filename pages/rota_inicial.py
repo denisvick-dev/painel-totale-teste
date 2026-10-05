@@ -35,6 +35,9 @@ from components.componentes import (
     render_kpi_sm,
     render_section_header,
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Pasta de cache local
 CACHE_DIR = Path(".streamlit_cache")
@@ -571,6 +574,7 @@ def buscar_google_sheets() -> pd.DataFrame:
         )
         return df
     except Exception:
+        logger.warning("Google Sheets indisponível; ações ficam sem dados cadastrais.", exc_info=True)
         return pd.DataFrame(columns=["Login", "Técnico", "Monitor", "Base"])
 
 
@@ -1138,7 +1142,8 @@ def calcular_centroide_municipios(df_geo: pd.DataFrame | None) -> tuple[float, f
         lat = centroid.y.mean()
         lon = centroid.x.mean()
         return float(lat), float(lon)
-    except Exception:
+    except (AttributeError, TypeError, ValueError):
+        logger.debug("Centroide da malha geográfica indisponível; usando ABCDM.", exc_info=True)
         return -23.70, -46.55
 
 

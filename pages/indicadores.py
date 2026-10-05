@@ -24,6 +24,9 @@ from components.componentes import (
     converter_data_br,
     Cores,
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Configuração da Página
 st.set_page_config(
@@ -376,8 +379,8 @@ def _serie_para_datetime(serie: pd.Series) -> pd.Series:
             s_conv = pd.to_datetime(convertida, errors="coerce")
             if int(s_conv.notna().sum()) > 0:
                 return s_conv
-    except Exception:
-        pass
+    except (ValueError, TypeError, OverflowError):
+        logger.debug("Conversão de datas falhou; seguindo com a série original.", exc_info=True)
 
     numeric = pd.to_numeric(serie, errors="coerce")
     numeric_ok = numeric.dropna()
@@ -460,7 +463,8 @@ def extrair_data_maxima_aba(
         if s_dt.empty:
             return None
         return _formatar_data_maxima(pd.Timestamp(s_dt.max()))
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
+        logger.debug("Detecção de coluna de data falhou para valor.", exc_info=True)
         return None
 
 
@@ -556,7 +560,7 @@ def gerar_regras_cores(
                 m = float(meta_val)
                 regras_realizado[str(val_real)] = "sucesso" if v >= m else "alerta"
             except (ValueError, TypeError):
-                pass
+                logger.debug("Normalização numérica falhou; usando fallback.", exc_info=True)
         color_rules[col_realizado] = regras_realizado
 
     if col_desvio and col_desvio in df_data.columns:
@@ -1723,6 +1727,7 @@ def renderizar_visao_executiva_geral(resultados: Dict[str, Dict[str, Any]]) -> N
                 else "alerta"
             )
         except (TypeError, ValueError):
+            logger.debug("Valor inválido ignorado na consolidação.", exc_info=True)
             continue
     color_rules_exec["7 dias"] = regras_7d
     render_table_html(

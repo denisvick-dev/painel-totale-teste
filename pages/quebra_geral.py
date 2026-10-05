@@ -152,6 +152,10 @@ try:
 except ImportError:
     COMPONENTES_DISPONIVEIS = False
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def render_section_header(icone: str, titulo: str) -> None:
     if _component_section_header is not None:
@@ -209,7 +213,8 @@ def _tentar_import_robo() -> tuple[RoboCallable | None, str]:
             arquivo_modulo = getattr(module, "__file__", "módulo sem caminho")
             return funcao, f"OK ({arquivo_modulo})"
         return None, "Módulo encontrado, mas sem função de renderização compatível."
-    except Exception as erro:
+    except Exception:
+        logger.debug("Robô local não pôde ser importado.", exc_info=True)
         return None, f"{type(erro).__name__}: {erro}"
 
 
@@ -458,7 +463,7 @@ def _padronizar_tipo_servico(tipo: Any) -> str:
         if pd.isna(tipo):
             return "Outros"
     except (TypeError, ValueError):
-        pass
+        logger.debug("Falha ao normalizar valor.", exc_info=True)
 
     t = str(tipo).upper().strip()
     # Remove acentos
@@ -598,7 +603,7 @@ class Utils:
             if isinstance(ausente, (bool, np.bool_)) and bool(ausente):
                 return ""
         except (TypeError, ValueError):
-            pass
+            logger.debug("Falha ao normalizar valor.", exc_info=True)
         texto = unicodedata.normalize("NFKD", str(valor))
         texto = "".join(
             caractere for caractere in texto if not unicodedata.combining(caractere)
@@ -693,7 +698,7 @@ class Utils:
                 numero = float(valor)
                 return numero if np.isfinite(numero) else np.nan
         except (TypeError, ValueError):
-            pass
+            logger.debug("Falha ao normalizar valor.", exc_info=True)
         texto = str(valor).strip()
         if not texto:
             return np.nan
@@ -1012,7 +1017,7 @@ class DataLoader:
             if isinstance(raw, pd.DataFrame) and not raw.empty:
                 return DataLoader._processar_lista_ativos(raw)
         except Exception:
-            pass
+            logger.debug("Conexão gsheets falhou; tentando leitura por CSV público.", exc_info=True)
         try:
             aba = quote(Config.WORKSHEET_ATIVOS)
             url = f"https://docs.google.com/spreadsheets/d/{Config.SHEET_ID_ATIVOS}/gviz/tq?tqx=out:csv&sheet={aba}"
@@ -1020,7 +1025,7 @@ class DataLoader:
             if not raw_csv.empty:
                 return DataLoader._processar_lista_ativos(raw_csv)
         except Exception:
-            pass
+            logger.debug("Leitura por CSV público falhou; retornando base vazia.", exc_info=True)
         return pd.DataFrame()
 
     @staticmethod

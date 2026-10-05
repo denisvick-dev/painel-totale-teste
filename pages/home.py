@@ -436,7 +436,7 @@ def render_modulos_principais() -> None:
                 width="stretch",
             )
         except Exception:
-            pass
+            logger.debug("page_link indisponível para pages/qtde_os.py; cartão segue sem atalho.", exc_info=True)
 
     # Módulo 2: Indicadores & Metas
     with c2:
@@ -470,7 +470,7 @@ def render_modulos_principais() -> None:
                 width="stretch",
             )
         except Exception:
-            pass
+            logger.debug("page_link indisponível para pages/dashboard_meta.py; cartão segue sem atalho.", exc_info=True)
 
     # Módulo 3: Ativos & Governança
     with c3:
@@ -504,7 +504,7 @@ def render_modulos_principais() -> None:
                 width="stretch",
             )
         except Exception:
-            pass
+            logger.debug("page_link indisponível para pages/gestao_ativos.py; cartão segue sem atalho.", exc_info=True)
 
     render_spacer(14)
 

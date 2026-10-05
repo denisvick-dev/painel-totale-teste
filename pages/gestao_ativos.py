@@ -31,6 +31,9 @@ from components.componentes import (
     render_sidebar_section,
     render_table_html,
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -51,13 +54,13 @@ class Safe:
             try:
                 if np.isnan(v):
                     return ""
-            except Exception:
+            except (TypeError, ValueError):
                 pass
             return str(int(v)) if v == int(v) else str(v)
         try:
             if pd.isna(v):
                 return ""
-        except Exception:
+        except (TypeError, ValueError):
             pass
         s = str(v).strip()
         return "" if s.lower() in cls._N else s
@@ -271,7 +274,7 @@ class Config:
                     "bases": [Safe.str(b) for b in list(d.get("bases", []))],
                 }
         except Exception:
-            pass
+            logger.warning("st.secrets['usuarios'] indisponível; usando base de usuários padrão.", exc_info=True)
         return base
 
 

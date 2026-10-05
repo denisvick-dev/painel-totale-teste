@@ -55,6 +55,9 @@ from components.componentes import (
 )
 from components.criterios import classificar_tipo_servico, render_debug_criterios
 from pages.quebra_geral import Config, Motor, Utils
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ── Correções Avançadas Pylance (Type Safety) ────────────────────────
 _COL_REGIAO: str = str(getattr(Config, "COL_REGIAO", "REGIÃO"))
@@ -224,7 +227,7 @@ def _fmt_int(v: Any) -> str:
         if v is None or (isinstance(v, float) and np.isnan(v)):
             return "0"
         return f"{int(float(v)):,}".replace(",", ".")
-    except Exception:
+    except (TypeError, ValueError):
         return "0"
 
 
@@ -274,7 +277,9 @@ def _hash_df(df: pd.DataFrame) -> str:
     try:
         b = pd.util.hash_pandas_object(df, index=True).to_numpy().tobytes()
         return hashlib.md5(b).hexdigest()[:10]
-    except Exception:
+    except (TypeError, ValueError, AttributeError):
+        # Tipos exóticos impedem o hash; usa o tamanho como chave de cache degradada.
+        logger.debug("Hash do DataFrame indisponível; usando o tamanho como chave.", exc_info=True)
         return str(len(df))
 
 
@@ -295,7 +300,8 @@ def _causa_raiz_segmento(
         return pd.DataFrame()
     try:
         return Motor.causa_raiz(df_seg, col_baixa, top_n=top_n)
-    except Exception:
+    except (ValueError, TypeError, KeyError):
+        logger.debug("Causa raiz indisponível para o segmento.", exc_info=True)
         return pd.DataFrame()
 
 
@@ -587,7 +593,7 @@ class _PDFExecutivoBase:
                 for row_i, (_, row) in enumerate(base.iterrows(), start=1):
                     try:
                         val = float(row[cor_col_quebra])
-                    except Exception:
+                    except (TypeError, ValueError):
                         continue
                     if np.isnan(val):
                         continue
@@ -1061,7 +1067,7 @@ def _gerar_alertas(
                     }
                 )
         except Exception:
-            pass
+            logger.debug("Alerta de causa raiz não pôde ser calculado.", exc_info=True)
     return alerts
 
 
@@ -1323,7 +1329,7 @@ def _sub_visao_geral(segmento, df_seg, m_seg, p_ot, p_base, p_pess, sla_meta):
                     fig_line, width="stretch", config={"displayModeBar": False}
                 )
         except Exception:
-            pass
+            logger.debug("Fallback de cálculo falhou.", exc_info=True)
 
     st.markdown("")
     render_section("🛡️ Folga de SLA")
@@ -1488,7 +1494,7 @@ def _sub_causa_raiz(segmento, df_seg):
                 fig_reg, width="stretch", config={"displayModeBar": False}
             )
         except Exception:
-            pass
+            logger.debug("Fallback de cálculo falhou.", exc_info=True)
 
 
 def _sub_tecnicos(segmento, df_seg, p_ot, p_base, p_pess, min_aloc, top_n, sla_meta):
@@ -1824,7 +1830,7 @@ def _sub_comparativo(df_full, sla_meta, p_base, p_ot, p_pess):
                 fig_h, width="stretch", config={"displayModeBar": False}
             )
         except Exception:
-            pass
+            logger.debug("Heatmap de região x segmento indisponível.", exc_info=True)
 
 
 # =====================================================================

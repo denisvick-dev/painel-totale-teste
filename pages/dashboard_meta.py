@@ -273,7 +273,7 @@ def _is_na_scalar(val: Any) -> bool:
         if isinstance(val, (str, bytes)):
             return val in ("", " ", "None", "NaN", "NA", "null", "NULL")
         return bool(pd.isna(val))
-    except Exception:
+    except (TypeError, ValueError):
         return False
 
 
@@ -307,7 +307,8 @@ def formatar_data_br(valor: Any, com_hora: bool = False) -> str:
         if pd.isna(ts):
             return "-"
         return ts.strftime("%d/%m/%Y %H:%M" if com_hora else "%d/%m/%Y")
-    except Exception:
+    except (TypeError, ValueError, OverflowError):
+        logger.debug("Valor valor não pôde ser formatado como data.", exc_info=True)
         return str(valor)
 
 
@@ -440,14 +441,14 @@ def garantir_datetime_auto(
             try:
                 parsed = pd.to_datetime(texto, dayfirst=dayfirst, errors="coerce")
                 return parsed if not pd.isna(parsed) else pd.NaT
-            except Exception:
+            except (ValueError, TypeError, OverflowError):
                 return pd.NaT
 
         try:
             # ISO (YYYY-MM-DD) e timestamps sem ambiguidade.
             parsed = pd.to_datetime(texto, yearfirst=True, errors="coerce")
             return parsed if not pd.isna(parsed) else pd.NaT
-        except Exception:
+        except (ValueError, TypeError, OverflowError):
             return pd.NaT
 
     df_out = df.copy()
@@ -506,7 +507,7 @@ def detectar_coluna_data(df: pd.DataFrame) -> str | None:
         try:
             if pd.to_datetime(df[col].head(10), errors="coerce").notna().sum() > 5:
                 return str(col)
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             continue
     return None
 
@@ -853,7 +854,8 @@ def carregar_consultivos(
         if df["DATA"].isna().all():
             return pd.DataFrame(), "Todas as datas são inválidas em Consultivos."
         return df, None
-    except Exception as e:
+    except Exception:
+        logger.warning("Falha ao carregar consultivos do Drive.", exc_info=True)
         return pd.DataFrame(), f"Consultivos: {type(e).__name__} - {e!s}"
 
 
@@ -922,7 +924,8 @@ def carregar_producao(cache_version: str = VERSAO) -> tuple[pd.DataFrame, str | 
         if df["DATA"].isna().all():
             return pd.DataFrame(), "Datas inválidas na planilha de produção."
         return df, None
-    except Exception as e:
+    except Exception:
+        logger.warning("Falha ao carregar a planilha de produção.", exc_info=True)
         return pd.DataFrame(), f"Produção: {type(e).__name__} - {e!s}"
 
 
@@ -1362,8 +1365,8 @@ def obter_param_url(chave: str) -> list[str]:
 def atualizar_param_url(chave: str, key_widget: str) -> None:
     try:
         st.query_params[chave] = st.session_state.get(key_widget, [])
-    except AttributeError:
-        pass
+    except Exception:
+        logger.debug("Atributo ausente ao inspecionar dados; seguindo com valor padrão.", exc_info=True)
 
 
 def obter_valores_unicos_seguro(df: pd.DataFrame, coluna: str) -> list[str]:

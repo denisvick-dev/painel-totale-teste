@@ -687,7 +687,8 @@ def formatar_datetime_exibicao(valor: Any, com_segundos: bool = False) -> str:
             return str(valor)
         formato = "%d/%m/%Y %H:%M:%S" if com_segundos else "%d/%m/%Y %H:%M"
         return ts.strftime(formato)
-    except Exception:
+    except (TypeError, ValueError, OverflowError):
+        logger.debug("Valor não pôde ser convertido em Timestamp; usando representação bruta.", exc_info=True)
         return str(valor)
 
 
@@ -699,7 +700,7 @@ class Validadores:
         try:
             result = urlparse(url)
             return bool(result.scheme and result.netloc)
-        except Exception:
+        except (TypeError, ValueError):
             return False
 
     @staticmethod
@@ -1046,7 +1047,7 @@ def _safe_render_html(html_str: str, container: Any = None) -> None:
             c.html(clean)
             return
         except Exception:
-            pass
+            logger.debug("st.html indisponível; usando markdown como fallback.", exc_info=True)
 
     clean_md = clean.replace("\n", " ").replace("\r", " ").replace("\t", " ")
     clean_md = re.sub(r">\s+<", "><", clean_md)
@@ -1058,7 +1059,7 @@ def _safe_render_html(html_str: str, container: Any = None) -> None:
         try:
             st.markdown(clean_md, unsafe_allow_html=True)
         except Exception:
-            pass
+            logger.warning("HTML customizado não pôde ser renderizado.", exc_info=True)
 
 
 def _texto_icone_seguro(icone: str) -> str:
@@ -3438,7 +3439,7 @@ def render_table_html(
                         elif callable(formatter):
                             val_str = str(formatter(val))
                     except Exception:
-                        pass
+                        logger.debug("Formatter customizado falhou; usando valor bruto.", exc_info=True)
                 val_str = Validadores.html_escape(val_str)
             val_clean_upper = normalizar_texto_badge(val_str)
             if val_clean_upper in (
