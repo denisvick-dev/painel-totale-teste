@@ -9,6 +9,7 @@ com comparativo entre técnicos Escalados e Montados.
 from __future__ import annotations
 
 import html
+import logging
 import re
 import textwrap
 import unicodedata
@@ -46,7 +47,6 @@ from components.componentes import (
 # ROBÔ DE MONITORAMENTO AUTOMÁTICO
 # ==========================================================
 from robo.robo_local import renderizar_robo_local
-import logging
 
 logger = logging.getLogger(__name__)
 

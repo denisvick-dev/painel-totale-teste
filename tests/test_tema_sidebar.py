@@ -36,7 +36,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
-from streamlit.testing.v1 import AppTest  # noqa: E402
+from streamlit.testing.v1 import AppTest
 
 # Cores-âncora de cada tema (ConfigCores.SIDEBAR[tema]["fundo_base"]).
 CORES_ANCORA = {

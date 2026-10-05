@@ -28,7 +28,6 @@ import streamlit as st
 from components.componentes import (
     Cores,
     formatar_numero_br,
-    render_badge,
     render_hero_totale_1,
     render_hero_totale_2,
     render_insight,
@@ -407,7 +406,7 @@ def render_modulos_principais() -> None:
     # Módulo 1: Produção de Campo
     with c1:
         st.markdown(
-            f"""
+            """
             <div class="totale-home-card totale-home-card--accent">
                 <div>
                     <div class="totale-home-card-header">
@@ -441,7 +440,7 @@ def render_modulos_principais() -> None:
     # Módulo 2: Indicadores & Metas
     with c2:
         st.markdown(
-            f"""
+            """
             <div class="totale-home-card">
                 <div>
                     <div class="totale-home-card-header">
@@ -475,7 +474,7 @@ def render_modulos_principais() -> None:
     # Módulo 3: Ativos & Governança
     with c3:
         st.markdown(
-            f"""
+            """
             <div class="totale-home-card totale-home-card--success">
                 <div>
                     <div class="totale-home-card-header">

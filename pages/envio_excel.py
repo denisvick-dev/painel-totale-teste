@@ -19,6 +19,7 @@ Página do app Streamlit (rodar como página em pages/ ou como main).
 from __future__ import annotations
 
 import csv
+import math
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -130,7 +131,7 @@ class Configuracoes:
 
     @classmethod
     def vazio_texto(cls, valor: object) -> str:
-        if valor is None or (isinstance(valor, float) and valor != valor):
+        if valor is None or (isinstance(valor, float) and math.isnan(valor)):
             return ""
         texto = str(valor).strip()
         return "" if cls._RE_VAZIO.fullmatch(texto) is not None else texto
@@ -209,7 +210,7 @@ class ProcessadorDeDados:
     @staticmethod
     def _login_chave(valor: object) -> str:
         """Chave de join: sem sufixo de float ('12345.0'), caixa alta, sem vazio."""
-        if valor is None or (isinstance(valor, float) and valor != valor):
+        if valor is None or (isinstance(valor, float) and math.isnan(valor)):
             return ""
         s = str(valor).strip().upper()
         if re.fullmatch(r"\d+\.0+", s):

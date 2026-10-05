@@ -716,9 +716,8 @@ class Utils:
                     texto = texto.replace(",", "")
                 else:
                     texto = texto.replace(",", ".")
-            elif "." in texto:
-                if re.fullmatch(r"-?\d{1,3}(?:\.\d{3})+", texto):
-                    texto = texto.replace(".", "")
+            elif "." in texto and re.fullmatch(r"-?\d{1,3}(?:\.\d{3})+", texto):
+                texto = texto.replace(".", "")
             numero = float(texto)
             return numero if np.isfinite(numero) else np.nan
         except (TypeError, ValueError):
@@ -799,8 +798,9 @@ class Utils:
         df = df.copy()
         colunas_problema = ["DATA AGENDA MDU", "ID SGD", "DATA_AGENDA_MDU", "ID_SGD"]
         for col in colunas_problema:
-            if col in df.columns:
-                if df[col].isna().all() or (df[col].astype(str) == "None").all():
+            if col in df.columns and (
+                df[col].isna().all() or (df[col].astype(str) == "None").all()
+            ):
                     for col_alt in df.columns:
                         if col_alt != col:
                             if "AGENDA" in col_alt.upper() and col in col_alt.upper():
@@ -1234,7 +1234,7 @@ class DataLoader:
         colunas_auxiliares = [
             col
             for col in base.columns
-            if col.startswith("_LOGIN_") or col.startswith("_ATIVO_")
+            if col.startswith(("_LOGIN_", "_ATIVO_"))
         ]
         base = base.drop(columns=colunas_auxiliares, errors="ignore")
         base = base.reset_index(drop=True)

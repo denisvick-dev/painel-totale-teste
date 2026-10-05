@@ -133,9 +133,12 @@ def detectar_col_tipo_os_1(df: pd.DataFrame) -> str | None:
 
     # 2. Busca parcial (TIPO + OS + 1)
     for col_norm, col_real in cols_norm.items():
-        if "TIPO" in col_norm and ("OS" in col_norm or "O S" in col_norm):
-            if col_norm.endswith("1") or col_norm.endswith(" 1") or " 1 " in col_norm:
-                return col_real
+        if (
+            "TIPO" in col_norm
+            and ("OS" in col_norm or "O S" in col_norm)
+            and (col_norm.endswith(("1", " 1")) or " 1 " in col_norm)
+        ):
+            return col_real
 
     # 3. Busca alternativa (qualquer coluna com TIPO e OS)
     for col_norm, col_real in cols_norm.items():

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import pickle
 import re
 import unicodedata
@@ -35,7 +36,6 @@ from components.componentes import (
     render_kpi_sm,
     render_section_header,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -1632,7 +1632,7 @@ def main() -> None:
                 df_pontos = df_pontos_temp.dropna(subset=["COORD_X", "COORD_Y"])
 
         # 3. Opções de visualização
-        col_opt1, col_opt2, col_opt3 = st.columns(3)
+        col_opt1, _, _ = st.columns(3)
         with col_opt1:
             modo_mapa = st.radio(
                 "🗺️ Modo de Visualização",

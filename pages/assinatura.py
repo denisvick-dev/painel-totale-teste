@@ -1,5 +1,6 @@
 # gerador_assinatura.py
 import io
+import logging
 import traceback
 from pathlib import Path
 
@@ -21,7 +22,6 @@ from components.componentes import (
 from components.componentes import (
     aplicar_estilo as aplicar_estilo_corp,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 

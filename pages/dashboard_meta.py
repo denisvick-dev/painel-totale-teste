@@ -1059,8 +1059,7 @@ def render_tabela_segura(df: pd.DataFrame, **kwargs: Any) -> None:
         nome_coluna = normalizar_texto(col)
         eh_coluna_data = (
             nome_coluna in {"DATA", "DATE", "DATA/HORA", "DATA HORA"}
-            or nome_coluna.startswith("DATA_")
-            or nome_coluna.startswith("DATA ")
+            or nome_coluna.startswith(("DATA_", "DATA "))
             or nome_coluna.endswith("_DATA")
         )
         if not eh_coluna_data:

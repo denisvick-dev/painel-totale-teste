@@ -155,6 +155,8 @@ class TemaSidebar(str, Enum):
     CLARO = "claro"
     AZUL = "azul"
     LARANJA = "laranja"
+    # Alias intencional de CLARO (compatibilidade com "padrao" legado):
+    # normalizar_tema_sidebar() converte "padrao" -> "claro".
     PADRAO = "claro"
 
 
@@ -732,6 +734,12 @@ class Formatadores:
 # =============================================================================
 # VERIFICAÇÃO DE CORES DA SIDEBAR (WCAG 2.1) — NOVO NA 5.0.0
 # =============================================================================
+def _rgb_para_hex(rgb: tuple[int, int, int]) -> str:
+    """Converte (r, g, b) para "#RRGGBB" (a=255)."""
+    r, g, b = rgb
+    return f"#{r:02X}{g:02X}{b:02X}"
+
+
 def _hex_para_rgb(cor: str) -> tuple[int, int, int] | None:
     """Converte '#RGB', '#RRGGBB' ou 'rgb(r,g,b)' para tupla (r, g, b)."""
     s = str(cor).strip().lower()
@@ -768,9 +776,9 @@ def _compor_cor(cor: str, base: str) -> str | None:
         return None
     a = _extrair_alpha(cor)
     if a >= 1.0:
-        return "#%02X%02X%02X" % rgb
+        return _rgb_para_hex(rgb)
     comp = tuple(round(a * v + (1 - a) * b) for v, b in zip(rgb, base_rgb))
-    return "#%02X%02X%02X" % comp
+    return _rgb_para_hex(comp)
 
 
 def _para_solidas(cor: str, base: str) -> list[str]:
@@ -3067,17 +3075,13 @@ def render_section_header(
             return False
         if len(v) <= 4:
             return True
-        if " " not in v and all(c.isalnum() or c == "_" for c in v):
-            return True
-        return False
+        return " " not in v and all(c.isalnum() or c == "_" for c in v)
 
     def _parece_titulo(val: str) -> bool:
         v = val.strip()
         if not v:
             return False
-        if len(v) > 10 or " " in v or any(c.isupper() for c in v):
-            return True
-        return False
+        return len(v) > 10 or " " in v or any(c.isupper() for c in v)
 
     # 4.7.1: chamada antiga (icone, titulo, subtitulo) não pode quebrar o layout.
     if _parece_icone(titulo_final) and _parece_titulo(icone_final):
@@ -3631,8 +3635,8 @@ __all__ = [
     "definir_tema_sidebar",
     "formatar_datetime_exibicao",
     "formatar_numero_br",
-    "normalizar_texto_badge",
     "normalizar_tema_sidebar",
+    "normalizar_texto_badge",
     "normalizar_tipo",
     "render_badge",
     "render_card",

@@ -19,6 +19,7 @@ Uso:
 
 from __future__ import annotations
 
+import logging
 import unicodedata
 from datetime import datetime, time
 from io import BytesIO
@@ -31,7 +32,6 @@ from openpyxl.utils import get_column_letter
 from streamlit_gsheets import GSheetsConnection
 
 from components.componentes import aplicar_estilo as aplicar_estilo_ds
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -1003,10 +1003,12 @@ def main() -> None:
         col_contrato=col_contrato,
         col_status_atividade=col_status_atividade,
     )
+    logger.debug("Diagnóstico da limpeza da base: %s", diag_limpeza)
 
     # Merge com Google Sheets
     df_ativos = carregar_lista_ativos()
     df, diag_merge = aplicar_merge_ativos(df, df_ativos, col_login)
+    logger.debug("Diagnóstico do merge com a lista de ativos: %s", diag_merge)
 
     col_tecnico = (
         "Técnico"

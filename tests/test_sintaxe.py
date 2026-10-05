@@ -74,7 +74,7 @@ def _main() -> int:
     for teste in testes:
         try:
             teste()
-        except Exception as exc:  # noqa: BLE001 — runner de testes
+        except Exception as exc:
             falhas += 1
             print(f"FALHOU  {teste.__name__}: {exc}")
         else:

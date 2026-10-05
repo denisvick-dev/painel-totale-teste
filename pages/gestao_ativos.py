@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import logging
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -31,7 +32,6 @@ from components.componentes import (
     render_sidebar_section,
     render_table_html,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 

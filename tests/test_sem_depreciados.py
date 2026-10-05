@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import ast
 import re
-import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -110,7 +109,7 @@ def _main() -> int:
     for teste in testes:
         try:
             teste()
-        except Exception as exc:  # noqa: BLE001 — runner de testes
+        except Exception as exc:
             falhas += 1
             print(f"FALHOU  {teste.__name__}: {exc}")
         else:

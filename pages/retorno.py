@@ -421,7 +421,7 @@ def carregar_arquivo(
             score = len(df.columns) if len(df.columns) > 1 else 0
             if score > melhor_score:
                 melhor_score, melhor_df, melhor_cfg = score, df, cfg
-        except Exception:  # noqa: BLE001, S112
+        except Exception:
             logger.debug("Tentativa de leitura do CSV falhou; tentando próximo formato.", exc_info=True)
             continue
 
@@ -852,7 +852,7 @@ try:
     # FIX #1 — getvalue() é idempotente entre reruns; read() esvazia o buffer
     df_toa_raw, _ = carregar_arquivo(arquivo_toa.getvalue(), arquivo_toa.name)
     df_sin_raw, _ = carregar_arquivo(arquivo_sinapse.getvalue(), arquivo_sinapse.name)
-except Exception as e:  # noqa: BLE001
+except Exception as e:
     render_insight(f"Erro ao ler os arquivos enviados: `{e}`", tipo="critico")
     st.stop()
 

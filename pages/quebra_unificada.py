@@ -26,6 +26,8 @@ for _p in (_DIR, _ROOT):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+import logging
+
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -55,7 +57,6 @@ from components.componentes import (
 )
 from components.criterios import classificar_tipo_servico, render_debug_criterios
 from pages.quebra_geral import Config, Motor, Utils
-import logging
 
 logger = logging.getLogger(__name__)
 

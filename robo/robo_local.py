@@ -320,7 +320,7 @@ def _stat_basico(caminho: str) -> tuple[float | None, int | None]:
 
 def _arquivo_ignorado(nome: str) -> bool:
     baixo = nome.lower()
-    if baixo.startswith("~$") or baixo.startswith("."):
+    if baixo.startswith(("~$", ".")):
         return True
     return baixo.endswith(EXTENSOES_TEMP)
 
@@ -867,7 +867,7 @@ def _obter_gsheets(gsheets_fn: FonteSheets) -> pd.DataFrame:
 def _rerun_aplicacao() -> None:
     if st is None:
         return
-    rerun = getattr(st, "rerun")
+    rerun = st.rerun
     try:
         rerun(scope="app")
     except TypeError:
@@ -997,8 +997,12 @@ def renderizar_robo_local(
         st.session_state["robo_recursivo"] = False
     if not st.session_state.get("robo_pasta_alvo"):
         st.session_state["robo_pasta_alvo"] = pasta_padrao or obter_pasta_robo_padrao()
-    if pasta_padrao and not st.session_state.get("_robo_pasta_user_set"):
-        if st.session_state.get("robo_pasta_alvo") in (None, "", obter_pasta_robo_padrao()):
+    if (
+        pasta_padrao
+        and not st.session_state.get("_robo_pasta_user_set")
+        and st.session_state.get("robo_pasta_alvo")
+        in (None, "", obter_pasta_robo_padrao())
+    ):
             st.session_state["robo_pasta_alvo"] = pasta_padrao
 
     pasta_alvo = str(st.session_state["robo_pasta_alvo"])
