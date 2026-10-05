@@ -28,6 +28,7 @@ import pandas as pd
 import streamlit as st
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from components.componentes import render_page_sidebar_theme_selector
 
 # ─────────────────────────────────────────────────────────────────────
 # IMPORTAÇÃO DO MÓDULO CRITÉRIOS
@@ -2231,6 +2232,7 @@ def _limpar_estado_aplicacao(limpar_ativos: bool = True) -> None:
 # ─────────────────────────────────────────────────────────────────────
 def main() -> None:
     _injetar_css_global()
+    render_page_sidebar_theme_selector()
     mensagem_flash = st.session_state.pop("mensagem_flash", "")
     if mensagem_flash:
         st.success(str(mensagem_flash))

@@ -36,6 +36,7 @@ from components.componentes import (
     render_insight,
     render_kpi,
     render_table_html,
+    render_page_sidebar_theme_selector,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,7 @@ st.set_page_config(
 )
 
 aplicar_estilo()
+render_page_sidebar_theme_selector()
 
 st.markdown(
     """

@@ -14,6 +14,7 @@ from components.componentes import (
     render_insight,
     render_kpi,
     render_section_header,
+    render_page_sidebar_theme_selector,
 )
 
 # ====================================================
@@ -25,6 +26,7 @@ except Exception:
     pass
 
 aplicar_estilo()
+render_page_sidebar_theme_selector()
 
 # ── CSS LOCAL DA PÁGINA (Cores da tabela, tamanho de fontes e barras de rolagem) ──
 st.markdown(

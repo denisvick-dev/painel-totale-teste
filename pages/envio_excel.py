@@ -82,6 +82,7 @@ try:
         render_section_header,
         render_sidebar_brand,
         render_table_html,
+        render_page_sidebar_theme_selector,
     )
 except Exception:  # ambiente sem o design system — o app ainda abre
     aplicar_estilo = _noop
@@ -1002,6 +1003,7 @@ def _rodar() -> None:
     except Exception:
         pass
     aplicar_estilo()
+    render_page_sidebar_theme_selector()
 
     with st.sidebar:
         render_sidebar_brand("TOTALE", "Data Management")

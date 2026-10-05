@@ -49,6 +49,7 @@ from components.componentes import (
     render_kpi_sm,
     render_section_header,
     render_table_html,
+    render_page_sidebar_theme_selector,
 )
 from components.componentes import (
     aplicar_estilo as _aplicar_estilo_global,
@@ -173,6 +174,7 @@ st.set_page_config(
     page_title="Análise de Quebra | TOTALE", page_icon="📉", layout="wide"
 )
 _aplicar_estilo_global()
+render_page_sidebar_theme_selector()
 
 if "df_memoria" not in st.session_state:
     st.session_state["df_memoria"] = None

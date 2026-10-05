@@ -34,6 +34,7 @@ from components.componentes import (
     render_insight,
     render_kpi_sm,
     render_section_header,
+    render_page_sidebar_theme_selector,
 )
 from components.componentes import (
     aplicar_estilo as aplicar_estilo_corp,
@@ -56,6 +57,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+render_page_sidebar_theme_selector()
 
 
 # ==========================================================

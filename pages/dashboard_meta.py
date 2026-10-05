@@ -70,6 +70,7 @@ try:
         render_sidebar_spacer,
         render_sidebar_status,
         render_table_html,
+        render_page_sidebar_theme_selector,
     )
 except ImportError:
 
@@ -162,6 +163,7 @@ try:
     aplicar_sidebar_corp()
 except Exception as e:
     logger.warning("Estilização customizada falhou: %s", e)
+render_page_sidebar_theme_selector()
 
 
 VERSAO = "4.6.2"

@@ -23,6 +23,7 @@ from components.componentes import (
     render_table_html,
     converter_data_br,
     Cores,
+    render_page_sidebar_theme_selector,
 )
 
 # Configuração da Página
@@ -35,6 +36,7 @@ st.set_page_config(
 
 # Inicialização do Design System TOTALE
 aplicar_estilo()
+render_page_sidebar_theme_selector()
 
 MergeHowType = Literal["left", "right", "outer", "inner", "cross"]
 

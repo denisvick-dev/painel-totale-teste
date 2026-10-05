@@ -30,6 +30,7 @@ from components.componentes import (
     render_sidebar_info,
     render_sidebar_section,
     render_table_html,
+    render_page_sidebar_theme_selector,
 )
 
 
@@ -740,6 +741,7 @@ def main():
         initial_sidebar_state="expanded",
     )
     aplicar_estilo()  # <--- APLICA O CSS DO COMPONENTES.PY
+    render_page_sidebar_theme_selector()
     _init()
     if not st.session_state.autenticado:
         tela_login()

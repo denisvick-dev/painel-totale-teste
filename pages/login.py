@@ -2,7 +2,9 @@ import hashlib
 import sqlite3
 
 import streamlit as st
+from components.componentes import render_page_sidebar_theme_selector
 
+render_page_sidebar_theme_selector()
 
 # --- CONFIGURAÇÃO DO BANCO DE DADOS ---
 def conectar_banco():

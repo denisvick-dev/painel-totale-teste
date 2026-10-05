@@ -556,6 +556,7 @@ def main() -> None:
     GerenciadorEstilos.injetar_css_global()
     GerenciadorNavegacao.renderizar_sidebar_corporativa()
 
+    st.session_state["_totale_root_navigation_shell"] = True
     pg.run()
     logger.info("Aplicação iniciada com sucesso")
 

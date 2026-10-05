@@ -26,6 +26,7 @@ from typing import Any
 
 import pandas as pd
 import streamlit as st
+from components.componentes import render_page_sidebar_theme_selector
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from streamlit_gsheets import GSheetsConnection
@@ -875,6 +876,7 @@ def aplicar_cor_horario(valor: Any) -> str:
 # ═══════════════════════════════════════════════════════
 def main() -> None:
     aplicar_estilo()
+    render_page_sidebar_theme_selector()
 
     render_hero(
         titulo="Painel de Primeiro Atendimento",

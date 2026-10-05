@@ -27,6 +27,7 @@ from components.componentes import (
     render_kpi,
     render_kpi_sm,
     render_section_header,
+    render_page_sidebar_theme_selector,
 )
 
 # Fallback caso a paleta não tenha essa cor exportada
@@ -695,6 +696,7 @@ class UI:
         )
         aplicar_estilo()
         UI._injetar_css()
+        render_page_sidebar_theme_selector()
 
         render_hero_totale_1(
             titulo="🗺️ Rota Geral | TOTALE",

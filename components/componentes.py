@@ -12,6 +12,8 @@ Autor: TOTALE Tecnologia
 • CSS dos temas integrado ao refinamento por tokens, preservando controles,
   scrollbars, estados desabilitados e estilos estruturais existentes.
 • Hierarquia de cor restaurada no card de usuário (nome, cargo e e-mail).
+• Chamadas de aplicar_estilo() sem tema explícito preservam a escolha da sessão
+  ao navegar entre páginas, em vez de voltar ao tema Claro.
 
 5.1.0 — Refino visual da navegação nos 3 temas de sidebar (baseado em feedback
 das telas reais do portal):
@@ -2093,8 +2095,10 @@ class CSSInjector:
         )
 
     @staticmethod
-    def injetar(tema_sidebar: str = "claro") -> None:
-        tema_norm = normalizar_tema_sidebar(tema_sidebar)
+    def injetar(tema_sidebar: TemaSidebarType | str | None = None) -> None:
+        # Sem tema explícito, reaplica o tema persistido na sessão em vez de
+        # voltar silenciosamente ao claro ao navegar entre páginas.
+        tema_norm = _obter_tema_sidebar(tema_sidebar)
         css_html = CSSInjector._build_css(tema_norm)
         _safe_render_html(css_html)
 
@@ -2129,9 +2133,16 @@ class CSSInjector:
         st.session_state["_totale_css_head_tema"] = tema_norm
 
 
-def aplicar_estilo(tema_sidebar: TemaSidebarType = "claro") -> None:
-    """Aplica o Design System TOTALE com suporte a 3 temas de sidebar ('claro', 'azul', 'laranja')."""
-    tema_norm = normalizar_tema_sidebar(tema_sidebar)
+def aplicar_estilo(
+    tema_sidebar: TemaSidebarType | str | None = None,
+) -> None:
+    """Aplica o Design System TOTALE preservando o tema ativo da sessão.
+
+    Passe ``tema_sidebar`` explicitamente para trocar o tema. Se omitido,
+    reaplica o tema salvo em ``st.session_state``; o primeiro uso continua
+    iniciando em ``claro`` por meio de ``_obter_tema_sidebar``.
+    """
+    tema_norm = _obter_tema_sidebar(tema_sidebar)
     st.session_state["_totale_sidebar_theme"] = tema_norm
     PlotlyConfig.configurar()
     FontInjector.injetar_no_head_pai()
@@ -2139,13 +2150,17 @@ def aplicar_estilo(tema_sidebar: TemaSidebarType = "claro") -> None:
     NavContrastFix.injetar(cor="#FFFFFF", ativo=True)
 
 
-def aplicar_estilo_corp(tema_sidebar: TemaSidebarType = "claro") -> None:
-    """Alias corporativo de aplicar_estilo()."""
+def aplicar_estilo_corp(
+    tema_sidebar: TemaSidebarType | str | None = None,
+) -> None:
+    """Alias corporativo de ``aplicar_estilo``; preserva o tema da sessão."""
     aplicar_estilo(tema_sidebar=tema_sidebar)
 
 
-def aplicar_sidebar_corp(tema: TemaSidebarType = "claro") -> None:
-    """Aplica tema de sidebar TOTALE ('claro', 'azul' ou 'laranja')."""
+def aplicar_sidebar_corp(
+    tema: TemaSidebarType | str | None = None,
+) -> None:
+    """Aplica um tema TOTALE explícito ou mantém o tema ativo da sessão."""
     aplicar_estilo(tema_sidebar=tema)
 
 

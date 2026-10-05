@@ -35,6 +35,7 @@ from components.componentes import (
     render_kpi,
     render_section_header,
     render_spacer,
+    render_page_sidebar_theme_selector,
 )
 
 logger = logging.getLogger(__name__)
@@ -603,6 +604,7 @@ def render_footer() -> None:
 def main() -> None:
     """Ponto de entrada da página Home."""
     _injetar_css_home()
+    render_page_sidebar_theme_selector()
 
     info_base = _obter_metricas_base()
 

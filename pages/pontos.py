@@ -20,6 +20,7 @@ from components.componentes import (
     render_insight,
     render_kpi,
     render_section_header,
+    render_page_sidebar_theme_selector,
 )
 
 st.set_page_config(
@@ -29,6 +30,7 @@ st.set_page_config(
 )
 
 aplicar_estilo()
+render_page_sidebar_theme_selector()
 
 # CSS extra só desta página (header azul + classes de meta + redução de fontes e scrollbar)
 st.markdown(

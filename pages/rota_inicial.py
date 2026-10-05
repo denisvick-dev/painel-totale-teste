@@ -34,6 +34,7 @@ from components.componentes import (
     render_kpi,
     render_kpi_sm,
     render_section_header,
+    render_page_sidebar_theme_selector,
 )
 
 # Pasta de cache local
@@ -1302,6 +1303,7 @@ def criar_mapa_folium(
 # ====================================================
 def main() -> None:
     aplicar_estilo()
+    render_page_sidebar_theme_selector()
     _injetar_css_local()
 
     render_hero(
