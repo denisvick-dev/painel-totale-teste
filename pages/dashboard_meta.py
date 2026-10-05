@@ -854,7 +854,7 @@ def carregar_consultivos(
         if df["DATA"].isna().all():
             return pd.DataFrame(), "Todas as datas são inválidas em Consultivos."
         return df, None
-    except Exception:
+    except Exception as e:
         logger.warning("Falha ao carregar consultivos do Drive.", exc_info=True)
         return pd.DataFrame(), f"Consultivos: {type(e).__name__} - {e!s}"
 
@@ -924,7 +924,7 @@ def carregar_producao(cache_version: str = VERSAO) -> tuple[pd.DataFrame, str | 
         if df["DATA"].isna().all():
             return pd.DataFrame(), "Datas inválidas na planilha de produção."
         return df, None
-    except Exception:
+    except Exception as e:
         logger.warning("Falha ao carregar a planilha de produção.", exc_info=True)
         return pd.DataFrame(), f"Produção: {type(e).__name__} - {e!s}"
 

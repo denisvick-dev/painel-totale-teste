@@ -213,7 +213,7 @@ def _tentar_import_robo() -> tuple[RoboCallable | None, str]:
             arquivo_modulo = getattr(module, "__file__", "módulo sem caminho")
             return funcao, f"OK ({arquivo_modulo})"
         return None, "Módulo encontrado, mas sem função de renderização compatível."
-    except Exception:
+    except Exception as erro:
         logger.debug("Robô local não pôde ser importado.", exc_info=True)
         return None, f"{type(erro).__name__}: {erro}"
 
