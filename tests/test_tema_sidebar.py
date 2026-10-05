@@ -38,6 +38,8 @@ if str(RAIZ) not in sys.path:
 
 from streamlit.testing.v1 import AppTest
 
+from components.componentes import CSSInjector
+
 # Cores-âncora de cada tema (ConfigCores.SIDEBAR[tema]["fundo_base"]).
 CORES_ANCORA = {
     "claro": "#F1F5F9",
@@ -141,6 +143,27 @@ def _seletor_de_tema(app: AppTest):
     return next(
         w for w in app.sidebar.selectbox if w.key == "_totale_sidebar_theme_select"
     )
+
+
+def test_selectbox_sidebar_estiliza_markup_atual_do_streamlit() -> None:
+    """O seletor nativo mantém contraste no markup React Aria do Streamlit atual."""
+    fundos = {
+        "claro": "#FFFFFF",
+        "azul": "rgba(255, 255, 255, 0.06)",
+        "laranja": "rgba(0, 0, 0, 0.22)",
+    }
+    for tema, fundo in fundos.items():
+        css = CSSInjector._build_css(tema)
+        assert '[data-testid="stSelectbox"] [role="group"]' in css
+        assert (
+            '[data-testid="stSelectbox"] [role="group"] input[role="combobox"]'
+            in css
+        )
+        assert f"--totale-sb-input-bg: {fundo};" in css
+        assert (
+            "-webkit-text-fill-color: var(--totale-sb-input-text) !important;"
+            in css
+        )
 
 
 def test_pagina_preserva_tema_da_sessao() -> None:

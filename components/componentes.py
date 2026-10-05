@@ -3,8 +3,13 @@ components/componentes.py
 =========================
 Design System Streamlit — TOTALE
 
-Versão: 5.3.0
+Versão: 5.4.0
 Autor: TOTALE Tecnologia
+
+5.4.0 — Correção do selectbox de tema da sidebar:
+• Estilos do controle adaptados ao markup React Aria das versões atuais do
+  Streamlit, evitando fundo branco com texto branco; mantido o suporte ao
+  markup BaseWeb legado.
 
 5.3.0 — Correção: o tema da sidebar deixou de ser resetado ao navegar entre páginas:
 • `aplicar_estilo()`, `aplicar_estilo_corp()` e `aplicar_sidebar_corp()`, quando
@@ -1937,6 +1942,28 @@ def _gerar_css_sidebar_refino(tema: str) -> str:
 }}
 [data-testid="stSidebar"] div[data-baseweb="select"] svg {{
     fill: var(--totale-sb-icon) !important;
+}}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] [role="group"] {{
+    background: var(--totale-sb-input-bg) !important;
+    border: 1px solid var(--totale-sb-input-border) !important;
+    color: var(--totale-sb-input-text) !important;
+    border-radius: 8px !important;
+}}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] [role="group"] input[role="combobox"] {{
+    background: transparent !important;
+    border: 0 !important;
+    color: var(--totale-sb-input-text) !important;
+    -webkit-text-fill-color: var(--totale-sb-input-text) !important;
+}}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] [role="group"] button,
+[data-testid="stSidebar"] [data-testid="stSelectbox"] [role="group"] svg {{
+    color: var(--totale-sb-icon) !important;
+    fill: var(--totale-sb-icon) !important;
+}}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] [role="group"]:focus-within {{
+    border-color: var(--totale-sb-input-focus) !important;
+    box-shadow: 0 0 0 2px var(--totale-sb-input-focus-ring) !important;
+    outline: none !important;
 }}
 [data-testid="stSidebar"] div[data-baseweb="select"] > div:focus-within,
 [data-testid="stSidebar"] input:focus,
