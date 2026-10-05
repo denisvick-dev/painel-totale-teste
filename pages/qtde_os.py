@@ -32,6 +32,7 @@ from components.componentes import (
     render_kpi,
     render_section_header,
 )
+from components.css_paginas import aplicar_css_tabela_corporativa
 
 # ====================================================
 # 1. CONFIGURAÇÃO DA PÁGINA
@@ -45,25 +46,21 @@ st.set_page_config(
 aplicar_estilo()
 
 # CSS local: Fontes reduzidas, tabelas compactas e barra de rolagem ultrafina
+# ── Tabela corporativa: CSS compartilhado do Design System ──
+# (a aparência de .corp-table vive em components/css_paginas.py)
+aplicar_css_tabela_corporativa(
+    fonte_px=11,
+    padding='5px 8px',
+    altura_linha='1.2',
+    raio_scrollbar='10px',
+    colapsar_bordas=False,
+)
+
 st.markdown(
     """
     <style>
-    /* Customização e redução da Barra de Rolagem (Scrollbar) */
-    .corp-table-wrap::-webkit-scrollbar {
-        width: 6px !important;
-        height: 6px !important;
-    }
-    .corp-table-wrap::-webkit-scrollbar-track {
-        background: #F1F5F9 !important;
-        border-radius: 10px !important;
-    }
-    .corp-table-wrap::-webkit-scrollbar-thumb {
-        background: #CBD5E1 !important;
-        border-radius: 10px !important;
-    }
-    .corp-table-wrap::-webkit-scrollbar-thumb:hover {
-        background: #94A3B8 !important;
-    }
+    /* Moldura da tabela — fonte/padding/scrollbar vêm do Design System */
+
     .corp-table-wrap {
         scrollbar-width: thin !important;
         scrollbar-color: #CBD5E1 #F1F5F9 !important;
@@ -71,23 +68,6 @@ st.markdown(
         border-radius: 6px;
     }
 
-    /* Redução de fonte e espaçamento (padding) da tabela geral */
-    .corp-table {
-        font-size: 11px !important; /* Fonte reduzida para o corpo */
-        width: 100% !important;
-    }
-    .corp-table th, .corp-table td {
-        padding: 5px 8px !important; /* Padding reduzido para compactar linhas */
-        line-height: 1.2 !important;
-    }
-
-    .corp-table thead th {
-        background: linear-gradient(180deg, #012869 0%, #1E40AF 100%) !important;
-        color: #FFFFFF !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.04em !important;
-        font-size: 10px !important; /* Cabeçalho sutilmente menor */
-    }
     .corp-table td.col-os {
         background: #F8FAFC !important;
         color: #334155 !important;
@@ -128,10 +108,7 @@ st.markdown(
         text-align: center !important;
         border-radius: 4px;
     }
-    .corp-table td.num {
-        text-align: right !important;
-        font-variant-numeric: tabular-nums !important;
-    }
+
     </style>
     """,
     unsafe_allow_html=True,
@@ -306,7 +283,7 @@ class InfoCalendario:
             feriados_br = holidays.BR(years=ano)
             # Converte os feriados do mês/ano para o formato datetime64 do numpy
             lista_feriados = [
-                np.datetime64(data) for data in feriados_br.keys() if data.month == mes
+                np.datetime64(data) for data in feriados_br if data.month == mes
             ]
             feriados_usados = True
 

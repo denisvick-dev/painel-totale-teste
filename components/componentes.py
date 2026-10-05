@@ -1070,6 +1070,20 @@ def _safe_render_html(html_str: str, container: Any = None) -> None:
             logger.warning("HTML customizado não pôde ser renderizado.", exc_info=True)
 
 
+def injetar_css(css: str, container: Any = None) -> None:
+    """Injeta um bloco de CSS na página (ou no container informado).
+
+    API pública para CSS de página, reaproveitando o mesmo caminho de injeção
+    do Design System (`st.html` quando disponível, com fallback para markdown).
+
+    Exemplo:
+        >>> injetar_css(".minha-classe { color: #012869; }")
+    """
+    if not css or not css.strip():
+        return
+    _safe_render_html(f"<style>{css}</style>", container)
+
+
 def _texto_icone_seguro(icone: str) -> str:
     """Trava da 4.7.1: texto longo com espaço não estoura o tile."""
     texto = str(icone or "").strip()
@@ -3635,6 +3649,7 @@ __all__ = [
     "definir_tema_sidebar",
     "formatar_datetime_exibicao",
     "formatar_numero_br",
+    "injetar_css",
     "normalizar_tema_sidebar",
     "normalizar_texto_badge",
     "normalizar_tipo",

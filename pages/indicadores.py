@@ -1519,7 +1519,7 @@ def renderizar_visao_executiva_geral(resultados: dict[str, dict[str, Any]]) -> N
 
     vinculo_total = 0
     vinculo_sem = 0
-    for aba_fisica, info_fisica in resultados.items():
+    for info_fisica in resultados.values():
         df_fisica = info_fisica.get("df")
         if df_fisica is None or df_fisica.empty:
             continue

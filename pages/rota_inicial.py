@@ -1105,7 +1105,7 @@ def detectar_municipios_presentes(df: pd.DataFrame) -> list[str]:
                     municipios_encontrados.add(mun_oficial)
                     break
 
-    return sorted(list(municipios_encontrados))
+    return sorted(municipios_encontrados)
 
 
 def filtrar_geometria_por_municipios(

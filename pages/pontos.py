@@ -21,6 +21,7 @@ from components.componentes import (
     render_kpi,
     render_section_header,
 )
+from components.css_paginas import aplicar_css_tabela_corporativa
 
 st.set_page_config(
     page_title="Central de Performance",
@@ -31,55 +32,25 @@ st.set_page_config(
 aplicar_estilo()
 
 # CSS extra só desta página (header azul + classes de meta + redução de fontes e scrollbar)
+# ── Tabela corporativa: CSS compartilhado do Design System ──
+# (a aparência de .corp-table vive em components/css_paginas.py)
+aplicar_css_tabela_corporativa(
+    fonte_px=11,
+    padding='5px 8px',
+    altura_linha='1.2',
+    fonte_celula_px=11,
+    gradiente_cabecalho='linear-gradient(180deg, #012869 0%, #1E3A8A 100%)',
+    raio_scrollbar='4px',
+    cabecalho_extra='border-right: 1px solid rgba(255,255,255,0.12) !important; padding: 6px 8px !important; position: sticky !important; top: 0 !important; z-index: 3 !important; text-align: left !important;',
+)
+
 st.markdown(
     """
     <style>
-    /* --- BARRA DE ROLAGEM CUSTOMIZADA --- */
-    .corp-table-wrap::-webkit-scrollbar {
-        width: 6px !important;
-        height: 6px !important;
-    }
-    .corp-table-wrap::-webkit-scrollbar-track {
-        background: #F1F5F9 !important;
-        border-radius: 4px !important;
-    }
-    .corp-table-wrap::-webkit-scrollbar-thumb {
-        background: #CBD5E1 !important;
-        border-radius: 4px !important;
-    }
-    .corp-table-wrap::-webkit-scrollbar-thumb:hover {
-        background: #94A3B8 !important;
-    }
+    /* --- TABELA CORPORATIVA ---
+       Base (.corp-table, cabeçalho, padding e scrollbar) vem do Design System
+       (components/css_paginas.py); abaixo ficam só as cores de meta/projeção. */
 
-    /* --- TABELA COMPACTA (FONTES E PADDING REDUZIDOS) --- */
-    .corp-table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-        font-size: 11px !important; /* Fonte geral reduzida */
-    }
-    .corp-table th, .corp-table td {
-        padding: 5px 8px !important; /* Padding reduzido para compactação */
-        font-size: 11px !important;
-        line-height: 1.2 !important;
-    }
-    .corp-table thead th {
-        background: linear-gradient(180deg, #012869 0%, #1E3A8A 100%) !important;
-        color: #FFFFFF !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.04em !important;
-        font-size: 10px !important; /* Cabeçalho ligeiramente menor */
-        border-right: 1px solid rgba(255,255,255,0.12) !important;
-        padding: 6px 8px !important;
-        position: sticky !important;   /* FIX: cabeçalho acompanha o scroll da tabela */
-        top: 0 !important;
-        z-index: 3 !important;
-        text-align: left !important;
-    }
-    /* FIX: a classe "num" era gerada no HTML mas não existia no CSS */
-    .corp-table td.num {
-        text-align: right !important;
-        font-variant-numeric: tabular-nums !important;
-    }
     .corp-table td.meta-alta {
         background: #1E3A8A !important; color: #FFFFFF !important;
         font-weight: 800 !important; text-align: center !important;

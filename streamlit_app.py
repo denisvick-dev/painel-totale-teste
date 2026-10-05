@@ -97,7 +97,7 @@ def handle_exceptions(func):
         try:
             return func(*args, **kwargs)
         except Exception as exc:
-            logger.error("Erro em %s: %s", func.__name__, exc, exc_info=True)
+            logger.exception("Erro em %s: %s", func.__name__, exc)
             st.error(f"Ocorreu um erro inesperado: {exc!s}")
             return None
 
