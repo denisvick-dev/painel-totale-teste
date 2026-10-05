@@ -9,6 +9,7 @@ com comparativo entre técnicos Escalados e Montados.
 from __future__ import annotations
 
 import html
+import logging
 import re
 import textwrap
 import unicodedata
@@ -46,6 +47,8 @@ from components.componentes import (
 # ROBÔ DE MONITORAMENTO AUTOMÁTICO
 # ==========================================================
 from robo.robo_local import renderizar_robo_local
+
+logger = logging.getLogger(__name__)
 
 # ==========================================================
 # CONFIGURAÇÃO DE PÁGINA
@@ -287,6 +290,7 @@ class DataLoader:
             )
             return df_gs.drop_duplicates("__LOGIN_KEY")
         except Exception:
+            logger.warning("Hierarquia via Google Sheets indisponível; seguindo sem ela.", exc_info=True)
             return pd.DataFrame()
 
     @staticmethod
@@ -1187,7 +1191,7 @@ def render_dataframe(
         ]
     )
 
-    st.dataframe(sty, use_container_width=True, hide_index=True, height=height)
+    st.dataframe(sty, width="stretch", hide_index=True, height=height)
 
 
 # ==========================================================
@@ -1230,7 +1234,7 @@ def renderizar_volumetria_tecnicos(df: pd.DataFrame, total_montados_fixo: int):
                     "📥 Baixar Escalados",
                     gerar_excel(df_esc, "Escalados"),
                     "tecnicos_escalados.xlsx",
-                    use_container_width=True,
+                    width="stretch",
                 )
             with st.expander("📊 Resumo por Monitor — Escalados"):
                 r = _resumo_por_monitor(df_esc, ct)
@@ -1238,7 +1242,7 @@ def renderizar_volumetria_tecnicos(df: pd.DataFrame, total_montados_fixo: int):
                     # Sanitiza antes de renderizar para prevenir problemas de tipo com o Arrow
                     st.dataframe(
                         Utils.sanitizar_para_pyarrow(r),
-                        use_container_width=True,
+                        width="stretch",
                         hide_index=True,
                     )
 
@@ -1265,7 +1269,7 @@ def renderizar_volumetria_tecnicos(df: pd.DataFrame, total_montados_fixo: int):
                     "📥 Baixar Montados",
                     gerar_excel(df_mon, "Montados"),
                     "tecnicos_montados.xlsx",
-                    use_container_width=True,
+                    width="stretch",
                 )
             with st.expander("📊 Resumo por Monitor — Montados"):
                 r = _resumo_por_monitor(df_mon, ct)
@@ -1273,7 +1277,7 @@ def renderizar_volumetria_tecnicos(df: pd.DataFrame, total_montados_fixo: int):
                     # Sanitiza antes de renderizar para prevenir problemas de tipo com o Arrow
                     st.dataframe(
                         Utils.sanitizar_para_pyarrow(r),
-                        use_container_width=True,
+                        width="stretch",
                         hide_index=True,
                     )
 
@@ -1469,7 +1473,7 @@ def main():
         st.divider()
 
         st.header("⚙️ Configurações")
-        if st.button("🔄 Reiniciar Painel", use_container_width=True):
+        if st.button("🔄 Reiniciar Painel", width="stretch"):
             st.session_state.base_data = None
             st.session_state.pop("input_montados", None)
             st.session_state.pop("_montados_init", None)
@@ -1535,7 +1539,7 @@ def main():
         if df_robo is not None and not df_robo.empty:
             st.success("✅ **Dados carregados automaticamente pelo robô!**")
             if st.button(
-                "🚀 Processar Dados do Robô", use_container_width=True, type="primary"
+                "🚀 Processar Dados do Robô", width="stretch", type="primary"
             ):
                 try:
                     with st.spinner("Processando base..."):
@@ -1589,7 +1593,7 @@ def main():
         statuses = Config.STATUS_ORDEM
         sel_s = st.multiselect("Status", statuses, default=statuses)
 
-        if st.button("↩️ Limpar filtros", use_container_width=True):
+        if st.button("↩️ Limpar filtros", width="stretch"):
             st.rerun()
 
     df = df_full[
@@ -1826,11 +1830,11 @@ def main():
                 ),
             }
         ),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
-    st.plotly_chart(plot_comparativo(vol_esc, vol_mon), use_container_width=True)
+    st.plotly_chart(plot_comparativo(vol_esc, vol_mon), width="stretch")
 
     # ── GRÁFICOS GERAIS ─────────────────────────────────
     render_section_header(
@@ -1841,8 +1845,8 @@ def main():
         badge_tipo="info",
     )
     g1, g2 = st.columns([1, 2])
-    g1.plotly_chart(plot_status_pie(df), use_container_width=True)
-    g2.plotly_chart(plot_ranking_monitor(df), use_container_width=True)
+    g1.plotly_chart(plot_status_pie(df), width="stretch")
+    g2.plotly_chart(plot_ranking_monitor(df), width="stretch")
 
     # ── ABAS PRINCIPAIS ─────────────────────────────────
     render_section_header(

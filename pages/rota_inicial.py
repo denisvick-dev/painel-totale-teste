@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import pickle
 import re
 import unicodedata
@@ -35,6 +36,8 @@ from components.componentes import (
     render_kpi_sm,
     render_section_header,
 )
+
+logger = logging.getLogger(__name__)
 
 # Pasta de cache local
 CACHE_DIR = Path(".streamlit_cache")
@@ -533,7 +536,7 @@ def render_dataframe_local(
         ]
     )
 
-    st.dataframe(styler, use_container_width=True, hide_index=True, height="auto")
+    st.dataframe(styler, width="stretch", hide_index=True, height="auto")
 
 
 def gerar_excel(df: pd.DataFrame, aba: str = "Dados") -> bytes:
@@ -571,6 +574,7 @@ def buscar_google_sheets() -> pd.DataFrame:
         )
         return df
     except Exception:
+        logger.warning("Google Sheets indisponível; ações ficam sem dados cadastrais.", exc_info=True)
         return pd.DataFrame(columns=["Login", "Técnico", "Monitor", "Base"])
 
 
@@ -1101,7 +1105,7 @@ def detectar_municipios_presentes(df: pd.DataFrame) -> list[str]:
                     municipios_encontrados.add(mun_oficial)
                     break
 
-    return sorted(list(municipios_encontrados))
+    return sorted(municipios_encontrados)
 
 
 def filtrar_geometria_por_municipios(
@@ -1138,7 +1142,8 @@ def calcular_centroide_municipios(df_geo: pd.DataFrame | None) -> tuple[float, f
         lat = centroid.y.mean()
         lon = centroid.x.mean()
         return float(lat), float(lon)
-    except Exception:
+    except (AttributeError, TypeError, ValueError):
+        logger.debug("Centroide da malha geográfica indisponível; usando ABCDM.", exc_info=True)
         return -23.70, -46.55
 
 
@@ -1312,7 +1317,7 @@ def main() -> None:
     # ── Sidebar — configurações ──────────────────────
     with st.sidebar:
         st.header("⚙️ Configurações")
-        if st.button("🔄 Reiniciar Painel", use_container_width=True):
+        if st.button("🔄 Reiniciar Painel", width="stretch"):
             st.session_state["df_master"] = None
             if "sim_equipe" in st.session_state:
                 del st.session_state["sim_equipe"]
@@ -1526,7 +1531,7 @@ def main() -> None:
             yaxis_title="",
             title=dict(text="Pico de Agendamento", font=dict(size=14)),
         )
-        st.plotly_chart(fig_per, use_container_width=True)
+        st.plotly_chart(fig_per, width="stretch")
 
     with g2:
         df_prem = pd.DataFrame(
@@ -1559,7 +1564,7 @@ def main() -> None:
                 yaxis_title="",
                 title=dict(text="Mix Premium", font=dict(size=14)),
             )
-            st.plotly_chart(fig_prem, use_container_width=True)
+            st.plotly_chart(fig_prem, width="stretch")
         else:
             render_insight("Nenhum serviço premium identificado.", tipo="info")
 
@@ -1600,7 +1605,7 @@ def main() -> None:
             title=dict(text="Top 15 Técnicos por Volume", font=dict(size=15)),
             margin=dict(t=50, b=10, l=10, r=10),
         )
-        st.plotly_chart(fig_tec, use_container_width=True)
+        st.plotly_chart(fig_tec, width="stretch")
 
     # ============================================================
     # ABA — MAPA (OTIMIZADO)
@@ -1627,7 +1632,7 @@ def main() -> None:
                 df_pontos = df_pontos_temp.dropna(subset=["COORD_X", "COORD_Y"])
 
         # 3. Opções de visualização
-        col_opt1, col_opt2, col_opt3 = st.columns(3)
+        col_opt1, _, _ = st.columns(3)
         with col_opt1:
             modo_mapa = st.radio(
                 "🗺️ Modo de Visualização",
@@ -1673,7 +1678,7 @@ def main() -> None:
                     labels={"x": "Quantidade", "y": "Cidade"},
                 )
                 fig.update_layout(height=500, yaxis_title="", xaxis_title="Quantidade")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             else:
                 render_insight("Coluna CIDADE não encontrada.", tipo="alerta")
 
@@ -2037,7 +2042,7 @@ def main() -> None:
                 tickfont=dict(family="Inter", size=11, color="#6B7280"),
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
             # ============================================================
             # 7. PLANO DE REDISTRIBUIÇÃO DE O.S.
@@ -2322,7 +2327,7 @@ def main() -> None:
                 tickfont=dict(family="Inter", size=11, color="#6B7280"),
             )
 
-            st.plotly_chart(fig_sim, use_container_width=True)
+            st.plotly_chart(fig_sim, width="stretch")
 
             if diff_total_os != 0:
                 render_insight(

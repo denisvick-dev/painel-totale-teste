@@ -421,7 +421,8 @@ def carregar_arquivo(
             score = len(df.columns) if len(df.columns) > 1 else 0
             if score > melhor_score:
                 melhor_score, melhor_df, melhor_cfg = score, df, cfg
-        except Exception:  # noqa: BLE001, S112
+        except Exception:
+            logger.debug("Tentativa de leitura do CSV falhou; tentando próximo formato.", exc_info=True)
             continue
 
     if melhor_df is None or melhor_score == 0:
@@ -851,7 +852,7 @@ try:
     # FIX #1 — getvalue() é idempotente entre reruns; read() esvazia o buffer
     df_toa_raw, _ = carregar_arquivo(arquivo_toa.getvalue(), arquivo_toa.name)
     df_sin_raw, _ = carregar_arquivo(arquivo_sinapse.getvalue(), arquivo_sinapse.name)
-except Exception as e:  # noqa: BLE001
+except Exception as e:
     render_insight(f"Erro ao ler os arquivos enviados: `{e}`", tipo="critico")
     st.stop()
 
@@ -959,7 +960,7 @@ with st.expander("🔧 Mapeamento de colunas detectado"):
                 ],
             }
         ).fillna("— não encontrada —"),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
@@ -1212,7 +1213,7 @@ else:
                 mime=(
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 ),
-                use_container_width=True,
+                width="stretch",
                 type="primary",
             )
         except Exception as e:
@@ -1227,7 +1228,7 @@ else:
             data=csv_bytes,
             file_name=f"retornos_auditoria_{sufixo}.csv",
             mime="text/csv",
-            use_container_width=True,
+            width="stretch",
         )
 
 # ==========================================================

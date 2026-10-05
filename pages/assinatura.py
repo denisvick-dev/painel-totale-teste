@@ -1,5 +1,6 @@
 # gerador_assinatura.py
 import io
+import logging
 import traceback
 from pathlib import Path
 
@@ -21,6 +22,8 @@ from components.componentes import (
 from components.componentes import (
     aplicar_estilo as aplicar_estilo_corp,
 )
+
+logger = logging.getLogger(__name__)
 
 # ============ CONFIGURAÇÕES DE IMAGEM ============
 
@@ -155,7 +158,8 @@ def carregar_fonte(tamanho: int, negrito: bool = False):
         try:
             fonte = ImageFont.truetype(caminho_fonte, tamanho)
             return fonte, f"{nome_fonte} (fallback)"
-        except OSError:
+        except Exception:
+            logger.debug("Fonte do sistema indisponível; seguindo com a próxima opção.", exc_info=True)
             continue
 
     return ImageFont.load_default(), "DEFAULT (bitmap)"
@@ -403,7 +407,7 @@ with col2:
         )
 
         st.markdown('<div class="preview-container">', unsafe_allow_html=True)
-        st.image(img_final, use_container_width=True)
+        st.image(img_final, width="stretch")
         st.markdown("</div>", unsafe_allow_html=True)
 
         if modo_debug:
@@ -454,7 +458,7 @@ with col2:
             data=buffer,
             file_name=f"assinatura_totale_{nome_slug}.{extensao}",
             mime=f"image/{extensao}",
-            use_container_width=True,
+            width="stretch",
             type="primary",
             disabled=not campos_ok,
         )

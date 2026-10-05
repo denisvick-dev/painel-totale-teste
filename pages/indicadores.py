@@ -1,29 +1,32 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import requests
+import logging
 import unicodedata
-from io import BytesIO, StringIO
-from typing import Literal, Optional, Dict, List, Tuple, Any
 from datetime import datetime
+from io import BytesIO, StringIO
+from typing import Any, Literal
+
+import numpy as np
+import pandas as pd
+import requests
+import streamlit as st
 
 # Importação do Design System TOTALE
 from components.componentes import (
     aplicar_estilo,
+    converter_data_br,
+    render_empty_state,
+    render_insight,
+    render_kpi,
+    render_metric_card,
+    render_progress_bar,
+    render_section_header,
     render_sidebar_brand,
     render_sidebar_divider,
     render_sidebar_footer_info,
     render_sidebar_status,
-    render_section_header,
-    render_kpi,
-    render_metric_card,
-    render_insight,
-    render_empty_state,
-    render_progress_bar,
     render_table_html,
-    converter_data_br,
-    Cores,
 )
+
+logger = logging.getLogger(__name__)
 
 # Configuração da Página
 st.set_page_config(
@@ -48,7 +51,7 @@ MIN_OS_BOTTOM = 3
 DRIVE_FILE_ID = "1k6NrvdZzdSV_sGOQkMKIssEhh7p7wyO0"
 LISTA_ATIVOS_ID = "1LQKDcLshC6XSXLBVWaEYSpxrro6uydyU9pwDLc38pEg"
 
-SHEET_LOGIN_MAPPING: Dict[str, str] = {
+SHEET_LOGIN_MAPPING: dict[str, str] = {
     "Geoloc_Os": "LOGIN_TEC",
     "Aderencia_Ura": "CD_LOGIN_TECNICO",
     "Nr35": "LOGIN_FIELD",
@@ -57,7 +60,7 @@ SHEET_LOGIN_MAPPING: Dict[str, str] = {
     "OS_Digital": "LOGIN_TEC",
 }
 
-METAS_POR_ABA: Dict[str, float] = {
+METAS_POR_ABA: dict[str, float] = {
     "Geoloc_Os": 95.0,
     "OS_Digital": 95.0,
     "Aderencia_Ura": 95.0,
@@ -66,7 +69,7 @@ METAS_POR_ABA: Dict[str, float] = {
     "Baixa_Pda": 95.0,
 }
 
-ORDEM_INDICADORES: List[str] = [
+ORDEM_INDICADORES: list[str] = [
     "Geoloc_Os",
     "OS_Digital",
     "Aderencia_Ura",
@@ -75,7 +78,7 @@ ORDEM_INDICADORES: List[str] = [
     "Baixa_Pda",
 ]
 
-NOMES_AMIGAVEIS: Dict[str, str] = {
+NOMES_AMIGAVEIS: dict[str, str] = {
     "Geoloc_Os": "Geolocalização",
     "OS_Digital": "O.S. Digital",
     "Aderencia_Ura": "Aderência URA",
@@ -84,7 +87,7 @@ NOMES_AMIGAVEIS: Dict[str, str] = {
     "Baixa_Pda": "Baixa PDA",
 }
 
-NOMES_CURTOS: Dict[str, str] = {
+NOMES_CURTOS: dict[str, str] = {
     "Geoloc_Os": "Geoloc",
     "OS_Digital": "O.S. Digital",
     "Aderencia_Ura": "URA",
@@ -93,7 +96,7 @@ NOMES_CURTOS: Dict[str, str] = {
     "Baixa_Pda": "Baixa PDA",
 }
 
-NOMES_ICONES: Dict[str, str] = {
+NOMES_ICONES: dict[str, str] = {
     "Geoloc_Os": "📍",
     "OS_Digital": "💻",
     "Aderencia_Ura": "📞",
@@ -102,7 +105,7 @@ NOMES_ICONES: Dict[str, str] = {
     "Baixa_Pda": "📱",
 }
 
-GLOSSARIO: Dict[str, str] = {
+GLOSSARIO: dict[str, str] = {
     "Geoloc_Os": "Com Padrão no menor status de geolocalização, sobre Com Padrão + Sem Padrão. Meta 95%.",
     "OS_Digital": "GEROU_OS = Sim, calculado na base de Geolocalização. Meta 95%.",
     "Aderencia_Ura": "OBJETIVO_URA = Sucesso. Meta 95%.",
@@ -112,7 +115,7 @@ GLOSSARIO: Dict[str, str] = {
 }
 
 # Coluna de data de cada base. TEC1 usa DAT_NOTA — a data final da base.
-COLUNAS_DATA_POR_ABA: Dict[str, List[str]] = {
+COLUNAS_DATA_POR_ABA: dict[str, list[str]] = {
     "Geoloc_Os": ["DATA", "DT", "DATA_OS", "DT_EXECUCAO"],
     "OS_Digital": ["DATA", "DT", "DATA_OS"],
     "Aderencia_Ura": ["DT_AGENDA", "DATA", "DATA_AGENDA"],
@@ -121,7 +124,7 @@ COLUNAS_DATA_POR_ABA: Dict[str, List[str]] = {
     "Baixa_Pda": ["DATA_NET", "DATA", "DT_BAIXA", "DATA_BAIXA"],
 }
 
-CRITERIOS_POR_ABA: Dict[str, Dict[str, Any]] = {
+CRITERIOS_POR_ABA: dict[str, dict[str, Any]] = {
     "Geoloc_Os": {
         "colunas_possiveis_num": [
             "MENOR_STATUS_GEOLOC",
@@ -206,7 +209,7 @@ CRITERIOS_POR_ABA: Dict[str, Dict[str, Any]] = {
     },
 }
 
-MAPA_PERFORMANCE: Dict[str, Optional[str]] = {
+MAPA_PERFORMANCE: dict[str, str | None] = {
     "Todos": None,
     "🟢 Meta Atingida": "CONCLUIDO",
     "🟡 Próximo à Meta": "PENDENTE",
@@ -222,17 +225,17 @@ TipoProgressBarType = Literal[
 ]
 TipoTrendType = Literal["up", "down", "neutral", "none"]
 
-TEMAS_STATUS: Dict[str, TemaKPIType] = {
+TEMAS_STATUS: dict[str, TemaKPIType] = {
     "CONCLUIDO": "verde",
     "PENDENTE": "laranja",
     "CANCELADO": "vermelho",
 }
-TEMAS_BARRA: Dict[str, TipoProgressBarType] = {
+TEMAS_BARRA: dict[str, TipoProgressBarType] = {
     "CONCLUIDO": "verde",
     "PENDENTE": "laranja",
     "CANCELADO": "vermelho",
 }
-TREND_STATUS: Dict[str, TipoTrendType] = {
+TREND_STATUS: dict[str, TipoTrendType] = {
     "CONCLUIDO": "up",
     "PENDENTE": "neutral",
     "CANCELADO": "down",
@@ -254,9 +257,9 @@ def normalizar_chave(serie: pd.Series) -> pd.Series:
 
 
 def encontrar_coluna_flexivel(
-    df: pd.DataFrame, nomes_candidatos: List[str]
-) -> Optional[str]:
-    cols_map: Dict[str, str] = {
+    df: pd.DataFrame, nomes_candidatos: list[str]
+) -> str | None:
+    cols_map: dict[str, str] = {
         remover_acentos_e_padronizar(c): str(c) for c in df.columns
     }
     for candidato in nomes_candidatos:
@@ -317,7 +320,7 @@ def fmt_pct(valor: float, sinal: bool = False) -> str:
     return numero.replace(".", ",") + "%"
 
 
-def fmt_pp(valor: Optional[float]) -> str:
+def fmt_pp(valor: float | None) -> str:
     if valor is None or (isinstance(valor, float) and np.isnan(valor)):
         return "—"
     return f"{valor:+.1f}".replace(".", ",") + " p.p."
@@ -330,7 +333,7 @@ def fmt_int(valor: Any) -> str:
         return "0"
 
 
-def parse_data_texto(texto: Any) -> Optional[pd.Timestamp]:
+def parse_data_texto(texto: Any) -> pd.Timestamp | None:
     if texto is None or (isinstance(texto, float) and np.isnan(texto)):
         return None
     parsed = pd.to_datetime(
@@ -341,14 +344,14 @@ def parse_data_texto(texto: Any) -> Optional[pd.Timestamp]:
     return pd.Timestamp(parsed)
 
 
-def atraso_em_dias(texto: str) -> Optional[int]:
+def atraso_em_dias(texto: str) -> int | None:
     parsed = parse_data_texto(texto)
     if parsed is None:
         return None
     return int((pd.Timestamp.now().normalize() - parsed.normalize()).days)
 
 
-def _tokens_coluna(nome_coluna: str) -> List[str]:
+def _tokens_coluna(nome_coluna: str) -> list[str]:
     bruto = str(nome_coluna).replace("-", " ").replace("_", " ").replace(".", " ")
     return [remover_acentos_e_padronizar(t) for t in bruto.split() if str(t).strip()]
 
@@ -376,8 +379,8 @@ def _serie_para_datetime(serie: pd.Series) -> pd.Series:
             s_conv = pd.to_datetime(convertida, errors="coerce")
             if int(s_conv.notna().sum()) > 0:
                 return s_conv
-    except Exception:
-        pass
+    except (ValueError, TypeError, OverflowError):
+        logger.debug("Conversão de datas falhou; seguindo com a série original.", exc_info=True)
 
     numeric = pd.to_numeric(serie, errors="coerce")
     numeric_ok = numeric.dropna()
@@ -398,21 +401,21 @@ def _formatar_data_maxima(max_dt: Any) -> str:
     return str(max_dt)
 
 
-def maior_texto_data(datas: List[str], fallback: str) -> str:
+def maior_texto_data(datas: list[str], fallback: str) -> str:
     validas = [d for d in (parse_data_texto(t) for t in datas) if d is not None]
     if not validas:
         return fallback
     return _formatar_data_maxima(max(validas))
 
 
-def menor_texto_data(datas: List[str], fallback: str) -> str:
+def menor_texto_data(datas: list[str], fallback: str) -> str:
     validas = [d for d in (parse_data_texto(t) for t in datas) if d is not None]
     if not validas:
         return fallback
     return _formatar_data_maxima(min(validas))
 
 
-def resolver_coluna_data(df: pd.DataFrame, aba: Optional[str] = None) -> Optional[str]:
+def resolver_coluna_data(df: pd.DataFrame, aba: str | None = None) -> str | None:
     if df is None or df.empty:
         return None
     if aba:
@@ -429,7 +432,7 @@ def resolver_coluna_data(df: pd.DataFrame, aba: Optional[str] = None) -> Optiona
     return None
 
 
-def anexar_data(df: pd.DataFrame, aba: Optional[str] = None) -> pd.DataFrame:
+def anexar_data(df: pd.DataFrame, aba: str | None = None) -> pd.DataFrame:
     out = df.copy()
     if "_DATA" in out.columns:
         return out
@@ -442,8 +445,8 @@ def anexar_data(df: pd.DataFrame, aba: Optional[str] = None) -> pd.DataFrame:
 
 
 def extrair_data_maxima_aba(
-    df: Optional[pd.DataFrame], aba: Optional[str] = None
-) -> Optional[str]:
+    df: pd.DataFrame | None, aba: str | None = None
+) -> str | None:
     """Maior data válida da base. No TEC1 a referência é DAT_NOTA, não o relógio."""
     if df is None or df.empty:
         return None
@@ -460,13 +463,14 @@ def extrair_data_maxima_aba(
         if s_dt.empty:
             return None
         return _formatar_data_maxima(pd.Timestamp(s_dt.max()))
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
+        logger.debug("Detecção de coluna de data falhou para valor.", exc_info=True)
         return None
 
 
 def limites_periodo(
-    df: Optional[pd.DataFrame],
-) -> Tuple[Optional[datetime], Optional[datetime]]:
+    df: pd.DataFrame | None,
+) -> tuple[datetime | None, datetime | None]:
     if df is None or df.empty or "_DATA" not in df.columns:
         return None, None
     validas = df["_DATA"].dropna()
@@ -475,7 +479,7 @@ def limites_periodo(
     return validas.min().date(), validas.max().date()
 
 
-def normalizar_periodo(valor: Any, padrao_ini: Any, padrao_fim: Any) -> Tuple[Any, Any]:
+def normalizar_periodo(valor: Any, padrao_ini: Any, padrao_fim: Any) -> tuple[Any, Any]:
     if isinstance(valor, (tuple, list)):
         if len(valor) >= 2 and valor[0] is not None and valor[1] is not None:
             return valor[0], valor[1]
@@ -512,7 +516,7 @@ def aplicar_filtro_base(df: pd.DataFrame, selecionada: str) -> pd.DataFrame:
 
 
 def aplicar_filtro_lista(
-    df: pd.DataFrame, coluna: Optional[str], selecionados: List[str]
+    df: pd.DataFrame, coluna: str | None, selecionados: list[str]
 ) -> pd.DataFrame:
     if df is None or not selecionados or not coluna or coluna not in df.columns:
         return df
@@ -520,7 +524,7 @@ def aplicar_filtro_lista(
     return df.loc[rotulo.isin(selecionados)].copy()
 
 
-def opcoes_categoria(serie: pd.Series) -> List[str]:
+def opcoes_categoria(serie: pd.Series) -> list[str]:
     rotulos = serie.map(rotulo_categoria)
     nomes = sorted({r for r in rotulos.unique().tolist() if r != SEM_VINCULO})
     if (rotulos == SEM_VINCULO).any():
@@ -530,18 +534,18 @@ def opcoes_categoria(serie: pd.Series) -> List[str]:
 
 def gerar_regras_cores(
     df_data: pd.DataFrame,
-    col_realizado: Optional[str] = None,
-    col_desvio: Optional[str] = None,
-    col_meta: Optional[str] = None,
+    col_realizado: str | None = None,
+    col_desvio: str | None = None,
+    col_meta: str | None = None,
     meta_padrao: float = 95.0,
-) -> Dict[str, Dict[str, str]]:
+) -> dict[str, dict[str, str]]:
     """Mapeia valores numéricos para as cores do design system."""
-    color_rules: Dict[str, Dict[str, str]] = {}
+    color_rules: dict[str, dict[str, str]] = {}
     if df_data is None or df_data.empty:
         return color_rules
 
     if col_realizado and col_realizado in df_data.columns:
-        regras_realizado: Dict[str, str] = {}
+        regras_realizado: dict[str, str] = {}
         for _, row in df_data.iterrows():
             val_real = row[col_realizado]
             meta_val = (
@@ -556,11 +560,11 @@ def gerar_regras_cores(
                 m = float(meta_val)
                 regras_realizado[str(val_real)] = "sucesso" if v >= m else "alerta"
             except (ValueError, TypeError):
-                pass
+                logger.debug("Normalização numérica falhou; usando fallback.", exc_info=True)
         color_rules[col_realizado] = regras_realizado
 
     if col_desvio and col_desvio in df_data.columns:
-        regras_desvio: Dict[str, str] = {}
+        regras_desvio: dict[str, str] = {}
         for _, row in df_data.iterrows():
             val_desv = row[col_desvio]
             try:
@@ -575,8 +579,8 @@ def gerar_regras_cores(
     return color_rules
 
 
-def regras_texto_pp(valores: pd.Series) -> Dict[str, str]:
-    regras: Dict[str, str] = {}
+def regras_texto_pp(valores: pd.Series) -> dict[str, str]:
+    regras: dict[str, str] = {}
     for valor in valores.dropna().unique().tolist():
         texto = str(valor)
         if texto == "—":
@@ -587,16 +591,16 @@ def regras_texto_pp(valores: pd.Series) -> Dict[str, str]:
 
 # --- CARREGAMENTO E CRUZAMENTO ---
 @st.cache_data(ttl=3600)
-def load_excel_from_drive(file_id: str) -> Optional[Dict[str, pd.DataFrame]]:
+def load_excel_from_drive(file_id: str) -> dict[str, pd.DataFrame] | None:
     url = f"https://drive.google.com/uc?export=download&id={file_id}"
     try:
         response = requests.get(url, timeout=60)
         response.raise_for_status()
-        all_sheets: Dict[str, pd.DataFrame] = pd.read_excel(
+        all_sheets: dict[str, pd.DataFrame] = pd.read_excel(
             BytesIO(response.content), sheet_name=None, engine="openpyxl"
         )
-        for name in all_sheets:
-            all_sheets[name].columns = all_sheets[name].columns.astype(str).str.strip()
+        for sheet in all_sheets.values():
+            sheet.columns = sheet.columns.astype(str).str.strip()
         return all_sheets
     except Exception as e:
         st.error(f"❌ Erro ao carregar Excel do Drive: {e}")
@@ -604,7 +608,7 @@ def load_excel_from_drive(file_id: str) -> Optional[Dict[str, pd.DataFrame]]:
 
 
 @st.cache_data(ttl=3600)
-def load_google_sheet(sheet_id: str) -> Optional[pd.DataFrame]:
+def load_google_sheet(sheet_id: str) -> pd.DataFrame | None:
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
     try:
         response = requests.get(url, timeout=60)
@@ -617,7 +621,7 @@ def load_google_sheet(sheet_id: str) -> Optional[pd.DataFrame]:
         return None
 
 
-def resolver_chave_excel(sheet_name: str, df_sheet: pd.DataFrame) -> Optional[str]:
+def resolver_chave_excel(sheet_name: str, df_sheet: pd.DataFrame) -> str | None:
     sheet_name_norm = remover_acentos_e_padronizar(sheet_name)
 
     for aba_config, col_esperada in SHEET_LOGIN_MAPPING.items():
@@ -628,7 +632,7 @@ def resolver_chave_excel(sheet_name: str, df_sheet: pd.DataFrame) -> Optional[st
             if col_encontrada:
                 return col_encontrada
 
-    todas_cols: List[str] = list(SHEET_LOGIN_MAPPING.values()) + list(
+    todas_cols: list[str] = list(SHEET_LOGIN_MAPPING.values()) + list(
         SHEET_LOGIN_MAPPING.keys()
     )
     col_encontrada = encontrar_coluna_flexivel(df_sheet, todas_cols)
@@ -650,18 +654,18 @@ def merge_aba(
     df_ativos: pd.DataFrame,
     chave_excel: str,
     col_login_ativos: str,
-    col_tec_ativos: Optional[str],
-    col_mon_ativos: Optional[str],
-    col_base_ativos: Optional[str],
-    col_sit_ativos: Optional[str] = None,
+    col_tec_ativos: str | None,
+    col_mon_ativos: str | None,
+    col_base_ativos: str | None,
+    col_sit_ativos: str | None = None,
     how: MergeHowType = "left",
 ) -> pd.DataFrame:
-    cols_importar: List[str] = [
+    cols_importar: list[str] = [
         c
         for c in [col_tec_ativos, col_mon_ativos, col_base_ativos, col_sit_ativos]
         if c is not None
     ]
-    cols_right: List[str] = [col_login_ativos] + cols_importar
+    cols_right: list[str] = [col_login_ativos] + cols_importar
 
     left = df_sheet.copy()
     right = df_ativos[cols_right].drop_duplicates(subset=[col_login_ativos]).copy()
@@ -672,7 +676,7 @@ def merge_aba(
 
     merged = pd.merge(left, right, on="_KEY", how=how, suffixes=("", "_ativos"))
 
-    renomear: Dict[str, str] = {}
+    renomear: dict[str, str] = {}
     if (
         col_tec_ativos
         and col_tec_ativos in merged.columns
@@ -703,16 +707,16 @@ def merge_aba(
 
 
 def merge_todas_abas(
-    excel_sheets: Dict[str, pd.DataFrame],
+    excel_sheets: dict[str, pd.DataFrame],
     df_ativos: pd.DataFrame,
     col_login_ativos: str,
-    col_tec_ativos: Optional[str],
-    col_mon_ativos: Optional[str],
-    col_base_ativos: Optional[str],
-    col_sit_ativos: Optional[str] = None,
+    col_tec_ativos: str | None,
+    col_mon_ativos: str | None,
+    col_base_ativos: str | None,
+    col_sit_ativos: str | None = None,
     how: MergeHowType = "left",
-) -> Dict[str, Dict[str, Any]]:
-    resultados: Dict[str, Dict[str, Any]] = {}
+) -> dict[str, dict[str, Any]]:
+    resultados: dict[str, dict[str, Any]] = {}
     for aba, df_sheet in excel_sheets.items():
         chave_excel = resolver_chave_excel(aba, df_sheet)
         if not chave_excel:
@@ -745,25 +749,25 @@ def merge_todas_abas(
 
 
 def dataframe_indicador(
-    resultados: Dict[str, Dict[str, Any]], chave: str
-) -> Optional[pd.DataFrame]:
+    resultados: dict[str, dict[str, Any]], chave: str
+) -> pd.DataFrame | None:
     if chave == "OS_Digital":
         return resultados.get("Geoloc_Os", {}).get("df")
     return resultados.get(chave, {}).get("df")
 
 
-def resumo_vinculo(df: Optional[pd.DataFrame]) -> Dict[str, Any]:
+def resumo_vinculo(df: pd.DataFrame | None) -> dict[str, Any]:
     if df is None or df.empty or "Tecnico" not in df.columns:
         return {"total": 0, "sem": 0, "pct": 0.0}
     rotulo = df["Tecnico"].map(rotulo_categoria)
     sem = int((rotulo == SEM_VINCULO).sum())
-    total = int(len(df))
+    total = len(df)
     pct = ((total - sem) / total * 100.0) if total else 0.0
     return {"total": total, "sem": sem, "pct": pct}
 
 
 # --- MOTOR DE CÁLCULO ---
-def _norm_regra(valores: List[Any]) -> set:
+def _norm_regra(valores: list[Any]) -> set:
     return {remover_acentos_e_padronizar(v) for v in valores}
 
 
@@ -773,8 +777,8 @@ def _serie_norm_regra(serie: pd.Series) -> pd.Series:
 
 def calcular_aderencia_criterio(
     df: pd.DataFrame, aba: str
-) -> Tuple[Optional[str], Optional[pd.Series], Dict[str, Any]]:
-    regra: Optional[Dict[str, Any]] = None
+) -> tuple[str | None, pd.Series | None, dict[str, Any]]:
+    regra: dict[str, Any] | None = None
     for k_aba, v_regra in CRITERIOS_POR_ABA.items():
         if remover_acentos_e_padronizar(k_aba) == remover_acentos_e_padronizar(aba):
             regra = v_regra
@@ -823,7 +827,7 @@ def calcular_aderencia_criterio(
 
     qtd_num = int((serie_score == 1.0).sum())
     qtd_den = (
-        int(serie_score.notna().sum()) if tipo == "dual_column_ratio" else int(len(df))
+        int(serie_score.notna().sum()) if tipo == "dual_column_ratio" else len(df)
     )
     pct = (qtd_num / qtd_den * 100.0) if qtd_den > 0 else 0.0
     return (
@@ -841,7 +845,7 @@ def calcular_aderencia_criterio(
     )
 
 
-def com_score(df: pd.DataFrame, aba: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+def com_score(df: pd.DataFrame, aba: str) -> tuple[pd.DataFrame, dict[str, Any]]:
     work = df.copy()
     _, serie, info = calcular_aderencia_criterio(work, aba)
     if serie is not None:
@@ -853,7 +857,7 @@ def agregar_grupo(
     df: pd.DataFrame,
     col_grupo: str,
     meta: float,
-    col_tec: Optional[str] = None,
+    col_tec: str | None = None,
     com_situacao: bool = False,
     com_monitor: bool = False,
 ) -> pd.DataFrame:
@@ -924,8 +928,8 @@ def serie_diaria(df: pd.DataFrame) -> pd.DataFrame:
     return out.sort_values("Data")
 
 
-def comparativo_7d(df: pd.DataFrame) -> Dict[str, Any]:
-    vazio: Dict[str, Any] = {
+def comparativo_7d(df: pd.DataFrame) -> dict[str, Any]:
+    vazio: dict[str, Any] = {
         "pct": None,
         "pct_ant": None,
         "var": None,
@@ -949,7 +953,7 @@ def comparativo_7d(df: pd.DataFrame) -> Dict[str, Any]:
     ant_fim = ini - pd.Timedelta(days=1)
     ant_ini = ant_fim - pd.Timedelta(days=6)
 
-    def pack(inicio: pd.Timestamp, final: pd.Timestamp) -> Tuple[Optional[float], int]:
+    def pack(inicio: pd.Timestamp, final: pd.Timestamp) -> tuple[float | None, int]:
         sub = df[
             df["_DATA"].notna()
             & df["_SCORE"].notna()
@@ -978,8 +982,8 @@ def comparativo_7d(df: pd.DataFrame) -> Dict[str, Any]:
 
 
 def concentracao_nao_conformes(
-    df: pd.DataFrame, col_tec: Optional[str], n: int = 10
-) -> Dict[str, Any]:
+    df: pd.DataFrame, col_tec: str | None, n: int = 10
+) -> dict[str, Any]:
     vazio = {"qtd": 0, "top": 0, "n": 0, "pct_top": 0.0, "nomes": []}
     if (
         df is None
@@ -999,11 +1003,11 @@ def concentracao_nao_conformes(
     )
     por = por[por.index != SEM_VINCULO]
     if por.empty:
-        return {"qtd": int(len(fora)), "top": 0, "n": 0, "pct_top": 0.0, "nomes": []}
+        return {"qtd": len(fora), "top": 0, "n": 0, "pct_top": 0.0, "nomes": []}
     top = int(por.head(n).sum())
     total = int(por.sum())
     return {
-        "qtd": int(len(fora)),
+        "qtd": len(fora),
         "top": top,
         "n": int(min(n, len(por))),
         "pct_top": (top / total * 100.0) if total else 0.0,
@@ -1018,7 +1022,7 @@ def filtrar_status(df: pd.DataFrame, selecao: str) -> pd.DataFrame:
     return df[df["Status"] == status].copy()
 
 
-def escala_percentual(valores: List[float], metas: List[float]) -> Tuple[float, float]:
+def escala_percentual(valores: list[float], metas: list[float]) -> tuple[float, float]:
     numeros = [float(v) for v in valores if v is not None and not pd.isna(v)]
     metas_ok = [float(m) for m in metas if m is not None]
     if not numeros and not metas_ok:
@@ -1070,7 +1074,7 @@ def render_barras_ranking(df: pd.DataFrame, col_nome: str, meta: float) -> None:
             .properties(height=240)
             .configure(background="transparent")
             .configure_view(strokeWidth=0),
-            use_container_width=True,
+            width="stretch",
         )
     except Exception:
         st.bar_chart(plot.set_index(col_nome)[["Realizado"]], height=240)
@@ -1117,13 +1121,13 @@ def render_evolucao(df_daily: pd.DataFrame, meta: float, titulo: str) -> None:
             .properties(height=280)
             .configure(background="transparent")
             .configure_view(strokeWidth=0),
-            use_container_width=True,
+            width="stretch",
         )
     except Exception:
         st.line_chart(plot.set_index("Data")[["Realizado"]], height=280)
 
 
-def render_evolucao_consolidada(long_df: pd.DataFrame, metas: List[float]) -> None:
+def render_evolucao_consolidada(long_df: pd.DataFrame, metas: list[float]) -> None:
     if long_df is None or long_df.empty or long_df["Data"].nunique() < 2:
         st.caption("Período curto demais para a tendência consolidada.")
         return
@@ -1168,7 +1172,7 @@ def render_evolucao_consolidada(long_df: pd.DataFrame, metas: List[float]) -> No
             .configure(background="transparent")
             .configure_view(strokeWidth=0)
             .configure_legend(orient="bottom"),
-            use_container_width=True,
+            width="stretch",
         )
     except Exception:
         pivot = plot.pivot_table(
@@ -1181,8 +1185,8 @@ def render_ranking_tabela(
     df: pd.DataFrame,
     col_nome: str,
     meta: float,
-    titulo: Optional[str] = None,
-    height: Optional[int] = None,
+    titulo: str | None = None,
+    height: int | None = None,
     com_qtd_tec: bool = False,
     com_nao: bool = False,
     com_situacao: bool = False,
@@ -1219,7 +1223,7 @@ def render_ranking_tabela(
         "Realizado": "{:.1f}%",
         "Desvio": "{:+.1f}%",
     }
-    kwargs: Dict[str, Any] = {
+    kwargs: dict[str, Any] = {
         "colunas": colunas,
         "alinhamentos": alinhamentos,
         "fmt": fmt,
@@ -1261,8 +1265,8 @@ def download_csv(df: pd.DataFrame, rotulo: str, nome_arquivo: str, key: str) -> 
 
 
 def texto_insight_executivo(
-    dados: List[Dict[str, Any]], vinculo: Dict[str, Any]
-) -> Tuple[str, TipoInsightType]:
+    dados: list[dict[str, Any]], vinculo: dict[str, Any]
+) -> tuple[str, TipoInsightType]:
     if not dados:
         return "Nenhum indicador disponível neste recorte.", "alerta"
 
@@ -1275,7 +1279,7 @@ def texto_insight_executivo(
         pior = min(fora, key=lambda d: d["Desvio (%)"])
         criticos = [d for d in fora if d["Status"] == "CANCELADO"]
         margem = [d for d in fora if d["Status"] == "PENDENTE"]
-        partes: List[str] = []
+        partes: list[str] = []
         if criticos:
             nomes = ", ".join(
                 nome_curto(d.get("_chave"), d.get("Indicador")) for d in criticos
@@ -1316,12 +1320,12 @@ def texto_insight_indicador(
     nome: str,
     pct: float,
     meta: float,
-    janela: Dict[str, Any],
-    pior_base: Optional[pd.Series],
-    concentracao: Dict[str, Any],
-    vinculo: Dict[str, Any],
+    janela: dict[str, Any],
+    pior_base: pd.Series | None,
+    concentracao: dict[str, Any],
+    vinculo: dict[str, Any],
     volume: int,
-) -> Tuple[str, TipoInsightType]:
+) -> tuple[str, TipoInsightType]:
     status = classificar_status(pct, meta)
     tipo: TipoInsightType
     if status == "CONCLUIDO":
@@ -1371,7 +1375,7 @@ def texto_insight_indicador(
 
 
 # --- VISÃO EXECUTIVA ---
-def renderizar_visao_executiva_geral(resultados: Dict[str, Dict[str, Any]]) -> None:
+def renderizar_visao_executiva_geral(resultados: dict[str, dict[str, Any]]) -> None:
     frames = []
     for chave in ORDEM_INDICADORES:
         df_chave = dataframe_indicador(resultados, chave)
@@ -1440,10 +1444,10 @@ def renderizar_visao_executiva_geral(resultados: Dict[str, Dict[str, Any]]) -> N
             st.caption("Os percentuais respeitam o período.")
             st.caption("“Atualizado até” é a data final da base, não o fim do filtro.")
 
-    dados: List[Dict[str, Any]] = []
-    serie_longa: List[pd.DataFrame] = []
-    matriz_partes: List[pd.DataFrame] = []
-    volume_partes: List[pd.DataFrame] = []
+    dados: list[dict[str, Any]] = []
+    serie_longa: list[pd.DataFrame] = []
+    matriz_partes: list[pd.DataFrame] = []
+    volume_partes: list[pd.DataFrame] = []
 
     for chave in ORDEM_INDICADORES:
         df_fonte = dataframe_indicador(resultados, chave)
@@ -1515,7 +1519,7 @@ def renderizar_visao_executiva_geral(resultados: Dict[str, Dict[str, Any]]) -> N
 
     vinculo_total = 0
     vinculo_sem = 0
-    for aba_fisica, info_fisica in resultados.items():
+    for info_fisica in resultados.values():
         df_fisica = info_fisica.get("df")
         if df_fisica is None or df_fisica.empty:
             continue
@@ -1646,12 +1650,12 @@ def renderizar_visao_executiva_geral(resultados: Dict[str, Dict[str, Any]]) -> N
             gap[col] = gap[col] - metas_col.get(col, 95.0)
         pct = pct.loc[gap.mean(axis=1).sort_values(ascending=True).index]
 
-        color_rules: Dict[str, Dict[str, str]] = {}
+        color_rules: dict[str, dict[str, str]] = {}
         display = pd.DataFrame({"Base": pct.index.astype(str)})
         for col in pct.columns:
             meta_col = metas_col.get(col, 95.0)
-            textos: List[str] = []
-            regras: Dict[str, str] = {}
+            textos: list[str] = []
+            regras: dict[str, str] = {}
             for val in pct[col].tolist():
                 if pd.isna(val):
                     textos.append("—")
@@ -1711,7 +1715,7 @@ def renderizar_visao_executiva_geral(resultados: Dict[str, Dict[str, Any]]) -> N
         col_meta="Meta (%)",
     )
     color_rules_exec["Var. 7d"] = regras_texto_pp(df_exec["Var. 7d"])
-    regras_7d: Dict[str, str] = {}
+    regras_7d: dict[str, str] = {}
     for _, row in df_exec.iterrows():
         texto_7d = str(row["7 dias"])
         if texto_7d == "—":
@@ -1723,6 +1727,7 @@ def renderizar_visao_executiva_geral(resultados: Dict[str, Dict[str, Any]]) -> N
                 else "alerta"
             )
         except (TypeError, ValueError):
+            logger.debug("Valor inválido ignorado na consolidação.", exc_info=True)
             continue
     color_rules_exec["7 dias"] = regras_7d
     render_table_html(
@@ -1765,7 +1770,7 @@ def renderizar_visao_executiva_geral(resultados: Dict[str, Dict[str, Any]]) -> N
 
 
 # --- VISÃO COMPLETA POR TÉCNICO ---
-def renderizar_visao_tecnicos(resultados: Dict[str, Dict[str, Any]]) -> None:
+def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
     render_section_header(
         titulo="Painel Integrado e Drill-Down do Técnico",
         subtitulo="Visão detalhada do comportamento de cada profissional da operação técnica.",
@@ -1883,7 +1888,7 @@ def renderizar_visao_tecnicos(resultados: Dict[str, Dict[str, Any]]) -> None:
         if df_calc.empty:
             continue
 
-        work, info = com_score(df_calc, chave)
+        work, _ = com_score(df_calc, chave)
         if "_SCORE" not in work.columns:
             continue
 
@@ -2046,13 +2051,13 @@ def renderizar_visao_tecnicos(resultados: Dict[str, Dict[str, Any]]) -> None:
             }
         )
 
-        color_rules_tec: Dict[str, Dict[str, str]] = {}
+        color_rules_tec: dict[str, dict[str, str]] = {}
         metas_col = {NOMES_CURTOS[k]: METAS_POR_ABA[k] for k in ORDEM_INDICADORES}
 
         for col in ordem_cols:
             meta_col = metas_col.get(col, 95.0)
-            textos: List[str] = []
-            regras: Dict[str, str] = {}
+            textos: list[str] = []
+            regras: dict[str, str] = {}
             for val in pivot_tec_completo[col].tolist():
                 if pd.isna(val):
                     textos.append("—")
@@ -2161,7 +2166,7 @@ def renderizar_visao_tecnicos(resultados: Dict[str, Dict[str, Any]]) -> None:
             ]
             df_erros_visualizar = df_erros_consol[colunas_limpas].copy()
 
-            st.dataframe(df_erros_visualizar, use_container_width=True)
+            st.dataframe(df_erros_visualizar, width="stretch")
 
             csv_data = df_erros_visualizar.to_csv(
                 index=False, sep=";", decimal=","
@@ -2183,7 +2188,7 @@ def renderizar_visao_tecnicos(resultados: Dict[str, Dict[str, Any]]) -> None:
 
 # --- PAINEL DO INDICADOR ---
 def renderizar_painel_executivo_aba(
-    df_indicador: Optional[pd.DataFrame], nome_kpi: str
+    df_indicador: pd.DataFrame | None, nome_kpi: str
 ) -> None:
     nome_amigavel = NOMES_AMIGAVEIS.get(nome_kpi, nome_kpi)
     icone = NOMES_ICONES.get(nome_kpi, "📋")
@@ -2537,8 +2542,8 @@ resultados = merge_todas_abas(
     how="left",
 )
 
-datas_fonte: List[str] = []
-datas_inicio: List[str] = []
+datas_fonte: list[str] = []
+datas_inicio: list[str] = []
 vinculo_total = 0
 vinculo_sem = 0
 for res_k, res_v in resultados.items():
@@ -2580,7 +2585,7 @@ with st.sidebar:
     st.caption(
         f"Vínculo de logins: {pct_vinculo:.1f}% ({fmt_int(vinculo_total - vinculo_sem)} de {fmt_int(vinculo_total)})"
     )
-    if st.button("🔄 Atualizar bases", use_container_width=True):
+    if st.button("🔄 Atualizar bases", width="stretch"):
         st.cache_data.clear()
         st.rerun()
 
@@ -2604,7 +2609,7 @@ with st.sidebar:
 
     render_sidebar_footer_info(empresa="TOTALE Tecnologia", versao=VERSAO)
 
-abas_erro: List[str] = [
+abas_erro: list[str] = [
     aba for aba, info in resultados.items() if info.get("df") is None
 ]
 if abas_erro:
@@ -2615,7 +2620,7 @@ if abas_erro:
             titulo="Erro ao mesclar base",
         )
 
-abas_exibicao: List[Tuple[str, Optional[pd.DataFrame]]] = []
+abas_exibicao: list[tuple[str, pd.DataFrame | None]] = []
 for chave in ORDEM_INDICADORES:
     df_chave = dataframe_indicador(resultados, chave)
     if df_chave is not None:
@@ -2630,7 +2635,7 @@ if not abas_exibicao:
     st.stop()
 
 # --- MONTAGEM DAS ABAS DO PAINEL ---
-nomes_tabs: List[str] = [
+nomes_tabs: list[str] = [
     "🎯 Visão Consolidada",
     "👷 Visão por Técnico",
 ] + [

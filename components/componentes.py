@@ -3,8 +3,24 @@ components/componentes.py
 =========================
 Design System Streamlit — TOTALE
 
-Versão: 5.2.0
+Versão: 5.3.0
 Autor: TOTALE Tecnologia
+
+5.3.0 — Correção: o tema da sidebar deixou de ser resetado ao navegar entre páginas:
+• `aplicar_estilo()`, `aplicar_estilo_corp()` e `aplicar_sidebar_corp()`, quando
+  chamadas sem argumento, passam a reutilizar o tema ativo da sessão
+  (`_totale_sidebar_theme` / seletor de tema) em vez de voltarem para "claro".
+• Causa raiz: as páginas em `pages/*` chamam `aplicar_estilo()` no início da
+  execução (depois do entrypoint). Como o parâmetro tinha default `"claro"`, a
+  cor escolhida pelo usuário era sobrescrita e o sidebar "voltava ao branco" em
+  todas as páginas — ficava correto apenas na Home, que não reinjetava o CSS.
+• `_obter_tema_sidebar()` agora também consulta a chave do widget do seletor
+  (`_totale_sidebar_theme_select`) e o estado legado (`seletor_cor_sidebar`),
+  mantendo o widget e o CSS sempre sincronizados.
+• `aplicar_estilo()` sincroniza o seletor de tema via `definir_tema_sidebar()`,
+  para que o selectbox reflita o tema realmente aplicado.
+• Páginas que forçavam CSS próprio de sidebar (fundo branco/texto fixo) foram
+  alinhadas ao Design System: a cor do menu agora é sempre a do tema ativo.
 
 5.2.0 — Refinamento de cores e tipografia dos três temas de sidebar:
 • Paleta clara, navy e terracota com tokens semânticos para textos, navegação,
@@ -139,6 +155,8 @@ class TemaSidebar(str, Enum):
     CLARO = "claro"
     AZUL = "azul"
     LARANJA = "laranja"
+    # Alias intencional de CLARO (compatibilidade com "padrao" legado):
+    # normalizar_tema_sidebar() converte "padrao" -> "claro".
     PADRAO = "claro"
 
 
@@ -541,12 +559,25 @@ def definir_tema_sidebar(tema: TemaSidebarType | str) -> None:
 
 
 def _obter_tema_sidebar(tema_param: Any = None) -> TemaSidebarType:
-    """Obtém o tema da sidebar a partir do parâmetro explícito ou do session_state."""
+    """Obtém o tema da sidebar a partir do parâmetro explícito ou do session_state.
+
+    v5.3.0: além de `_totale_sidebar_theme`, consulta a chave do widget do
+    seletor (`_totale_sidebar_theme_select`) e o estado legado
+    (`seletor_cor_sidebar`/`tema_sidebar`). Sem isso, uma página que chama
+    `aplicar_estilo()` sem argumento reiniciava o sidebar no tema "claro".
+    """
     if tema_param is not None:
         return normalizar_tema_sidebar(tema_param)
-    return normalizar_tema_sidebar(
-        st.session_state.get("_totale_sidebar_theme", "claro")
-    )
+    for chave in (
+        "_totale_sidebar_theme",
+        "_totale_sidebar_theme_select",
+        "seletor_cor_sidebar",  # estado legado
+        "tema_sidebar",  # estado legado
+    ):
+        valor = st.session_state.get(chave)
+        if valor:
+            return normalizar_tema_sidebar(valor)
+    return "claro"
 
 
 def normalizar_tipo_badge(tipo: Any) -> TipoBadgeType:
@@ -658,7 +689,8 @@ def formatar_datetime_exibicao(valor: Any, com_segundos: bool = False) -> str:
             return str(valor)
         formato = "%d/%m/%Y %H:%M:%S" if com_segundos else "%d/%m/%Y %H:%M"
         return ts.strftime(formato)
-    except Exception:
+    except (TypeError, ValueError, OverflowError):
+        logger.debug("Valor não pôde ser convertido em Timestamp; usando representação bruta.", exc_info=True)
         return str(valor)
 
 
@@ -670,7 +702,7 @@ class Validadores:
         try:
             result = urlparse(url)
             return bool(result.scheme and result.netloc)
-        except Exception:
+        except (TypeError, ValueError):
             return False
 
     @staticmethod
@@ -702,6 +734,12 @@ class Formatadores:
 # =============================================================================
 # VERIFICAÇÃO DE CORES DA SIDEBAR (WCAG 2.1) — NOVO NA 5.0.0
 # =============================================================================
+def _rgb_para_hex(rgb: tuple[int, int, int]) -> str:
+    """Converte (r, g, b) para "#RRGGBB" (a=255)."""
+    r, g, b = rgb
+    return f"#{r:02X}{g:02X}{b:02X}"
+
+
 def _hex_para_rgb(cor: str) -> tuple[int, int, int] | None:
     """Converte '#RGB', '#RRGGBB' ou 'rgb(r,g,b)' para tupla (r, g, b)."""
     s = str(cor).strip().lower()
@@ -738,9 +776,9 @@ def _compor_cor(cor: str, base: str) -> str | None:
         return None
     a = _extrair_alpha(cor)
     if a >= 1.0:
-        return "#%02X%02X%02X" % rgb
+        return _rgb_para_hex(rgb)
     comp = tuple(round(a * v + (1 - a) * b) for v, b in zip(rgb, base_rgb))
-    return "#%02X%02X%02X" % comp
+    return _rgb_para_hex(comp)
 
 
 def _para_solidas(cor: str, base: str) -> list[str]:
@@ -1017,7 +1055,7 @@ def _safe_render_html(html_str: str, container: Any = None) -> None:
             c.html(clean)
             return
         except Exception:
-            pass
+            logger.debug("st.html indisponível; usando markdown como fallback.", exc_info=True)
 
     clean_md = clean.replace("\n", " ").replace("\r", " ").replace("\t", " ")
     clean_md = re.sub(r">\s+<", "><", clean_md)
@@ -1029,7 +1067,21 @@ def _safe_render_html(html_str: str, container: Any = None) -> None:
         try:
             st.markdown(clean_md, unsafe_allow_html=True)
         except Exception:
-            pass
+            logger.warning("HTML customizado não pôde ser renderizado.", exc_info=True)
+
+
+def injetar_css(css: str, container: Any = None) -> None:
+    """Injeta um bloco de CSS na página (ou no container informado).
+
+    API pública para CSS de página, reaproveitando o mesmo caminho de injeção
+    do Design System (`st.html` quando disponível, com fallback para markdown).
+
+    Exemplo:
+        >>> injetar_css(".minha-classe { color: #012869; }")
+    """
+    if not css or not css.strip():
+        return
+    _safe_render_html(f"<style>{css}</style>", container)
 
 
 def _texto_icone_seguro(icone: str) -> str:
@@ -2093,8 +2145,9 @@ class CSSInjector:
         )
 
     @staticmethod
-    def injetar(tema_sidebar: str = "claro") -> None:
-        tema_norm = normalizar_tema_sidebar(tema_sidebar)
+    def injetar(tema_sidebar: str | None = None) -> None:
+        # v5.3.0: sem tema explícito, usa o tema ativo da sessão (não "claro").
+        tema_norm = _obter_tema_sidebar(tema_sidebar)
         css_html = CSSInjector._build_css(tema_norm)
         _safe_render_html(css_html)
 
@@ -2129,23 +2182,38 @@ class CSSInjector:
         st.session_state["_totale_css_head_tema"] = tema_norm
 
 
-def aplicar_estilo(tema_sidebar: TemaSidebarType = "claro") -> None:
-    """Aplica o Design System TOTALE com suporte a 3 temas de sidebar ('claro', 'azul', 'laranja')."""
-    tema_norm = normalizar_tema_sidebar(tema_sidebar)
-    st.session_state["_totale_sidebar_theme"] = tema_norm
+def aplicar_estilo(tema_sidebar: TemaSidebarType | str | None = None) -> None:
+    """Aplica o Design System TOTALE com suporte a 3 temas de sidebar ('claro', 'azul', 'laranja').
+
+    v5.3.0: com `tema_sidebar=None` (default), mantém o tema ativo da sessão em
+    vez de voltar para "claro". Isso permite que qualquer página chame
+    `aplicar_estilo()` sem argumento — como fazem as páginas de `pages/*` — sem
+    apagar a cor do sidebar escolhida pelo usuário no seletor de tema.
+
+    Informe `tema_sidebar` apenas para forçar um tema específico.
+    """
+    tema_norm = _obter_tema_sidebar(tema_sidebar)
+    # Mantém seletor de tema, session_state e CSS apontando para a mesma cor.
+    definir_tema_sidebar(tema_norm)
     PlotlyConfig.configurar()
     FontInjector.injetar_no_head_pai()
     CSSInjector.injetar(tema_sidebar=tema_norm)
     NavContrastFix.injetar(cor="#FFFFFF", ativo=True)
 
 
-def aplicar_estilo_corp(tema_sidebar: TemaSidebarType = "claro") -> None:
-    """Alias corporativo de aplicar_estilo()."""
+def aplicar_estilo_corp(tema_sidebar: TemaSidebarType | str | None = None) -> None:
+    """Alias corporativo de aplicar_estilo().
+
+    v5.3.0: sem argumento, preserva o tema ativo da sidebar (antes fixava "claro").
+    """
     aplicar_estilo(tema_sidebar=tema_sidebar)
 
 
-def aplicar_sidebar_corp(tema: TemaSidebarType = "claro") -> None:
-    """Aplica tema de sidebar TOTALE ('claro', 'azul' ou 'laranja')."""
+def aplicar_sidebar_corp(tema: TemaSidebarType | str | None = None) -> None:
+    """Aplica tema de sidebar TOTALE ('claro', 'azul' ou 'laranja').
+
+    v5.3.0: sem argumento, preserva o tema ativo da sidebar (antes fixava "claro").
+    """
     aplicar_estilo(tema_sidebar=tema)
 
 
@@ -2244,7 +2312,7 @@ def render_sidebar_brand(
     with st.sidebar:
         logo_valida = bool(logo_final and Validadores.url(str(logo_final)))
         if logo_valida:
-            st.image(str(logo_final), use_container_width=True)
+            st.image(str(logo_final), width="stretch")
 
         badge_html = ""
         if versao_final:
@@ -3021,17 +3089,13 @@ def render_section_header(
             return False
         if len(v) <= 4:
             return True
-        if " " not in v and all(c.isalnum() or c == "_" for c in v):
-            return True
-        return False
+        return " " not in v and all(c.isalnum() or c == "_" for c in v)
 
     def _parece_titulo(val: str) -> bool:
         v = val.strip()
         if not v:
             return False
-        if len(v) > 10 or " " in v or any(c.isupper() for c in v):
-            return True
-        return False
+        return len(v) > 10 or " " in v or any(c.isupper() for c in v)
 
     # 4.7.1: chamada antiga (icone, titulo, subtitulo) não pode quebrar o layout.
     if _parece_icone(titulo_final) and _parece_titulo(icone_final):
@@ -3393,7 +3457,7 @@ def render_table_html(
                         elif callable(formatter):
                             val_str = str(formatter(val))
                     except Exception:
-                        pass
+                        logger.debug("Formatter customizado falhou; usando valor bruto.", exc_info=True)
                 val_str = Validadores.html_escape(val_str)
             val_clean_upper = normalizar_texto_badge(val_str)
             if val_clean_upper in (
@@ -3477,7 +3541,7 @@ def render_table_html(
                     data=buffer.getvalue(),
                     file_name=f"{nome_arquivo}_{_agora_br().strftime('%Y%m%d_%H%M')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
+                    width="stretch",
                     help="Exportar relatório atual",
                 )
         except Exception as exc:
@@ -3585,8 +3649,9 @@ __all__ = [
     "definir_tema_sidebar",
     "formatar_datetime_exibicao",
     "formatar_numero_br",
-    "normalizar_texto_badge",
+    "injetar_css",
     "normalizar_tema_sidebar",
+    "normalizar_texto_badge",
     "normalizar_tipo",
     "render_badge",
     "render_card",

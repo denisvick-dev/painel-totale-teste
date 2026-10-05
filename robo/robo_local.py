@@ -320,7 +320,7 @@ def _stat_basico(caminho: str) -> tuple[float | None, int | None]:
 
 def _arquivo_ignorado(nome: str) -> bool:
     baixo = nome.lower()
-    if baixo.startswith("~$") or baixo.startswith("."):
+    if baixo.startswith(("~$", ".")):
         return True
     return baixo.endswith(EXTENSOES_TEMP)
 
@@ -696,6 +696,8 @@ def ler_arquivo_detalhado(
     except ArquivoBloqueadoError:
         raise
     except Exception as e:
+        # A mensagem vai para a UI do robô; o log guarda o traceback completo.
+        logger.debug("Falha ao ler %s: %s", nome, e, exc_info=True)
         return LeituraArquivo(None, f"{nome}: {type(e).__name__} — {e}", None)
 
     if df.empty:
@@ -865,7 +867,7 @@ def _obter_gsheets(gsheets_fn: FonteSheets) -> pd.DataFrame:
 def _rerun_aplicacao() -> None:
     if st is None:
         return
-    rerun = getattr(st, "rerun")
+    rerun = st.rerun
     try:
         rerun(scope="app")
     except TypeError:
@@ -995,8 +997,12 @@ def renderizar_robo_local(
         st.session_state["robo_recursivo"] = False
     if not st.session_state.get("robo_pasta_alvo"):
         st.session_state["robo_pasta_alvo"] = pasta_padrao or obter_pasta_robo_padrao()
-    if pasta_padrao and not st.session_state.get("_robo_pasta_user_set"):
-        if st.session_state.get("robo_pasta_alvo") in (None, "", obter_pasta_robo_padrao()):
+    if (
+        pasta_padrao
+        and not st.session_state.get("_robo_pasta_user_set")
+        and st.session_state.get("robo_pasta_alvo")
+        in (None, "", obter_pasta_robo_padrao())
+    ):
             st.session_state["robo_pasta_alvo"] = pasta_padrao
 
     pasta_alvo = str(st.session_state["robo_pasta_alvo"])
@@ -1120,11 +1126,11 @@ def renderizar_robo_local(
         st.sidebar.error(f"❌ {erro}")
         c_a, c_b = st.sidebar.columns(2)
         with c_a:
-            if st.button("🧹 Limpar", key="limpar_erro_robo", use_container_width=True):
+            if st.button("🧹 Limpar", key="limpar_erro_robo", width="stretch"):
                 st.session_state.pop("robo_erro", None)
                 _rerun_aplicacao()
         with c_b:
-            if st.button("🔄 Retentar", key="retry_erro_robo", use_container_width=True):
+            if st.button("🔄 Retentar", key="retry_erro_robo", width="stretch"):
                 st.session_state.pop("robo_erro", None)
                 st.session_state["robo_candidato_sig"] = None
                 st.session_state["robo_processado_sig"] = None

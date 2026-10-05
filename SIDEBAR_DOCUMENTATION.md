@@ -393,6 +393,50 @@ Todos os inputs no sidebar herdam o styling automático via CSS
 
 ---
 
+## 🔧 Correção v5.3.0 — Tema da sidebar persistente entre páginas
+
+**Sintoma:** a cor do sidebar só ficava correta enquanto o usuário estava na Home.
+Ao navegar para qualquer página de `pages/*`, o menu voltava para o tema Claro
+(ou mantinha o CSS antigo), mesmo com outro tema selecionado no seletor.
+
+**Causa raiz:** o entrypoint `streamlit_app.py` aplicava o tema escolhido, mas
+cada página de `pages/*` reinjeta o Design System chamando `aplicar_estilo()`
+sem argumento. Como o parâmetro tinha default `"claro"`, o valor fixo
+sobrescrevia o tema da sessão em toda troca de página.
+
+**Solução aplicada em `components/componentes.py`:**
+
+```python
+# Antes (v5.2.0) — qualquer página resetava o sidebar para o tema claro
+def aplicar_estilo(tema_sidebar: TemaSidebarType = "claro") -> None: ...
+
+# Depois (v5.3.0) — sem argumento, preserva o tema ativo da sessão
+def aplicar_estilo(tema_sidebar: TemaSidebarType | str | None = None) -> None:
+    tema_norm = _obter_tema_sidebar(tema_sidebar)  # sessão > seletor > legado
+    definir_tema_sidebar(tema_norm)                # sincroniza o selectbox
+    ...
+```
+
+- `aplicar_estilo()`, `aplicar_estilo_corp()` e `aplicar_sidebar_corp()` agora
+  herdam o tema ativo (`_totale_sidebar_theme` / `_totale_sidebar_theme_select`).
+- Passar um tema explícito continua funcionando (`aplicar_estilo("azul")`).
+- CSS local de sidebar que fixava cores (fundo branco em `p_atendimento.py`,
+  cor/borda de input em `consultivo.py`) foi removido: quem manda no sidebar é
+  o Design System.
+
+**Regressão coberta por testes:**
+
+```bash
+python tests/test_tema_sidebar.py     # execução direta
+pytest tests/test_tema_sidebar.py     # via pytest
+```
+
+Os testes usam `streamlit.testing.v1.AppTest` e cobrem: página que reaplica o
+Design System, aliases corporativos, tema explícito, fluxo entrypoint + página e
+troca de tema com uma página aberta.
+
+---
+
 ## 📝 Notas de Desenvolvimento
 
 - Todos os componentes usam `unsafe_allow_html=True` (CSS personalizado necessário)
