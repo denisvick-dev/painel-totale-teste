@@ -30,6 +30,8 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from streamlit_gsheets import GSheetsConnection
 
+from components.componentes import aplicar_estilo as aplicar_estilo_ds
+
 # ═══════════════════════════════════════════════════════
 # CONFIGURAÇÃO
 # ═══════════════════════════════════════════════════════
@@ -44,7 +46,14 @@ st.set_page_config(
 # ═══════════════════════════════════════════════════════
 # CSS CORPORATIVO
 # ═══════════════════════════════════════════════════════
-def aplicar_estilo() -> None:
+def _injetar_css_local() -> None:
+    """CSS específico do corpo da página.
+
+    v5.3.0: as regras de sidebar (fundo branco fixo e cor de título) foram
+    removidas — o sidebar é controlado pelo Design System TOTALE
+    (`components.componentes.aplicar_estilo`), que respeita o tema ativo
+    (Claro, Azul ou Laranja) escolhido no seletor de tema.
+    """
     st.markdown(
         """
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,19 +72,6 @@ def aplicar_estilo() -> None:
     .main .block-container {
         padding-top: 1.5rem;
         max-width: 1400px;
-    }
-
-    /* Sidebar Clean */
-    [data-testid="stSidebar"] {
-        background-color: #FFFFFF;
-        border-right: 1px solid #E2E8F0;
-    }
-    [data-testid="stSidebar"] h3 {
-        color: #0F172A !important;
-        font-size: 14px !important;
-        font-weight: 600 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
     }
 
     /* ═════════ HERO TOTALE (Azul e Laranja) ═════════ */
@@ -874,7 +870,9 @@ def aplicar_cor_horario(valor: Any) -> str:
 # APP PRINCIPAL
 # ═══════════════════════════════════════════════════════
 def main() -> None:
-    aplicar_estilo()
+    # Design System TOTALE (mantém a cor da sidebar escolhida no seletor de tema)
+    aplicar_estilo_ds()
+    _injetar_css_local()
 
     render_hero(
         titulo="Painel de Primeiro Atendimento",

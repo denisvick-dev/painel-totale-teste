@@ -3,8 +3,24 @@ components/componentes.py
 =========================
 Design System Streamlit — TOTALE
 
-Versão: 5.2.0
+Versão: 5.3.0
 Autor: TOTALE Tecnologia
+
+5.3.0 — Correção: o tema da sidebar deixou de ser resetado ao navegar entre páginas:
+• `aplicar_estilo()`, `aplicar_estilo_corp()` e `aplicar_sidebar_corp()`, quando
+  chamadas sem argumento, passam a reutilizar o tema ativo da sessão
+  (`_totale_sidebar_theme` / seletor de tema) em vez de voltarem para "claro".
+• Causa raiz: as páginas em `pages/*` chamam `aplicar_estilo()` no início da
+  execução (depois do entrypoint). Como o parâmetro tinha default `"claro"`, a
+  cor escolhida pelo usuário era sobrescrita e o sidebar "voltava ao branco" em
+  todas as páginas — ficava correto apenas na Home, que não reinjetava o CSS.
+• `_obter_tema_sidebar()` agora também consulta a chave do widget do seletor
+  (`_totale_sidebar_theme_select`) e o estado legado (`seletor_cor_sidebar`),
+  mantendo o widget e o CSS sempre sincronizados.
+• `aplicar_estilo()` sincroniza o seletor de tema via `definir_tema_sidebar()`,
+  para que o selectbox reflita o tema realmente aplicado.
+• Páginas que forçavam CSS próprio de sidebar (fundo branco/texto fixo) foram
+  alinhadas ao Design System: a cor do menu agora é sempre a do tema ativo.
 
 5.2.0 — Refinamento de cores e tipografia dos três temas de sidebar:
 • Paleta clara, navy e terracota com tokens semânticos para textos, navegação,
@@ -541,12 +557,25 @@ def definir_tema_sidebar(tema: TemaSidebarType | str) -> None:
 
 
 def _obter_tema_sidebar(tema_param: Any = None) -> TemaSidebarType:
-    """Obtém o tema da sidebar a partir do parâmetro explícito ou do session_state."""
+    """Obtém o tema da sidebar a partir do parâmetro explícito ou do session_state.
+
+    v5.3.0: além de `_totale_sidebar_theme`, consulta a chave do widget do
+    seletor (`_totale_sidebar_theme_select`) e o estado legado
+    (`seletor_cor_sidebar`/`tema_sidebar`). Sem isso, uma página que chama
+    `aplicar_estilo()` sem argumento reiniciava o sidebar no tema "claro".
+    """
     if tema_param is not None:
         return normalizar_tema_sidebar(tema_param)
-    return normalizar_tema_sidebar(
-        st.session_state.get("_totale_sidebar_theme", "claro")
-    )
+    for chave in (
+        "_totale_sidebar_theme",
+        "_totale_sidebar_theme_select",
+        "seletor_cor_sidebar",  # estado legado
+        "tema_sidebar",  # estado legado
+    ):
+        valor = st.session_state.get(chave)
+        if valor:
+            return normalizar_tema_sidebar(valor)
+    return "claro"
 
 
 def normalizar_tipo_badge(tipo: Any) -> TipoBadgeType:
@@ -2093,8 +2122,9 @@ class CSSInjector:
         )
 
     @staticmethod
-    def injetar(tema_sidebar: str = "claro") -> None:
-        tema_norm = normalizar_tema_sidebar(tema_sidebar)
+    def injetar(tema_sidebar: str | None = None) -> None:
+        # v5.3.0: sem tema explícito, usa o tema ativo da sessão (não "claro").
+        tema_norm = _obter_tema_sidebar(tema_sidebar)
         css_html = CSSInjector._build_css(tema_norm)
         _safe_render_html(css_html)
 
@@ -2129,23 +2159,38 @@ class CSSInjector:
         st.session_state["_totale_css_head_tema"] = tema_norm
 
 
-def aplicar_estilo(tema_sidebar: TemaSidebarType = "claro") -> None:
-    """Aplica o Design System TOTALE com suporte a 3 temas de sidebar ('claro', 'azul', 'laranja')."""
-    tema_norm = normalizar_tema_sidebar(tema_sidebar)
-    st.session_state["_totale_sidebar_theme"] = tema_norm
+def aplicar_estilo(tema_sidebar: TemaSidebarType | str | None = None) -> None:
+    """Aplica o Design System TOTALE com suporte a 3 temas de sidebar ('claro', 'azul', 'laranja').
+
+    v5.3.0: com `tema_sidebar=None` (default), mantém o tema ativo da sessão em
+    vez de voltar para "claro". Isso permite que qualquer página chame
+    `aplicar_estilo()` sem argumento — como fazem as páginas de `pages/*` — sem
+    apagar a cor do sidebar escolhida pelo usuário no seletor de tema.
+
+    Informe `tema_sidebar` apenas para forçar um tema específico.
+    """
+    tema_norm = _obter_tema_sidebar(tema_sidebar)
+    # Mantém seletor de tema, session_state e CSS apontando para a mesma cor.
+    definir_tema_sidebar(tema_norm)
     PlotlyConfig.configurar()
     FontInjector.injetar_no_head_pai()
     CSSInjector.injetar(tema_sidebar=tema_norm)
     NavContrastFix.injetar(cor="#FFFFFF", ativo=True)
 
 
-def aplicar_estilo_corp(tema_sidebar: TemaSidebarType = "claro") -> None:
-    """Alias corporativo de aplicar_estilo()."""
+def aplicar_estilo_corp(tema_sidebar: TemaSidebarType | str | None = None) -> None:
+    """Alias corporativo de aplicar_estilo().
+
+    v5.3.0: sem argumento, preserva o tema ativo da sidebar (antes fixava "claro").
+    """
     aplicar_estilo(tema_sidebar=tema_sidebar)
 
 
-def aplicar_sidebar_corp(tema: TemaSidebarType = "claro") -> None:
-    """Aplica tema de sidebar TOTALE ('claro', 'azul' ou 'laranja')."""
+def aplicar_sidebar_corp(tema: TemaSidebarType | str | None = None) -> None:
+    """Aplica tema de sidebar TOTALE ('claro', 'azul' ou 'laranja').
+
+    v5.3.0: sem argumento, preserva o tema ativo da sidebar (antes fixava "claro").
+    """
     aplicar_estilo(tema_sidebar=tema)
 
 

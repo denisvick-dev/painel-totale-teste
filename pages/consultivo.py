@@ -30,17 +30,13 @@ aplicar_estilo()
 st.markdown(
     """
     <style>
-    /* Estilo do SideBar Filtros Específicos */
+    /* Estilo do SideBar Filtros Específicos
+       v5.3.0: apenas tipografia/raio — cor, borda e foco vêm do Design System
+       TOTALE para respeitar o tema ativo (Claro, Azul ou Laranja). */
     [data-testid="stSidebar"] [data-testid="stDateInput"] input {
         border-radius: 8px !important;
-        border: 1.5px solid #CBD5E1 !important;
         font-weight: 600 !important;
-        color: #012869 !important;
         font-size: 13px !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stDateInput"] input:focus {
-        border-color: #F37C04 !important;
-        box-shadow: 0 0 0 3px rgba(243, 124, 4, 0.15) !important;
     }
     [data-testid="stSidebar"] [data-testid="stRadio"] label {
         font-size: 13px !important;
