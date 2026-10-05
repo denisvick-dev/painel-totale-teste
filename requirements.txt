@@ -1,4 +1,8 @@
-streamlit
+# Piso 1.52: primeiro release em que `width="stretch"` (substituto de
+# use_container_width, removido após 2025-12-31) existe em st.plotly_chart,
+# st.altair_chart, st.button, st.download_button, st.form_submit_button,
+# st.page_link, st.dataframe e st.image — validado com AppTest.
+streamlit>=1.52
 pandas
 openpyxl
 plotly

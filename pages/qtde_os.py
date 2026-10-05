@@ -36,14 +36,11 @@ from components.componentes import (
 # ====================================================
 # 1. CONFIGURAÇÃO DA PÁGINA
 # ====================================================
-try:
-    st.set_page_config(
-        page_title="Central de Performance | O.S.",
-        page_icon="⚡",
-        layout="wide",
-    )
-except Exception:
-    pass
+st.set_page_config(
+    page_title="Central de Performance | O.S.",
+    page_icon="⚡",
+    layout="wide",
+)
 
 aplicar_estilo()
 
@@ -606,7 +603,7 @@ class Componentes:
             height=300,
             font=dict(family=Fontes.TEXTO),
         )
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
     @staticmethod
     def visao_supervisor(df_sup: pd.DataFrame) -> None:
@@ -682,7 +679,7 @@ class Componentes:
                 font=dict(family=Fontes.TEXTO),
             )
             st.plotly_chart(
-                fig, use_container_width=True, config={"displayModeBar": False}
+                fig, width="stretch", config={"displayModeBar": False}
             )
 
     @staticmethod
@@ -738,7 +735,7 @@ class Componentes:
                 font=dict(family=Fontes.TEXTO),
             )
             st.plotly_chart(
-                fig, use_container_width=True, config={"displayModeBar": False}
+                fig, width="stretch", config={"displayModeBar": False}
             )
 
     @staticmethod

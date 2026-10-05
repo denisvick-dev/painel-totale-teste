@@ -883,7 +883,7 @@ def main() -> None:
     with st.sidebar:
         st.markdown("### ⚙️ Painel de Controle")
 
-        if st.button("🔄 Reiniciar Aplicação", use_container_width=True):
+        if st.button("🔄 Reiniciar Aplicação", width="stretch"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.cache_data.clear()
@@ -1190,7 +1190,7 @@ def main() -> None:
 
         st.dataframe(
             styled_tec,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             height=400,
             column_config={
@@ -1215,7 +1215,7 @@ def main() -> None:
                 data=gerar_excel(df_exibir_tec, "Ranking_Tecnicos"),
                 file_name=f"ranking_tecnicos_{timestamp}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
+                width="stretch",
             )
         with col_dl2:
             csv_t = df_exibir_tec.to_csv(
@@ -1226,7 +1226,7 @@ def main() -> None:
                 data=csv_t,
                 file_name=f"ranking_tecnicos_{timestamp}.csv",
                 mime="text/csv",
-                use_container_width=True,
+                width="stretch",
             )
 
         # ─────────────────────────────────────────────────
@@ -1293,7 +1293,7 @@ def main() -> None:
 
             st.dataframe(
                 styled_mon,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 height="auto",
                 column_config={
@@ -1327,7 +1327,7 @@ def main() -> None:
                     data=gerar_excel(df_exibir_mon, "Ranking_Monitores"),
                     file_name=f"ranking_monitores_{timestamp}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
+                    width="stretch",
                 )
             with col_dm2:
                 csv_m = df_exibir_mon.to_csv(
@@ -1338,7 +1338,7 @@ def main() -> None:
                     data=csv_m,
                     file_name=f"ranking_monitores_{timestamp}.csv",
                     mime="text/csv",
-                    use_container_width=True,
+                    width="stretch",
                 )
 
     # ─────────────────────────────────────────────────
@@ -1445,7 +1445,7 @@ def main() -> None:
     df_exibir = df_filtrado[colunas_prio + outras].copy()
 
     with st.spinner("Montando tabela de pendentes..."):
-        st.dataframe(df_exibir, use_container_width=True, hide_index=True, height=500)
+        st.dataframe(df_exibir, width="stretch", hide_index=True, height=500)
 
     # Exportação
     render_section("📥", "Exportar Lista para Rota")
@@ -1459,7 +1459,7 @@ def main() -> None:
             data=gerar_excel(df_exibir, "Pendentes_Rota"),
             file_name=f"rota_pendentes_{timestamp}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
+            width="stretch",
             type="primary",
         )
 
@@ -1472,7 +1472,7 @@ def main() -> None:
             data=csv,
             file_name=f"rota_pendentes_{timestamp}.csv",
             mime="text/csv",
-            use_container_width=True,
+            width="stretch",
         )
 
     with col_info:

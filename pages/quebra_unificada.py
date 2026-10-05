@@ -1239,7 +1239,7 @@ def _sub_visao_geral(segmento, df_seg, m_seg, p_ot, p_base, p_pess, sla_meta):
             legend=dict(orientation="h"),
         )
         st.plotly_chart(
-            fig_pie, use_container_width=True, config={"displayModeBar": False}
+            fig_pie, width="stretch", config={"displayModeBar": False}
         )
     with col_gauge:
         cor_bar = "#EF4444" if m_seg["quebra_atual"] > sla_meta else "#10B981"
@@ -1273,7 +1273,7 @@ def _sub_visao_geral(segmento, df_seg, m_seg, p_ot, p_base, p_pess, sla_meta):
             )
         )
         fig.update_layout(height=280, margin=dict(t=40, b=10, l=20, r=20))
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
     st.markdown("")
     render_section("📈 Projeções de Fechamento")
@@ -1320,7 +1320,7 @@ def _sub_visao_geral(segmento, df_seg, m_seg, p_ot, p_base, p_pess, sla_meta):
                 fig_line.add_hline(y=sla_meta, line_dash="dash", line_color="#DC2626")
                 fig_line.update_layout(yaxis_tickformat=".1%", height=300)
                 st.plotly_chart(
-                    fig_line, use_container_width=True, config={"displayModeBar": False}
+                    fig_line, width="stretch", config={"displayModeBar": False}
                 )
         except Exception:
             pass
@@ -1466,7 +1466,7 @@ def _sub_causa_raiz(segmento, df_seg):
         xaxis=dict(tickangle=-30),
         margin=dict(t=60, b=160),
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
     if _COL_REGIAO in df_seg.columns and col_baixa:
         try:
@@ -1485,7 +1485,7 @@ def _sub_causa_raiz(segmento, df_seg):
             )
             fig_reg.update_layout(yaxis_tickformat=".1%", height=320)
             st.plotly_chart(
-                fig_reg, use_container_width=True, config={"displayModeBar": False}
+                fig_reg, width="stretch", config={"displayModeBar": False}
             )
         except Exception:
             pass
@@ -1541,7 +1541,7 @@ def _sub_tecnicos(segmento, df_seg, p_ot, p_base, p_pess, min_aloc, top_n, sla_m
             xaxis_tickformat=".1%",
             height=max(360, len(df_plot) * 42),
         )
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
 
 def _sub_plano_acao(segmento, df_seg, p_base, sla_meta):
@@ -1659,14 +1659,14 @@ def _sub_pendentes(segmento, df_seg):
         Utils.gerar_excel(df_view, "Filtrado"),
         f"pendentes_{_slug(segmento)}_filtrado.xlsx",
         key=f"dl_pend_f_{segmento}",
-        use_container_width=True,
+        width="stretch",
     )
     c2.download_button(
         "📥 Completo",
         Utils.gerar_excel(df_pend, "Completo"),
         f"pendentes_{_slug(segmento)}_completo.xlsx",
         key=f"dl_pend_c_{segmento}",
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -1725,7 +1725,7 @@ def _sub_sem_registro(segmento, df_seg):
         Utils.gerar_excel(df_view, "Sem_Registro"),
         f"sem_registro_{_slug(segmento)}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
         key=f"dl_sr_{segmento}",
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -1790,7 +1790,7 @@ def _sub_comparativo(df_full, sla_meta, p_base, p_ot, p_pess):
         annotation_text=f"Meta {sla_meta:.0%}",
     )
     fig.update_layout(barmode="group", yaxis_tickformat=".1%", height=380)
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
     render_table_html(
         df_comp,
         fmt={
@@ -1821,7 +1821,7 @@ def _sub_comparativo(df_full, sla_meta, p_base, p_ot, p_pess):
             )
             fig_h.update_layout(height=320)
             st.plotly_chart(
-                fig_h, use_container_width=True, config={"displayModeBar": False}
+                fig_h, width="stretch", config={"displayModeBar": False}
             )
         except Exception:
             pass
@@ -1912,9 +1912,9 @@ def main():
         top_n = int(top_n)
         st.divider()
         with st.expander("⚙️ Sistema", expanded=False):
-            if st.button("🔄 Reiniciar", use_container_width=True):
+            if st.button("🔄 Reiniciar", width="stretch"):
                 st.rerun()
-            if st.button("🗑️ Limpar Cache", use_container_width=True):
+            if st.button("🗑️ Limpar Cache", width="stretch"):
                 st.cache_data.clear()
                 st.cache_resource.clear()
                 st.success("Cache limpo!")
@@ -1956,7 +1956,7 @@ def main():
                 "⚙️ Gerar PDF Comparativo",
                 key="gen_pdf_todos",
                 type="primary",
-                use_container_width=True,
+                width="stretch",
             ):
                 with st.spinner("Gerando PDF Comparativo..."):
                     try:
@@ -1973,7 +1973,7 @@ def main():
                     f"comparativo_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
                     "application/pdf",
                     key="dl_pdf_todos",
-                    use_container_width=True,
+                    width="stretch",
                 )
         st.divider()
         t1, t2, t3, t4, t5 = st.tabs(
@@ -2034,7 +2034,7 @@ def main():
             f"⚙️ Gerar PDF — {segmento}",
             key=f"gen_pdf_{segmento}",
             type="primary",
-            use_container_width=True,
+            width="stretch",
         ):
             with st.spinner("Gerando PDF..."):
                 try:
@@ -2051,7 +2051,7 @@ def main():
                 f"relatorio_{_slug(segmento)}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
                 "application/pdf",
                 key=f"dl_pdf_{segmento}",
-                use_container_width=True,
+                width="stretch",
             )
     with col_desc:
         render_insight(

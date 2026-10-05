@@ -19,10 +19,11 @@ from components.componentes import (
 # ====================================================
 # BLOCO 1: CONFIGURAÇÕES E INICIALIZAÇÃO
 # ====================================================
-try:
-    st.set_page_config(page_title="Total de Consultivos", page_icon="📋", layout="wide")
-except Exception:
-    pass
+# `st.set_page_config` aceita chamadas aditivas (o entrypoint define o padrão e
+# cada página ajusta título/ícone). O try/except antigo só escondia erros reais
+# de digitação nos argumentos; o piso de versão (streamlit>=1.52) garante o
+# suporte a múltiplas chamadas.
+st.set_page_config(page_title="Total de Consultivos", page_icon="📋", layout="wide")
 
 aplicar_estilo()
 
@@ -545,7 +546,7 @@ if "DATA" in df.columns and df["DATA"].notna().any():
     st.sidebar.button(
         "📅 Dia vigente",
         key="botao_dia_vigente",
-        use_container_width=True,
+        width="stretch",
         on_click=aplicar_dia_vigente,
     )
 
@@ -765,7 +766,7 @@ with aba1:
                     title="Top 10 Consultivos (Real)",
                     color_discrete_sequence=["#0EA5E9"],
                 ),
-                use_container_width=True,
+                width="stretch",
             )
     with g2:
         df_disp = df_exibir[df_exibir["Total Consultivos"] > 0]
@@ -779,7 +780,7 @@ with aba1:
                     title="Matriz: Consultivos x Produtos",
                     color_discrete_sequence=px.colors.qualitative.Prism,
                 ),
-                use_container_width=True,
+                width="stretch",
             )
 
 with aba2:
@@ -806,7 +807,7 @@ if tipo_exp == "CSV":
         df_exibir.to_csv(index=False, encoding="utf-8-sig", decimal=","),
         "relatorio_consultivos.csv",
         "text/csv",
-        use_container_width=True,
+        width="stretch",
     )
 else:
     out = BytesIO()
@@ -817,5 +818,5 @@ else:
         out.getvalue(),
         "relatorio_consultivos.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True,
+        width="stretch",
     )

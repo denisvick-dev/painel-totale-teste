@@ -959,7 +959,7 @@ with st.expander("🔧 Mapeamento de colunas detectado"):
                 ],
             }
         ).fillna("— não encontrada —"),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
@@ -1212,7 +1212,7 @@ else:
                 mime=(
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 ),
-                use_container_width=True,
+                width="stretch",
                 type="primary",
             )
         except Exception as e:
@@ -1227,7 +1227,7 @@ else:
             data=csv_bytes,
             file_name=f"retornos_auditoria_{sufixo}.csv",
             mime="text/csv",
-            use_container_width=True,
+            width="stretch",
         )
 
 # ==========================================================

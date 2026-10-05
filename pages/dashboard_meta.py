@@ -145,7 +145,7 @@ except ImportError:
     render_sidebar_section = lambda *a, **k: st.sidebar.header(a[0] if a else "")
     render_sidebar_spacer = _noop
     render_sidebar_status = lambda **k: st.sidebar.success(k.get("status", "OK"))
-    render_table_html = lambda df, **k: st.dataframe(df, use_container_width=True)
+    render_table_html = lambda df, **k: st.dataframe(df, width="stretch")
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -256,7 +256,7 @@ def render_botao_exportacao(df: pd.DataFrame, nome_arquivo: str) -> None:
         data=converter_para_excel(df),
         file_name=f"{nome_arquivo}_{hoje_tz.strftime('%Y%m%d')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True,
+        width="stretch",
         key=f"export_{nome_arquivo}",
     )
 
@@ -1476,7 +1476,7 @@ if isinstance(raw_filtro_datas, (tuple, list)):
 elif isinstance(raw_filtro_datas, date):
     _filtro_datas_safe = (raw_filtro_datas, raw_filtro_datas)
 render_sidebar_divider(espacamento="medio")
-if st.sidebar.button("Atualizar bases", use_container_width=True):
+if st.sidebar.button("Atualizar bases", width="stretch"):
     st.cache_data.clear()
     st.cache_resource.clear()
     st.rerun()
@@ -1712,7 +1712,7 @@ _cenario_styler = (
 st.dataframe(
     _cenario_styler,
     hide_index=True,
-    use_container_width=True,
+    width="stretch",
     height=185,
 )
 

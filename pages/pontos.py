@@ -1242,7 +1242,7 @@ with aba_ranking:
             data=Utilitarios.exportar_excel(df_exibir),
             file_name=nome_arq,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
+            width="stretch",
         )
     with col_dl2:
         # FIX: separador ";" + decimal "," (padrão que o Excel pt-BR abre
@@ -1255,7 +1255,7 @@ with aba_ranking:
             ).encode("utf-8-sig"),
             file_name=nome_arq.replace(".xlsx", ".csv"),
             mime="text/csv",
-            use_container_width=True,
+            width="stretch",
         )
 
     st.markdown(
@@ -1299,7 +1299,7 @@ with aba_executivo:
             df_saude = ProcessamentoDados.calcular_saude_operacao(ranking)
             st.plotly_chart(
                 Graficos.rosca(df_saude, "Status", "count"),
-                use_container_width=True,
+                width="stretch",
                 key="graf_saude",
             )
         with c_e2:
@@ -1310,7 +1310,7 @@ with aba_executivo:
             else:
                 st.plotly_chart(
                     Graficos.barras_horizontal(df_sup, "Media_por_Equipe", "Supervisor"),
-                    use_container_width=True,
+                    width="stretch",
                     key="graf_sup",
                 )
 
@@ -1345,7 +1345,7 @@ with aba_evolucao:
 
             st.plotly_chart(
                 Graficos.linhas(df_ag, col_data, "Pontos Acumulados", "Nome Equipe"),
-                use_container_width=True,
+                width="stretch",
                 key="graf_linha",
             )
             st.caption(

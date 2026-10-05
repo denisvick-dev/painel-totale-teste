@@ -378,10 +378,10 @@ def render_status_operacional(info_base: dict[str, Any]) -> None:
                     "pages/envio_excel.py",
                     label="🔁 Sincronizar Bases Agora",
                     icon="📥",
-                    use_container_width=True,
+                    width="stretch",
                 )
             except Exception:
-                if st.button("🔁 Ir para Atualização", use_container_width=True):
+                if st.button("🔁 Ir para Atualização", width="stretch"):
                     st.info("Navegue até 'Atualização de Dados' no menu lateral.")
     else:
         render_insight(
@@ -433,7 +433,7 @@ def render_modulos_principais() -> None:
                 "pages/qtde_os.py",
                 label="Abrir Painel de O.S.",
                 icon="⚡",
-                use_container_width=True,
+                width="stretch",
             )
         except Exception:
             pass
@@ -467,7 +467,7 @@ def render_modulos_principais() -> None:
                 "pages/dashboard_meta.py",
                 label="Abrir Metas Operacionais",
                 icon="🎯",
-                use_container_width=True,
+                width="stretch",
             )
         except Exception:
             pass
@@ -501,7 +501,7 @@ def render_modulos_principais() -> None:
                 "pages/gestao_ativos.py",
                 label="Abrir Gestão de Ativos",
                 icon="👷",
-                use_container_width=True,
+                width="stretch",
             )
         except Exception:
             pass

@@ -1120,11 +1120,11 @@ def renderizar_robo_local(
         st.sidebar.error(f"❌ {erro}")
         c_a, c_b = st.sidebar.columns(2)
         with c_a:
-            if st.button("🧹 Limpar", key="limpar_erro_robo", use_container_width=True):
+            if st.button("🧹 Limpar", key="limpar_erro_robo", width="stretch"):
                 st.session_state.pop("robo_erro", None)
                 _rerun_aplicacao()
         with c_b:
-            if st.button("🔄 Retentar", key="retry_erro_robo", use_container_width=True):
+            if st.button("🔄 Retentar", key="retry_erro_robo", width="stretch"):
                 st.session_state.pop("robo_erro", None)
                 st.session_state["robo_candidato_sig"] = None
                 st.session_state["robo_processado_sig"] = None

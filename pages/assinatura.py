@@ -403,7 +403,7 @@ with col2:
         )
 
         st.markdown('<div class="preview-container">', unsafe_allow_html=True)
-        st.image(img_final, use_container_width=True)
+        st.image(img_final, width="stretch")
         st.markdown("</div>", unsafe_allow_html=True)
 
         if modo_debug:
@@ -454,7 +454,7 @@ with col2:
             data=buffer,
             file_name=f"assinatura_totale_{nome_slug}.{extensao}",
             mime=f"image/{extensao}",
-            use_container_width=True,
+            width="stretch",
             type="primary",
             disabled=not campos_ok,
         )

@@ -1070,7 +1070,7 @@ def render_barras_ranking(df: pd.DataFrame, col_nome: str, meta: float) -> None:
             .properties(height=240)
             .configure(background="transparent")
             .configure_view(strokeWidth=0),
-            use_container_width=True,
+            width="stretch",
         )
     except Exception:
         st.bar_chart(plot.set_index(col_nome)[["Realizado"]], height=240)
@@ -1117,7 +1117,7 @@ def render_evolucao(df_daily: pd.DataFrame, meta: float, titulo: str) -> None:
             .properties(height=280)
             .configure(background="transparent")
             .configure_view(strokeWidth=0),
-            use_container_width=True,
+            width="stretch",
         )
     except Exception:
         st.line_chart(plot.set_index("Data")[["Realizado"]], height=280)
@@ -1168,7 +1168,7 @@ def render_evolucao_consolidada(long_df: pd.DataFrame, metas: List[float]) -> No
             .configure(background="transparent")
             .configure_view(strokeWidth=0)
             .configure_legend(orient="bottom"),
-            use_container_width=True,
+            width="stretch",
         )
     except Exception:
         pivot = plot.pivot_table(
@@ -2161,7 +2161,7 @@ def renderizar_visao_tecnicos(resultados: Dict[str, Dict[str, Any]]) -> None:
             ]
             df_erros_visualizar = df_erros_consol[colunas_limpas].copy()
 
-            st.dataframe(df_erros_visualizar, use_container_width=True)
+            st.dataframe(df_erros_visualizar, width="stretch")
 
             csv_data = df_erros_visualizar.to_csv(
                 index=False, sep=";", decimal=","
@@ -2580,7 +2580,7 @@ with st.sidebar:
     st.caption(
         f"Vínculo de logins: {pct_vinculo:.1f}% ({fmt_int(vinculo_total - vinculo_sem)} de {fmt_int(vinculo_total)})"
     )
-    if st.button("🔄 Atualizar bases", use_container_width=True):
+    if st.button("🔄 Atualizar bases", width="stretch"):
         st.cache_data.clear()
         st.rerun()
 

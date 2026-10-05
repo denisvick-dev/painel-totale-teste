@@ -1031,13 +1031,13 @@ class UI:
         processar = col1.button(
             "🚀 Processar bases",
             type="primary",
-            use_container_width=True,
+            width="stretch",
             key="btn_processar",
         )
         if col2.button(
             "🔄 Reiniciar painel",
             type="secondary",
-            use_container_width=True,
+            width="stretch",
             key="btn_reiniciar",
         ):
             UI.reiniciar_painel()
@@ -1114,7 +1114,7 @@ class UI:
             data=Visualization.gerar_excel(df_final),
             file_name="rota_geral.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
+            width="stretch",
         )
 
     @staticmethod
@@ -1220,19 +1220,19 @@ class UI:
         with g1:
             st.plotly_chart(
                 Visualization.grafico_participacao(df_bases),
-                use_container_width=True,
+                width="stretch",
                 config={"displayModeBar": False},
             )
         with g2:
             st.plotly_chart(
                 Visualization.grafico_comparativo_medias(df_bases),
-                use_container_width=True,
+                width="stretch",
                 config={"displayModeBar": False},
             )
 
         st.plotly_chart(
             Visualization.grafico_heatmap(df_bases),
-            use_container_width=True,
+            width="stretch",
             config={"displayModeBar": False},
         )
 

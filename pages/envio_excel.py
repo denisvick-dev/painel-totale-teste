@@ -61,7 +61,7 @@ def _kpi_fb(
 
 
 def _tabela_fb(df: object, **_k: object) -> None:
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
 
 def _hero_fb(**k: object) -> None:
@@ -847,7 +847,7 @@ def _painel_dados(intervalo_seg: int) -> None:
     with col_btn:
         clicou = st.button(
             "🔄 Sincronizar Agora",
-            use_container_width=True,
+            width="stretch",
             type="primary",
             key="btn_sincronizar_dados",
         )
@@ -993,14 +993,11 @@ def _painel_fragmento() -> None:
 
 
 def _rodar() -> None:
-    try:
-        st.set_page_config(
-            page_title="Atualização de Dados | TOTALE",
-            page_icon="🔁",
-            layout="wide",
-        )
-    except Exception:
-        pass
+    st.set_page_config(
+        page_title="Atualização de Dados | TOTALE",
+        page_icon="🔁",
+        layout="wide",
+    )
     aplicar_estilo()
 
     with st.sidebar:

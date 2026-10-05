@@ -583,7 +583,7 @@ def view_cadastro(svc, usr):
         )
         sit = c2.selectbox("Situação", Config.SITS_ATIVAS, key="cad_situacao")
         ok = st.form_submit_button(
-            "💾 Salvar", type="primary", use_container_width=True
+            "💾 Salvar", type="primary", width="stretch"
         )
 
     if ok:
@@ -662,7 +662,7 @@ def tela_login():
             u = st.text_input("👤 Usuário")
             p = st.text_input("🔑 Senha", type="password")
             ok = st.form_submit_button(
-                "Entrar →", type="primary", use_container_width=True
+                "Entrar →", type="primary", width="stretch"
             )
         if ok:
             chave = Safe.lower(str(u))
@@ -696,10 +696,10 @@ def tela_principal():
     st.sidebar.markdown("---")
 
     # Botões de ação
-    if st.sidebar.button("🔄 Sincronizar Dados", use_container_width=True):
+    if st.sidebar.button("🔄 Sincronizar Dados", width="stretch"):
         st.cache_data.clear()
         st.rerun()
-    if st.sidebar.button("🚪 Sair", use_container_width=True):
+    if st.sidebar.button("🚪 Sair", width="stretch"):
         st.session_state.update({"autenticado": False, "usuario": None})
         st.rerun()
 

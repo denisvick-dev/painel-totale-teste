@@ -2289,7 +2289,7 @@ def render_sidebar_brand(
     with st.sidebar:
         logo_valida = bool(logo_final and Validadores.url(str(logo_final)))
         if logo_valida:
-            st.image(str(logo_final), use_container_width=True)
+            st.image(str(logo_final), width="stretch")
 
         badge_html = ""
         if versao_final:
@@ -3522,7 +3522,7 @@ def render_table_html(
                     data=buffer.getvalue(),
                     file_name=f"{nome_arquivo}_{_agora_br().strftime('%Y%m%d_%H%M')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
+                    width="stretch",
                     help="Exportar relatório atual",
                 )
         except Exception as exc:

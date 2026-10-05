@@ -169,7 +169,7 @@ def render_table_html(df: pd.DataFrame, **kwargs: Any) -> None:
     if _component_table_html is not None:
         _component_table_html(df, **kwargs)
         return
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
 
 
 def render_insight(
@@ -1777,7 +1777,7 @@ def render_bloco_importacao_robo(dados_prontos: bool = False) -> bool:
     return st.button(
         "🔄 Atualizar Relatório",
         type="primary",
-        use_container_width=True,
+        width="stretch",
         key="btn_atualizar_relatorio",
     )
 
@@ -1987,7 +1987,7 @@ def view_resumo_executivo(df: pd.DataFrame, meta_sla: float) -> None:
         data=Utils.gerar_excel(matriz, "Matriz_Resumo"),
         file_name="Matriz_Resumo_Quebra.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -2150,7 +2150,7 @@ def view_auditoria(df: pd.DataFrame) -> None:
         dist.columns = ["Segmento", "Registros"]
         total = len(df)
         dist["%"] = (dist["Registros"] / total * 100).round(1).astype(str) + "%"
-        st.dataframe(dist, hide_index=True, use_container_width=True)
+        st.dataframe(dist, hide_index=True, width="stretch")
 
         nd_count = (
             dist[dist["Segmento"] == "Novos Domicílios"]["Registros"].sum()
@@ -2212,7 +2212,7 @@ def view_auditoria(df: pd.DataFrame) -> None:
                 st.code(df[col_hab].dropna().astype(str).unique()[:15].tolist())
 
     with st.expander("Visualizar amostra da base processada", expanded=False):
-        st.dataframe(df.head(200), use_container_width=True, hide_index=True)
+        st.dataframe(df.head(200), width="stretch", hide_index=True)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -2287,12 +2287,12 @@ def main() -> None:
                 st.error(f"Erro ao processar base de ativos: {erro}")
 
         if st.button(
-            "🔄 Reiniciar Aplicação", use_container_width=True, type="secondary"
+            "🔄 Reiniciar Aplicação", width="stretch", type="secondary"
         ):
             _limpar_estado_aplicacao(limpar_ativos=True)
             st.cache_data.clear()
             st.rerun()
-        if st.button("🗑️ Limpar Cache", use_container_width=True, type="secondary"):
+        if st.button("🗑️ Limpar Cache", width="stretch", type="secondary"):
             _limpar_estado_aplicacao(limpar_ativos=True)
             st.cache_data.clear()
             st.rerun()
