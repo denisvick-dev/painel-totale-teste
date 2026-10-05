@@ -3,8 +3,15 @@ components/componentes.py
 =========================
 Design System Streamlit — TOTALE
 
-Versão: 5.1.0
+Versão: 5.2.0
 Autor: TOTALE Tecnologia
+
+5.2.0 — Refinamento de cores e tipografia dos três temas de sidebar:
+• Paleta clara, navy e terracota com tokens semânticos para textos, navegação,
+  estados hover/ativo, inputs, foco e cards; contraste revisado para WCAG AA.
+• CSS dos temas integrado ao refinamento por tokens, preservando controles,
+  scrollbars, estados desabilitados e estilos estruturais existentes.
+• Hierarquia de cor restaurada no card de usuário (nome, cargo e e-mail).
 
 5.1.0 — Refino visual da navegação nos 3 temas de sidebar (baseado em feedback
 das telas reais do portal):
@@ -345,77 +352,97 @@ class ConfigCores:
     # (ver: verificar_contrastes_sidebar / CLI `python components/componentes.py`).
     SIDEBAR: dict[str, dict[str, str]] = {
         "claro": {
-            "fundo": "linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 50%, #F1F5F9 100%)",
-            # base inferior do gradiente: #F1F5F9 (usado nos testes de contraste)
+            "fundo": "linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 52%, #F1F5F9 100%)",
             "fundo_base": "#F1F5F9",
-            "borda": "#E2E8F0",
-            "texto_primario": "#011E52",
-            "texto_secundario": "#475569",
-            "icone": "#475569",
+            "borda": "#D8E1EC",
+            "texto_primario": "#102A43",
+            "texto_secundario": "#40536B",
+            "texto_muted": "#52657D",
+            "texto_acento": "#9A3412",
+            "icone": "#52657D",
+            "nav_secao": "#52657D",
             "card_fundo": "#FFFFFF",
-            "card_borda": "#E2E8F0",
+            "card_borda": "#D8E1EC",
             "nav_ativo_fundo": "#012869",
             "nav_ativo_texto": "#FFFFFF",
+            "nav_ativo_borda": "#0B2440",
+            "nav_ativo_acento": "#F37C04",
             "nav_passivo_texto": "#334155",
-            "nav_passivo_hover_texto": "#011E52",
+            "nav_passivo_hover_texto": "#0B2440",
+            "nav_passivo_hover_fundo": "#E7EEF7",
             "botao_fundo": "#F8FAFC",
-            "botao_texto": "#011E52",
-            "botao_hover_fundo": "#011E52",
+            "botao_texto": "#102A43",
+            "botao_hover_fundo": "#0B2440",
             "botao_hover_texto": "#FFFFFF",
             "input_fundo": "#FFFFFF",
-            "input_texto": "#0F172A",
-            "input_borda": "#78879E",
+            "input_texto": "#102A43",
+            "input_borda": "#718096",
             "input_focus": "#C2410C",
+            "input_focus_ring": "rgba(194, 65, 12, 0.24)",
             "foco": "#C2410C",
             "accent_topo": "linear-gradient(90deg, #012869 0%, #0A48AA 65%, #F37C04 100%)",
         },
         "azul": {
-            "fundo": "linear-gradient(180deg, #020C1B 0%, #061730 45%, #0B254A 100%)",
-            "fundo_base": "#0B254A",
-            "borda": "rgba(255, 255, 255, 0.10)",
-            "texto_primario": "#FFFFFF",
-            "texto_secundario": "#CBD5E1",
-            "icone": "#94A3B8",
-            "card_fundo": "rgba(255, 255, 255, 0.035)",
-            "card_borda": "rgba(255, 255, 255, 0.10)",
-            "nav_ativo_fundo": "linear-gradient(90deg, rgba(10, 72, 170, 0.45) 0%, rgba(10, 72, 170, 0.10) 100%)",
+            "fundo": "linear-gradient(180deg, #061426 0%, #0B1E35 47%, #112B4A 100%)",
+            "fundo_base": "#112B4A",
+            "borda": "rgba(255, 255, 255, 0.13)",
+            "texto_primario": "#F8FAFC",
+            "texto_secundario": "#D4DFEB",
+            "texto_muted": "#A9BDD3",
+            "texto_acento": "#FDBA74",
+            "icone": "#AFC5DC",
+            "nav_secao": "#9FB2C9",
+            "card_fundo": "rgba(255, 255, 255, 0.055)",
+            "card_borda": "rgba(255, 255, 255, 0.14)",
+            "nav_ativo_fundo": "linear-gradient(90deg, rgba(10, 72, 170, 0.50) 0%, rgba(10, 72, 170, 0.16) 100%)",
             "nav_ativo_texto": "#FFFFFF",
-            "nav_passivo_texto": "#CBD5E1",
+            "nav_ativo_borda": "rgba(253, 186, 116, 0.24)",
+            "nav_ativo_acento": "#FDBA74",
+            "nav_passivo_texto": "#D7E2EF",
             "nav_passivo_hover_texto": "#FFFFFF",
-            "botao_fundo": "rgba(255, 255, 255, 0.07)",
+            "nav_passivo_hover_fundo": "rgba(255, 255, 255, 0.085)",
+            "botao_fundo": "rgba(255, 255, 255, 0.085)",
             "botao_texto": "#FFFFFF",
             "botao_hover_fundo": "#C2410C",
             "botao_hover_texto": "#FFFFFF",
-            "input_fundo": "rgba(255, 255, 255, 0.05)",
+            "input_fundo": "rgba(255, 255, 255, 0.06)",
             "input_texto": "#FFFFFF",
-            "input_borda": "rgba(255, 255, 255, 0.42)",
-            "input_focus": "#F37C04",
-            "foco": "#F37C04",
-            "accent_topo": "linear-gradient(90deg, #F37C04 0%, #FB923C 100%)",
+            "input_borda": "rgba(255, 255, 255, 0.48)",
+            "input_focus": "#FDBA74",
+            "input_focus_ring": "rgba(253, 186, 116, 0.28)",
+            "foco": "#FDBA74",
+            "accent_topo": "linear-gradient(90deg, #F37C04 0%, #FDBA74 100%)",
         },
         "laranja": {
-            "fundo": "linear-gradient(180deg, #160702 0%, #2A0F04 40%, #3E1606 75%, #541E09 100%)",
-            "fundo_base": "#541E09",
-            "borda": "rgba(243, 124, 4, 0.22)",
-            "texto_primario": "#FFFFFF",
-            "texto_secundario": "#FFEDD5",
-            "icone": "#FED7AA",
+            "fundo": "linear-gradient(180deg, #1B0A04 0%, #2E1207 40%, #451B0A 75%, #5A260F 100%)",
+            "fundo_base": "#5A260F",
+            "borda": "rgba(255, 196, 150, 0.26)",
+            "texto_primario": "#FFF9F3",
+            "texto_secundario": "#FFE6CC",
+            "texto_muted": "#F1C79F",
+            "texto_acento": "#FFD09A",
+            "icone": "#FFD1A3",
+            "nav_secao": "#FFD3A6",
             "card_fundo": "rgba(0, 0, 0, 0.22)",
-            "card_borda": "rgba(255, 255, 255, 0.12)",
-            "nav_ativo_fundo": "linear-gradient(90deg, rgba(243, 124, 4, 0.36) 0%, rgba(243, 124, 4, 0.10) 100%)",
+            "card_borda": "rgba(255, 255, 255, 0.16)",
+            "nav_ativo_fundo": "linear-gradient(90deg, rgba(243, 124, 4, 0.42) 0%, rgba(243, 124, 4, 0.14) 100%)",
             "nav_ativo_texto": "#FFFFFF",
-            "nav_passivo_texto": "#FED7AA",
+            "nav_ativo_borda": "rgba(255, 205, 157, 0.30)",
+            "nav_ativo_acento": "#FFD09A",
+            "nav_passivo_texto": "#FFE4C7",
             "nav_passivo_hover_texto": "#FFFFFF",
+            "nav_passivo_hover_fundo": "rgba(255, 255, 255, 0.09)",
             "botao_fundo": "rgba(255, 255, 255, 0.10)",
             "botao_texto": "#FFFFFF",
             "botao_hover_fundo": "#011838",
             "botao_hover_texto": "#FFFFFF",
-            "input_fundo": "rgba(0, 0, 0, 0.24)",
+            "input_fundo": "rgba(0, 0, 0, 0.22)",
             "input_texto": "#FFFFFF",
-            "input_borda": "rgba(255, 255, 255, 0.42)",
-            "input_focus": "#F37C04",
-            "foco": "#F37C04",
-            "accent_topo": "linear-gradient(90deg, #F37C04 0%, #FFB067 60%, #FFFFFF 100%)",
+            "input_borda": "rgba(255, 255, 255, 0.52)",
+            "input_focus": "#FFD09A",
+            "input_focus_ring": "rgba(255, 208, 154, 0.28)",
+            "foco": "#FFD09A",
+            "accent_topo": "linear-gradient(90deg, #F37C04 0%, #FFD09A 60%, #FFF9F3 100%)",
         },
     }
 
@@ -819,6 +846,20 @@ def verificar_contrastes_sidebar(
                 minimo,
                 False,
             ),
+            (
+                "texto auxiliar vs fundo",
+                pal.get("texto_muted", ""),
+                fundo,
+                minimo,
+                False,
+            ),
+            (
+                "título de seção vs fundo",
+                pal.get("nav_secao", ""),
+                fundo,
+                minimo,
+                False,
+            ),
             ("ícone vs fundo", pal.get("icone", ""), fundo, minimo, False),
             (
                 "nav passivo vs fundo",
@@ -831,6 +872,13 @@ def verificar_contrastes_sidebar(
                 "nav passivo hover vs fundo",
                 pal.get("nav_passivo_hover_texto", ""),
                 fundo,
+                minimo,
+                False,
+            ),
+            (
+                "nav passivo hover vs superfície hover",
+                pal.get("nav_passivo_hover_texto", ""),
+                pal.get("nav_passivo_hover_fundo", fundo),
                 minimo,
                 False,
             ),
@@ -1727,6 +1775,143 @@ def _gerar_css_sidebar(tema: str) -> str:
     return _CSS_SIDEBAR_TEMAS.get(tema_norm, _CSS_SIDEBAR_CLARO)
 
 
+def _gerar_css_sidebar_refino(tema: str) -> str:
+    tema_norm = normalizar_tema_sidebar(tema)
+    pal = ConfigCores.SIDEBAR.get(tema_norm, ConfigCores.SIDEBAR["claro"])
+
+    return f"""
+[data-testid="stSidebar"] {{
+    --totale-sb-text-primary: {pal['texto_primario']};
+    --totale-sb-text-secondary: {pal['texto_secundario']};
+    --totale-sb-text-muted: {pal['texto_muted']};
+    --totale-sb-text-accent: {pal['texto_acento']};
+    --totale-sb-icon: {pal['icone']};
+    --totale-sb-section: {pal['nav_secao']};
+    --totale-sb-nav: {pal['nav_passivo_texto']};
+    --totale-sb-nav-hover: {pal['nav_passivo_hover_texto']};
+    --totale-sb-nav-hover-bg: {pal['nav_passivo_hover_fundo']};
+    --totale-sb-nav-active: {pal['nav_ativo_texto']};
+    --totale-sb-nav-active-bg: {pal['nav_ativo_fundo']};
+    --totale-sb-nav-active-border: {pal['nav_ativo_borda']};
+    --totale-sb-nav-active-accent: {pal['nav_ativo_acento']};
+    --totale-sb-button-bg: {pal['botao_fundo']};
+    --totale-sb-button-text: {pal['botao_texto']};
+    --totale-sb-button-hover-bg: {pal['botao_hover_fundo']};
+    --totale-sb-button-hover-text: {pal['botao_hover_texto']};
+    --totale-sb-input-bg: {pal['input_fundo']};
+    --totale-sb-input-text: {pal['input_texto']};
+    --totale-sb-input-border: {pal['input_borda']};
+    --totale-sb-input-focus: {pal['input_focus']};
+    --totale-sb-input-focus-ring: {pal['input_focus_ring']};
+    --totale-sb-focus: {pal['foco']};
+    background: {pal['fundo']} !important;
+    border-right-color: {pal['borda']} !important;
+    color: var(--totale-sb-text-secondary) !important;
+}}
+[data-testid="stSidebar"]::before {{
+    background: {pal['accent_topo']} !important;
+}}
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] li,
+[data-testid="stSidebar"] .stMarkdown {{
+    color: var(--totale-sb-text-secondary) !important;
+}}
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] h4,
+[data-testid="stSidebar"] strong {{
+    color: var(--totale-sb-text-primary) !important;
+}}
+[data-testid="stSidebar"] [data-testid="stSidebarNav"] [data-testid="stNavSectionHeader"] {{
+    color: var(--totale-sb-section) !important;
+}}
+[data-testid="stSidebar"] [data-testid="stSidebarNav"] a {{
+    color: var(--totale-sb-nav) !important;
+    border: 1px solid transparent !important;
+    border-left: 3px solid transparent !important;
+}}
+[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:not([aria-current="page"]) span {{
+    color: var(--totale-sb-nav) !important;
+    -webkit-text-fill-color: var(--totale-sb-nav) !important;
+}}
+[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:not([aria-current="page"]):hover {{
+    background: var(--totale-sb-nav-hover-bg) !important;
+    color: var(--totale-sb-nav-hover) !important;
+}}
+[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:not([aria-current="page"]):hover span {{
+    color: var(--totale-sb-nav-hover) !important;
+    -webkit-text-fill-color: var(--totale-sb-nav-hover) !important;
+}}
+[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[aria-current="page"] {{
+    background: var(--totale-sb-nav-active-bg) !important;
+    border: 1px solid var(--totale-sb-nav-active-border) !important;
+    border-left: 3px solid var(--totale-sb-nav-active-accent) !important;
+    color: var(--totale-sb-nav-active) !important;
+}}
+[data-testid="stSidebar"] .sidebar-brand-sub {{
+    color: var(--totale-sb-text-secondary) !important;
+}}
+[data-testid="stSidebar"] .sidebar-section-header > div,
+[data-testid="stSidebar"] .sidebar-section-header > div span,
+[data-testid="stSidebar"] .sidebar-section-header > span {{
+    color: var(--totale-sb-section) !important;
+}}
+[data-testid="stSidebar"] .sidebar-user-name {{
+    color: var(--totale-sb-text-primary) !important;
+}}
+[data-testid="stSidebar"] .sidebar-user-role {{
+    color: var(--totale-sb-text-accent) !important;
+}}
+[data-testid="stSidebar"] .sidebar-user-email {{
+    color: var(--totale-sb-text-muted) !important;
+}}
+[data-testid="stSidebar"] div[data-baseweb="select"] > div,
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] textarea {{
+    background: var(--totale-sb-input-bg) !important;
+    border: 1px solid var(--totale-sb-input-border) !important;
+    color: var(--totale-sb-input-text) !important;
+}}
+[data-testid="stSidebar"] div[data-baseweb="select"] span {{
+    color: var(--totale-sb-input-text) !important;
+}}
+[data-testid="stSidebar"] div[data-baseweb="select"] svg {{
+    fill: var(--totale-sb-icon) !important;
+}}
+[data-testid="stSidebar"] div[data-baseweb="select"] > div:focus-within,
+[data-testid="stSidebar"] input:focus,
+[data-testid="stSidebar"] textarea:focus {{
+    border-color: var(--totale-sb-input-focus) !important;
+    box-shadow: 0 0 0 2px var(--totale-sb-input-focus-ring) !important;
+    outline: none !important;
+}}
+[data-testid="stSidebar"] label[data-baseweb="checkbox"] span,
+[data-testid="stSidebar"] label[data-baseweb="radio"] span {{
+    color: var(--totale-sb-text-secondary) !important;
+}}
+[data-testid="stSidebar"] div[data-testid="stButton"] > button {{
+    background: var(--totale-sb-button-bg) !important;
+    color: var(--totale-sb-button-text) !important;
+}}
+[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover {{
+    background: var(--totale-sb-button-hover-bg) !important;
+    color: var(--totale-sb-button-hover-text) !important;
+}}
+[data-testid="stSidebar"] [data-testid="stExpander"] details {{
+    background: {pal['card_fundo']} !important;
+    border-color: {pal['card_borda']} !important;
+}}
+[data-testid="stSidebar"] [data-testid="stExpander"] summary {{
+    color: var(--totale-sb-text-primary) !important;
+}}
+[data-testid="stSidebar"]:focus-within *:focus-visible {{
+    outline-color: var(--totale-sb-focus) !important;
+}}
+"""
+
+
 class PlotlyConfig:
     @staticmethod
     def configurar() -> None:
@@ -1899,11 +2084,12 @@ class CSSInjector:
     @lru_cache(maxsize=8)
     def _build_css(tema_sidebar: str = "claro") -> str:
         css_sidebar = _gerar_css_sidebar(tema_sidebar)
+        css_sidebar_refino = _gerar_css_sidebar_refino(tema_sidebar)
         return (
             f"{FontInjector._build_links_html()}\n<style>\n"
             f"{_CSS_VARS_ROOT}\n{_CSS_RESET_GLOBAL}\n{_CSS_HEROS}\n{_CSS_CARDS}\n"
-            f"{_CSS_TABELAS}\n{_CSS_EXTRAS}\n{_CSS_STREAMLIT_CHROME}\n{css_sidebar}\n"
-            f"{_CSS_SIDEBAR_NAV_ATIVO}\n</style>"
+            f"{_CSS_TABELAS}\n{_CSS_EXTRAS}\n{_CSS_STREAMLIT_CHROME}\n"
+            f"{css_sidebar}\n{css_sidebar_refino}\n{_CSS_SIDEBAR_NAV_ATIVO}\n</style>"
         )
 
     @staticmethod
@@ -2435,19 +2621,19 @@ def render_sidebar_info(
     user_section = ""
     if user_name or role or email or avatar:
         name_html = (
-            f'<p style="margin:0;font-size:13px;font-weight:750;color:{nome_col};">'
+            f'<p class="sidebar-user-name" style="margin:0;font-size:13px;font-weight:750;color:{nome_col};">'
             f"{Validadores.html_escape(user_name)}</p>"
             if user_name
             else ""
         )
         role_html = (
-            f'<p style="margin:2px 0 0;font-size:11px;color:{role_col};font-weight:650;">'
+            f'<p class="sidebar-user-role" style="margin:2px 0 0;font-size:11px;color:{role_col};font-weight:650;">'
             f"{Validadores.html_escape(role)}</p>"
             if role
             else ""
         )
         email_html = (
-            f'<p style="margin:2px 0 0;font-size:11px;color:{email_col};">'
+            f'<p class="sidebar-user-email" style="margin:2px 0 0;font-size:11px;color:{email_col};">'
             f"{Validadores.html_escape(email)}</p>"
             if email
             else ""

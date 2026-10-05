@@ -1,74 +1,41 @@
 """
-app.py
-======
+streamlit_app.py
+================
 Portal TOTALE — Aplicação Principal
 
-Versão: 3.3.0 (Integração Design System v4.9.0 - Seletor de Cores da Sidebar Claro/Azul/Laranja)
+Versão: 3.4.0 (seletor de tema do sidebar integrado ao Design System TOTALE)
 Autor: TOTALE Tecnologia
 
-Evoluções desta versão:
-• Seletor nativo 'st.selectbox' integrado à sidebar para alternância dinâmica entre os 3 temas:
-  1. Claro (Padrão Corporativo)
-  2. Azul (Navy Imersivo)
-  3. Laranja (Vibrante TOTALE)
-• Sincronização em tempo real com o Design System através de 'aplicar_estilo(tema_sidebar=...)'.
-• Correção de Tipagem: Garantia de string estrita para 'ultima_atualizacao' em render_sidebar_status.
-• Sidebar encapsulada em 'with st.sidebar'.
-• Inicialização segura de Session State com persistência de tema.
+• Seletor da sidebar com temas Claro, Azul e Laranja.
+• Tema selecionado persistido entre reruns e sincronizado com components.componentes.
+• Marca, status do sistema e informações do ambiente na sidebar.
+• CSS do app limitado ao corpo da página; o Design System controla a sidebar.
 """
+
+from __future__ import annotations
 
 import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime
 from functools import wraps
+from typing import Any
 from zoneinfo import ZoneInfo
-
-from typing import Literal, Any, cast
 
 import streamlit as st
 
-try:
-    from components.componentes import (
-        aplicar_estilo,
-        render_sidebar_brand,
-        render_sidebar_divider,
-        render_sidebar_footer_info,
-        render_sidebar_section,
-        render_sidebar_spacer,
-        render_sidebar_status,
-    )
-except ImportError:
-    from components.componentes import (
-        aplicar_estilo,
-        render_sidebar_brand,
-        render_sidebar_divider,
-        render_sidebar_footer_info,
-        render_sidebar_section,
-        render_sidebar_spacer,
-        render_sidebar_status,
-    )
-
-# Fallback seguro para definir_tema_sidebar caso components.py ainda não tenha sido atualizado no servidor
-try:
-    from components.componentes import definir_tema_sidebar
-except (ImportError, AttributeError):
-    try:
-        from components.componentes import definir_tema_sidebar
-    except (ImportError, AttributeError):
-
-        def definir_tema_sidebar(tema: str) -> None:
-            st.session_state["_totale_sidebar_theme"] = str(tema).strip().lower()
-
-
-def _aplicar_estilo_seguro(tema: Any = "claro") -> None:
-    """Aplica estilo compatível tanto com o Design System v4.9.0 quanto v4.8.0."""
-    definir_tema_sidebar(str(tema))
-    try:
-        aplicar_estilo(tema_sidebar=cast(Any, tema))
-    except TypeError:
-        aplicar_estilo()
-
+from components.componentes import (
+    TemaSidebarType,
+    aplicar_estilo,
+    definir_tema_sidebar,
+    render_sidebar_brand,
+    render_sidebar_divider,
+    render_sidebar_footer_info,
+    render_sidebar_section,
+    render_sidebar_spacer,
+    render_sidebar_status,
+    render_sidebar_theme_selector,
+)
 
 # Configuração de logging
 logging.basicConfig(
@@ -83,7 +50,7 @@ logger = logging.getLogger(__name__)
 # ====================================================
 @dataclass(frozen=True)
 class Cores:
-    """Paleta de cores centralizada para todo o sistema."""
+    """Paleta de cores para o corpo do sistema."""
 
     PRIMARIA: str = "#012869"
     PRIMARIA_LIGHT: str = "#0A48AA"
@@ -103,7 +70,7 @@ class Cores:
 class ConfiguracoesSistema:
     """Configurações globais do sistema."""
 
-    VERSAO: str = "3.3.0"
+    VERSAO: str = "3.4.0"
     AMBIENTE: str = "Produção"
     FUSO_HORARIO: str = "America/Sao_Paulo"
     INTERVALO_REFRESH: int = 60
@@ -115,7 +82,6 @@ class ConfiguracoesSistema:
         return ZoneInfo(self.FUSO_HORARIO)
 
 
-# Instâncias globais
 CORES = Cores()
 CONFIG = ConfiguracoesSistema()
 
@@ -130,9 +96,9 @@ def handle_exceptions(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except Exception as e:
-            logger.error("Erro em %s: %s", func.__name__, e, exc_info=True)
-            st.error(f"Ocorreu um erro inesperado: {e!s}")
+        except Exception as exc:
+            logger.error("Erro em %s: %s", func.__name__, exc, exc_info=True)
+            st.error(f"Ocorreu um erro inesperado: {exc!s}")
             return None
 
     return wrapper
@@ -146,7 +112,7 @@ def get_current_time() -> datetime:
 def format_datetime(
     dt: datetime | str | None, format_str: str = "%d/%m/%Y às %H:%M:%S"
 ) -> str:
-    """Formata datetime de forma segura garantindo SEMPRE o retorno de uma string."""
+    """Formata datetime com retorno garantido em string."""
     if dt is None:
         return "Não disponível"
     if isinstance(dt, str):
@@ -157,41 +123,56 @@ def format_datetime(
         return str(dt)
 
 
+def _aplicar_estilo_seguro(tema: Any = "claro") -> None:
+    """Normaliza e aplica o tema, mantendo app.py e Design System sincronizados."""
+    tema_texto = str(tema or "claro").strip().lower()
+    if tema_texto == "azul":
+        tema_norm: TemaSidebarType = "azul"
+    elif tema_texto == "laranja":
+        tema_norm = "laranja"
+    else:
+        # Inclui "claro", "padrao" e valores desconhecidos.
+        tema_norm = "claro"
+
+    st.session_state["tema_sidebar"] = tema_norm
+    definir_tema_sidebar(tema_norm)
+    try:
+        aplicar_estilo(tema_sidebar=tema_norm)
+    except TypeError:
+        # Compatibilidade com versões antigas do Design System.
+        aplicar_estilo()
+
+
 # ====================================================
-# 🎨 BLOCO 3: GERENCIADOR DE ESTILOS (somente corpo da página)
+# 🎨 BLOCO 3: GERENCIADOR DE ESTILOS DO CORPO DA PÁGINA
 # ====================================================
 class GerenciadorEstilos:
-    """
-    Gerencia estilos do CORPO da página.
-
-    ⚠️ A sidebar é 100% estilizada por components/componentes.py (v4.9.0).
-    Não duplicar regras de [data-testid="stSidebar"] aqui.
-    """
+    """Gerencia estilos do corpo. A sidebar é controlada por components.py."""
 
     @staticmethod
     def _get_input_styles() -> str:
         return f"""
-        /* INPUTS DO CORPO DA PÁGINA */
-        [data-testid="stSelectbox"] label p,
-        [data-testid="stMultiSelect"] label p,
-        [data-testid="stTextInput"] label p {{
+        /* INPUTS DO CORPO DA PÁGINA — sidebar controlada pelo Design System */
+        [data-testid="stMain"] [data-testid="stSelectbox"] label p,
+        [data-testid="stMain"] [data-testid="stMultiSelect"] label p,
+        [data-testid="stMain"] [data-testid="stTextInput"] label p {{
             color: {CORES.PRIMARIA} !important;
             font-weight: 700 !important;
             font-size: 13px !important;
         }}
-        [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
-        [data-testid="stDateInput"] div[data-baseweb="input"] > div {{
+        [data-testid="stMain"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+        [data-testid="stMain"] [data-testid="stDateInput"] div[data-baseweb="input"] > div {{
             border: 2px solid {CORES.BORDA_INPUT} !important;
             border-radius: 10px !important;
             background-color: #FFFFFF !important;
             transition: border-color .18s ease, box-shadow .18s ease;
         }}
-        [data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover,
-        [data-testid="stDateInput"] div[data-baseweb="input"] > div:hover {{
+        [data-testid="stMain"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover,
+        [data-testid="stMain"] [data-testid="stDateInput"] div[data-baseweb="input"] > div:hover {{
             border-color: {CORES.SECUNDARIA} !important;
             box-shadow: 0 0 0 3px rgba(243, 124, 4, 0.12);
         }}
-        [data-testid="stDateInput"] svg {{
+        [data-testid="stMain"] [data-testid="stDateInput"] svg {{
             fill: {CORES.SECUNDARIA} !important;
             color: {CORES.SECUNDARIA} !important;
         }}
@@ -251,7 +232,7 @@ class GerenciadorEstilos:
             background: linear-gradient(180deg, {CORES.SECUNDARIA_LIGHT}, {CORES.SECUNDARIA});
         }}
 
-        /* FOOTER (em fluxo, não fixo — não cobre a sidebar) */
+        /* FOOTER DA PÁGINA */
         .footer {{
             margin-top: 2.5rem;
             background: linear-gradient(90deg, #011E52 0%, {CORES.PRIMARIA} 55%, {CORES.PRIMARIA_LIGHT} 100%);
@@ -273,24 +254,11 @@ class GerenciadorEstilos:
         .block-container {{
             padding-bottom: 3rem;
         }}
-
-        /* HEADERS DAS SEÇÕES DO MENU NATIVO (st.navigation) */
-        [data-testid="stSidebarNav"] p {{
-            font-size: 10px !important;
-            font-weight: 900 !important;
-            letter-spacing: .9px !important;
-            color: #64748B !important;
-            text-transform: uppercase;
-            margin: 20px 0 6px 6px !important;
-        }}
-        [data-testid="stSidebarNav"] p:first-child {{
-            margin-top: 4px !important;
-        }}
         """
 
     @classmethod
     def injetar_css_global(cls) -> None:
-        """Injeta CSS global via markdown (garante aplicação em todo o DOM)."""
+        """Injeta CSS do corpo da página sem sobrescrever o tema da sidebar."""
         css_completo = f"""
         <style>
         {cls._get_input_styles()}
@@ -329,7 +297,8 @@ class ComponentesHome:
             f"""
             <div class="card">
                 <p style="margin:0; font-size:14px; color:{CORES.TEXTO_PRIMARIO}; line-height:1.65;">
-                    <b style="color:{CORES.PRIMARIA};">Bem-vindo ao ambiente centralizado de dados da TOTALE.</b><br>
+                    <b style="color:{CORES.PRIMARIA};">Bem-vindo ao ambiente centralizado de dados da TOTALE.</b>
+
                     Este portal fornece uma visão clara e estratégica dos processos produtivos
                     e indicadores de performance, apoiando decisões com base em dados confiáveis.
                 </p>
@@ -346,7 +315,7 @@ class ComponentesHome:
             st.markdown(
                 """
                 <div class="card status-warning">
-                    <b style="color:#C2410C;">⚠️ Sistema aguardando atualização de dados</b><br>
+                    <b style="color:#C2410C;">⚠️ Sistema aguardando atualização de dados</b>
                     <p style="margin:8px 0 0 0; font-size:13px; color:#7C2D12; line-height:1.6;">
                         1️⃣ Acesse <b>🔁 Atualização de Dados</b> no menu lateral<br>
                         2️⃣ Clique em <b>Sincronizar Agora</b> para puxar as bases operacionais.
@@ -361,7 +330,7 @@ class ComponentesHome:
             st.markdown(
                 f"""
                 <div class="card status-ok">
-                    <b style="color:#15803D;">✅ Sistema operacional e atualizado</b><br>
+                    <b style="color:#15803D;">✅ Sistema operacional e atualizado</b>
                     <span style="font-size:13px; color:#166534;">
                         Última sincronização validada em {hora}
                     </span>
@@ -432,9 +401,7 @@ def pagina_home() -> None:
 
     st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
     ComponentesHome.render_cards_modulos()
-
     ComponentesHome.render_footer()
-
     _gerenciar_refresh_automatico()
 
 
@@ -444,7 +411,6 @@ def _gerenciar_refresh_automatico() -> None:
         st.session_state["_last_refresh_time"] = time.time()
 
     tempo_decorrido = time.time() - st.session_state["_last_refresh_time"]
-
     if tempo_decorrido > CONFIG.INTERVALO_REFRESH:
         logger.info("Executando refresh automático do portal.")
         st.session_state["_last_refresh_time"] = time.time()
@@ -455,25 +421,21 @@ def _gerenciar_refresh_automatico() -> None:
 # 🚀 BLOCO 6: GERENCIADOR DE NAVEGAÇÃO
 # ====================================================
 class GerenciadorNavegacao:
-    """Gerencia a navegação e estrutura de páginas."""
+    """Gerencia navegação e conteúdo corporativo da sidebar."""
 
     @staticmethod
     def _definir_paginas() -> dict[str, list[st.Page]]:
-        """Define todas as páginas do sistema de forma tipada."""
+        """Define as páginas do sistema."""
         return {
             "Menu Principal": [
                 st.Page("pages/home.py", title="Home", icon="🏠", default=True),
-                st.Page(
-                    "pages/envio_excel.py", title="Atualização de Dados", icon="🔁"
-                ),
+                st.Page("pages/envio_excel.py", title="Atualização de Dados", icon="🔁"),
             ],
             "Central de Performance": [
                 st.Page("pages/pontos.py", title="Produção Mensal", icon="📈"),
                 st.Page("pages/qtde_os.py", title="Quantidade de O.S.", icon="⚡"),
                 st.Page("pages/consultivo.py", title="Consultivos", icon="📋"),
-                st.Page(
-                    "pages/dashboard_meta.py", title="Metas Operacionais", icon="🎯"
-                ),
+                st.Page("pages/dashboard_meta.py", title="Metas Operacionais", icon="🎯"),
                 st.Page("pages/indicadores.py", title="Indicadores", icon="⚡"),
             ],
             "Compilado": [
@@ -488,9 +450,7 @@ class GerenciadorNavegacao:
             ],
             "Quebra": [
                 st.Page("pages/quebra_geral.py", title="Geral", icon="📉"),
-                st.Page(
-                    "pages/quebra_unificada.py", title="Visão Segmentos", icon="📉"
-                ),
+                st.Page("pages/quebra_unificada.py", title="Visão Segmentos", icon="📉"),
             ],
             "Utilitários": [
                 st.Page("pages/assinatura.py", title="Assinatura", icon="✉️"),
@@ -499,77 +459,60 @@ class GerenciadorNavegacao:
 
     @staticmethod
     def renderizar_sidebar_corporativa() -> None:
-        """
-        Renderiza o cabeçalho corporativo na sidebar compartilhado entre TODAS as páginas,
-        incluindo a marca TOTALE, o seletor nativo de cor e o status do sistema.
-        """
-        with st.sidebar:
-            render_sidebar_brand(
-                nome="TOTALE",
-                subtitulo="Portal de Produção & Performance",
-                versao=f"v{CONFIG.VERSAO}",
-                icone="📊",
-            )
+        """Renderiza marca, seletor de tema, status e informações do portal."""
+        tema_atual = st.session_state.get(
+            "_totale_sidebar_theme",
+            st.session_state.get("tema_sidebar", "laranja"),
+        )
 
-            # ====================================================
-            # 🎨 SELETOR NATIVO (st.selectbox) DA COR DA SIDEBAR
-            # ====================================================
-            render_sidebar_section("Aparência da Sidebar", icone="🎨")
+        render_sidebar_brand(
+            nome="TOTALE",
+            subtitulo="Portal de Produção & Performance",
+            versao=f"v{CONFIG.VERSAO}",
+            icone="⚡",
+            tema=tema_atual,
+        )
+        render_sidebar_section("Aparência", icone="🎨", tema=tema_atual)
+        tema_escolhido = render_sidebar_theme_selector(
+            label="Tema visual",
+            help="Escolha as cores do menu lateral.",
+            key="_totale_sidebar_theme_select",
+            mostrar_icone=True,
+            aplicar_automaticamente=True,
+        )
+        st.session_state["tema_sidebar"] = tema_escolhido
 
-            opcoes_tema: list[str] = ["claro", "azul", "laranja"]
-            labels_tema = {
-                "claro": "☀️ Claro Corporativo",
-                "azul": "🔷 Deep Executive Navy",
-                "laranja": "🔶 Terracotta & Amber",
-            }
+        render_sidebar_divider(
+            estilo="gradiente",
+            espacamento="pequeno",
+            tema=tema_escolhido,
+        )
 
-            def _ao_mudar_cor_sidebar() -> None:
-                novo_tema = st.session_state.get("seletor_cor_sidebar", "claro")
-                st.session_state["tema_sidebar"] = novo_tema
-                _aplicar_estilo_seguro(novo_tema)
+        dados = st.session_state.get("dados_prod")
+        ultima = st.session_state.get("ultima_atualizacao")
+        ultima_formatada = format_datetime(ultima) if ultima is not None else ""
+        try:
+            total_registros = len(dados) if dados is not None else None
+        except (TypeError, ValueError):
+            total_registros = None
 
-            tema_atual = st.session_state.get("tema_sidebar", "claro")
-            idx_atual = (
-                opcoes_tema.index(tema_atual) if tema_atual in opcoes_tema else 0
-            )
-
-            st.selectbox(
-                "Escolha a cor da sidebar",
-                options=opcoes_tema,
-                index=idx_atual,
-                format_func=lambda x: labels_tema.get(x, str(x).title()),
-                key="seletor_cor_sidebar",
-                on_change=_ao_mudar_cor_sidebar,
-                help="Selecione o esquema de cores para a barra lateral",
-            )
-
-            render_sidebar_divider(estilo="pontilhado", espacamento="pequeno")
-
-            # Status Operacional
-            render_sidebar_section("Status Operacional", icone="🛰️")
-
-            dados_prod = st.session_state.get("dados_prod")
-            if dados_prod is not None:
-                # Converte e garante que sempre seja passado um 'str' válido
-                data_formatada: str = format_datetime(
-                    st.session_state.get("ultima_atualizacao")
-                )
-                render_sidebar_status(
-                    label="Dados Sincronizados",
-                    status="Atualizado",
-                    tipo="ok",
-                    icone="🗄️",
-                    ultima_atualizacao=data_formatada,
-                )
-            else:
-                render_sidebar_status(
-                    label="Aguardando Sincronismo",
-                    status="Pendente",
-                    tipo="alerta",
-                    icone="⏳",
-                )
-
-            render_sidebar_divider(estilo="gradiente")
+        tem_dados = dados is not None
+        render_sidebar_status(
+            status="Dados disponíveis" if tem_dados else "Aguardando dados",
+            label="STATUS DO SISTEMA",
+            ultima_atualizacao=ultima_formatada,
+            total_registros=total_registros,
+            tipo="ok" if tem_dados else "info",
+            tema=tema_escolhido,
+        )
+        render_sidebar_spacer("pequeno")
+        render_sidebar_footer_info(
+            itens={"Fuso horário": CONFIG.FUSO_HORARIO},
+            empresa="TOTALE",
+            ambiente=CONFIG.AMBIENTE,
+            unidade="Portal de Produção & Performance",
+            tema=tema_escolhido,
+        )
 
 
 # ====================================================
@@ -580,7 +523,6 @@ def main() -> None:
     """Função principal da aplicação."""
     logger.info("Iniciando aplicação TOTALE")
 
-    # 1. Configuração inicial da página
     st.set_page_config(
         page_title="Painel TOTALE",
         page_icon=CONFIG.ICON_PATH,
@@ -593,41 +535,28 @@ def main() -> None:
         },
     )
 
-    # 2. Inicialização preventiva do Session State
     if "dados_prod" not in st.session_state:
         st.session_state["dados_prod"] = None
     if "ultima_atualizacao" not in st.session_state:
         st.session_state["ultima_atualizacao"] = None
     if "tema_sidebar" not in st.session_state:
-        st.session_state["tema_sidebar"] = "claro"
+        st.session_state["tema_sidebar"] = "laranja"
 
-    # 3. Definição do menu nativo e st.navigation primeiro
     paginas = GerenciadorNavegacao._definir_paginas()
     pg = st.navigation(paginas)
 
-    # 4. Injeção de estilos corporativos (garante o CSS ativo em TODAS as páginas)
-    tema_ativo = st.session_state.get(
-        "seletor_cor_sidebar", st.session_state["tema_sidebar"]
+    # A chave do widget tem precedência para não reverter a escolha no rerun.
+    tema_ativo = (
+        st.session_state.get("_totale_sidebar_theme_select")
+        or st.session_state.get("seletor_cor_sidebar")  # estado legado
+        or st.session_state.get("_totale_sidebar_theme")
+        or st.session_state.get("tema_sidebar", "laranja")
     )
-    st.session_state["tema_sidebar"] = tema_ativo
     _aplicar_estilo_seguro(tema_ativo)
     GerenciadorEstilos.injetar_css_global()
-
-    # 5. Cabeçalho corporativo da sidebar (Marca + seletor de cor + status) para TODAS as páginas
     GerenciadorNavegacao.renderizar_sidebar_corporativa()
 
-    # 6. Execução da página ativa
     pg.run()
-
-    # 7. Rodapé corporativo da sidebar (renderizado após o menu nativo para TODAS as páginas)
-    with st.sidebar:
-        render_sidebar_spacer(altura=12)
-        render_sidebar_footer_info(
-            empresa="TOTALE Tecnologia",
-            versao=f"v{CONFIG.VERSAO}",
-            ambiente=CONFIG.AMBIENTE,
-        )
-
     logger.info("Aplicação iniciada com sucesso")
 
 
