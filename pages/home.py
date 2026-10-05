@@ -28,7 +28,6 @@ import streamlit as st
 from components.componentes import (
     Cores,
     formatar_numero_br,
-    render_badge,
     render_hero_totale_1,
     render_hero_totale_2,
     render_insight,
@@ -379,10 +378,10 @@ def render_status_operacional(info_base: dict[str, Any]) -> None:
                     "pages/envio_excel.py",
                     label="🔁 Sincronizar Bases Agora",
                     icon="📥",
-                    use_container_width=True,
+                    width="stretch",
                 )
             except Exception:
-                if st.button("🔁 Ir para Atualização", use_container_width=True):
+                if st.button("🔁 Ir para Atualização", width="stretch"):
                     st.info("Navegue até 'Atualização de Dados' no menu lateral.")
     else:
         render_insight(
@@ -408,7 +407,7 @@ def render_modulos_principais() -> None:
     # Módulo 1: Produção de Campo
     with c1:
         st.markdown(
-            f"""
+            """
             <div class="totale-home-card totale-home-card--accent">
                 <div>
                     <div class="totale-home-card-header">
@@ -434,15 +433,15 @@ def render_modulos_principais() -> None:
                 "pages/qtde_os.py",
                 label="Abrir Painel de O.S.",
                 icon="⚡",
-                use_container_width=True,
+                width="stretch",
             )
         except Exception:
-            pass
+            logger.debug("page_link indisponível para pages/qtde_os.py; cartão segue sem atalho.", exc_info=True)
 
     # Módulo 2: Indicadores & Metas
     with c2:
         st.markdown(
-            f"""
+            """
             <div class="totale-home-card">
                 <div>
                     <div class="totale-home-card-header">
@@ -468,15 +467,15 @@ def render_modulos_principais() -> None:
                 "pages/dashboard_meta.py",
                 label="Abrir Metas Operacionais",
                 icon="🎯",
-                use_container_width=True,
+                width="stretch",
             )
         except Exception:
-            pass
+            logger.debug("page_link indisponível para pages/dashboard_meta.py; cartão segue sem atalho.", exc_info=True)
 
     # Módulo 3: Ativos & Governança
     with c3:
         st.markdown(
-            f"""
+            """
             <div class="totale-home-card totale-home-card--success">
                 <div>
                     <div class="totale-home-card-header">
@@ -502,10 +501,10 @@ def render_modulos_principais() -> None:
                 "pages/gestao_ativos.py",
                 label="Abrir Gestão de Ativos",
                 icon="👷",
-                use_container_width=True,
+                width="stretch",
             )
         except Exception:
-            pass
+            logger.debug("page_link indisponível para pages/gestao_ativos.py; cartão segue sem atalho.", exc_info=True)
 
     render_spacer(14)
 

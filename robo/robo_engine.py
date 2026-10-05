@@ -224,7 +224,7 @@ class TotaleRoboEngine:
     def _aceita(caminho: Path) -> bool:
         nome = caminho.name
         baixo = nome.lower()
-        if baixo.startswith("~$") or baixo.startswith("."):
+        if baixo.startswith(("~$", ".")):
             return False
         if baixo.endswith(_EXTENSOES_TEMP):
             return False

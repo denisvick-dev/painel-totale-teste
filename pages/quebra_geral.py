@@ -153,6 +153,10 @@ try:
 except ImportError:
     COMPONENTES_DISPONIVEIS = False
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def render_section_header(icone: str, titulo: str) -> None:
     if _component_section_header is not None:
@@ -170,7 +174,7 @@ def render_table_html(df: pd.DataFrame, **kwargs: Any) -> None:
     if _component_table_html is not None:
         _component_table_html(df, **kwargs)
         return
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
 
 
 def render_insight(
@@ -211,6 +215,7 @@ def _tentar_import_robo() -> tuple[RoboCallable | None, str]:
             return funcao, f"OK ({arquivo_modulo})"
         return None, "Módulo encontrado, mas sem função de renderização compatível."
     except Exception as erro:
+        logger.debug("Robô local não pôde ser importado.", exc_info=True)
         return None, f"{type(erro).__name__}: {erro}"
 
 
@@ -459,7 +464,7 @@ def _padronizar_tipo_servico(tipo: Any) -> str:
         if pd.isna(tipo):
             return "Outros"
     except (TypeError, ValueError):
-        pass
+        logger.debug("Falha ao normalizar valor.", exc_info=True)
 
     t = str(tipo).upper().strip()
     # Remove acentos
@@ -599,7 +604,7 @@ class Utils:
             if isinstance(ausente, (bool, np.bool_)) and bool(ausente):
                 return ""
         except (TypeError, ValueError):
-            pass
+            logger.debug("Falha ao normalizar valor.", exc_info=True)
         texto = unicodedata.normalize("NFKD", str(valor))
         texto = "".join(
             caractere for caractere in texto if not unicodedata.combining(caractere)
@@ -694,7 +699,7 @@ class Utils:
                 numero = float(valor)
                 return numero if np.isfinite(numero) else np.nan
         except (TypeError, ValueError):
-            pass
+            logger.debug("Falha ao normalizar valor.", exc_info=True)
         texto = str(valor).strip()
         if not texto:
             return np.nan
@@ -712,9 +717,8 @@ class Utils:
                     texto = texto.replace(",", "")
                 else:
                     texto = texto.replace(",", ".")
-            elif "." in texto:
-                if re.fullmatch(r"-?\d{1,3}(?:\.\d{3})+", texto):
-                    texto = texto.replace(".", "")
+            elif "." in texto and re.fullmatch(r"-?\d{1,3}(?:\.\d{3})+", texto):
+                texto = texto.replace(".", "")
             numero = float(texto)
             return numero if np.isfinite(numero) else np.nan
         except (TypeError, ValueError):
@@ -795,8 +799,9 @@ class Utils:
         df = df.copy()
         colunas_problema = ["DATA AGENDA MDU", "ID SGD", "DATA_AGENDA_MDU", "ID_SGD"]
         for col in colunas_problema:
-            if col in df.columns:
-                if df[col].isna().all() or (df[col].astype(str) == "None").all():
+            if col in df.columns and (
+                df[col].isna().all() or (df[col].astype(str) == "None").all()
+            ):
                     for col_alt in df.columns:
                         if col_alt != col:
                             if "AGENDA" in col_alt.upper() and col in col_alt.upper():
@@ -1013,7 +1018,7 @@ class DataLoader:
             if isinstance(raw, pd.DataFrame) and not raw.empty:
                 return DataLoader._processar_lista_ativos(raw)
         except Exception:
-            pass
+            logger.debug("Conexão gsheets falhou; tentando leitura por CSV público.", exc_info=True)
         try:
             aba = quote(Config.WORKSHEET_ATIVOS)
             url = f"https://docs.google.com/spreadsheets/d/{Config.SHEET_ID_ATIVOS}/gviz/tq?tqx=out:csv&sheet={aba}"
@@ -1021,7 +1026,7 @@ class DataLoader:
             if not raw_csv.empty:
                 return DataLoader._processar_lista_ativos(raw_csv)
         except Exception:
-            pass
+            logger.debug("Leitura por CSV público falhou; retornando base vazia.", exc_info=True)
         return pd.DataFrame()
 
     @staticmethod
@@ -1230,7 +1235,7 @@ class DataLoader:
         colunas_auxiliares = [
             col
             for col in base.columns
-            if col.startswith("_LOGIN_") or col.startswith("_ATIVO_")
+            if col.startswith(("_LOGIN_", "_ATIVO_"))
         ]
         base = base.drop(columns=colunas_auxiliares, errors="ignore")
         base = base.reset_index(drop=True)
@@ -1710,7 +1715,10 @@ def render_matriz_executiva_html(
     for _, linha in df.iterrows():
         primeiro_valor = linha.iloc[0]
         is_total = str(primeiro_valor).strip().upper() == "TOTAL GERAL"
-        html += f"<tr {"class='total-row'" if is_total else ''}>"
+        # Aspas aninhadas dentro de f-string só são válidas no Python 3.12+,
+        # e o projeto roda no 3.11 (devcontainer) — string extraída do f-string.
+        atributo_total = " class='total-row'" if is_total else " "
+        html += f"<tr{atributo_total}>"
         for posicao, coluna in enumerate(df.columns):
             valor = linha.iloc[posicao]
             coluna_upper = str(coluna).strip().upper()
@@ -1733,7 +1741,14 @@ def render_matriz_executiva_html(
             elif coluna_upper in {"TOTAL TASKS", "TOTAL_TASKS"}:
                 html += f"<td><strong>{_fmt_int_br(valor)}</strong></td>"
             else:
-                html += f"<td>{_html(valor) if not _is_missing_scalar(valor) else "<span style='color:#94A3B8;'>—</span>"}</td>"
+                # Mesmo caso da linha do TOTAL GERAL: mantém compatibilidade
+                # com Python 3.11 extraindo a string de dentro do f-string.
+                celula = (
+                    _html(valor)
+                    if not _is_missing_scalar(valor)
+                    else "<span style='color:#94A3B8;'>—</span>"
+                )
+                html += f"<td>{celula}</td>"
         html += "</tr>"
     html += """</tbody></table></div>"""
     st.markdown(html, unsafe_allow_html=True)
@@ -1768,7 +1783,7 @@ def render_bloco_importacao_robo(dados_prontos: bool = False) -> bool:
     return st.button(
         "🔄 Atualizar Relatório",
         type="primary",
-        use_container_width=True,
+        width="stretch",
         key="btn_atualizar_relatorio",
     )
 
@@ -1978,7 +1993,7 @@ def view_resumo_executivo(df: pd.DataFrame, meta_sla: float) -> None:
         data=Utils.gerar_excel(matriz, "Matriz_Resumo"),
         file_name="Matriz_Resumo_Quebra.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -2141,7 +2156,7 @@ def view_auditoria(df: pd.DataFrame) -> None:
         dist.columns = ["Segmento", "Registros"]
         total = len(df)
         dist["%"] = (dist["Registros"] / total * 100).round(1).astype(str) + "%"
-        st.dataframe(dist, hide_index=True, use_container_width=True)
+        st.dataframe(dist, hide_index=True, width="stretch")
 
         nd_count = (
             dist[dist["Segmento"] == "Novos Domicílios"]["Registros"].sum()
@@ -2203,7 +2218,7 @@ def view_auditoria(df: pd.DataFrame) -> None:
                 st.code(df[col_hab].dropna().astype(str).unique()[:15].tolist())
 
     with st.expander("Visualizar amostra da base processada", expanded=False):
-        st.dataframe(df.head(200), use_container_width=True, hide_index=True)
+        st.dataframe(df.head(200), width="stretch", hide_index=True)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -2279,12 +2294,12 @@ def main() -> None:
                 st.error(f"Erro ao processar base de ativos: {erro}")
 
         if st.button(
-            "🔄 Reiniciar Aplicação", use_container_width=True, type="secondary"
+            "🔄 Reiniciar Aplicação", width="stretch", type="secondary"
         ):
             _limpar_estado_aplicacao(limpar_ativos=True)
             st.cache_data.clear()
             st.rerun()
-        if st.button("🗑️ Limpar Cache", use_container_width=True, type="secondary"):
+        if st.button("🗑️ Limpar Cache", width="stretch", type="secondary"):
             _limpar_estado_aplicacao(limpar_ativos=True)
             st.cache_data.clear()
             st.rerun()

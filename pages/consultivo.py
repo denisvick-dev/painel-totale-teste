@@ -16,69 +16,55 @@ from components.componentes import (
     render_section_header,
     render_page_sidebar_theme_selector,
 )
+from components.css_paginas import aplicar_css_tabela_corporativa
 
 # ====================================================
 # BLOCO 1: CONFIGURAÇÕES E INICIALIZAÇÃO
 # ====================================================
-try:
-    st.set_page_config(page_title="Total de Consultivos", page_icon="📋", layout="wide")
-except Exception:
-    pass
+# `st.set_page_config` aceita chamadas aditivas (o entrypoint define o padrão e
+# cada página ajusta título/ícone). O try/except antigo só escondia erros reais
+# de digitação nos argumentos; o piso de versão (streamlit>=1.52) garante o
+# suporte a múltiplas chamadas.
+st.set_page_config(page_title="Total de Consultivos", page_icon="📋", layout="wide")
 
 aplicar_estilo()
 render_page_sidebar_theme_selector()
 
 # ── CSS LOCAL DA PÁGINA (Cores da tabela, tamanho de fontes e barras de rolagem) ──
+# ── Tabela corporativa: CSS compartilhado do Design System ──
+# (a aparência de .corp-table vive em components/css_paginas.py)
+aplicar_css_tabela_corporativa(
+    fonte_px=10.5,
+    padding='4px 6px',
+    altura_linha='1.25',
+    raio_scrollbar='4px',
+    cabecalho_extra='border-right: 1px solid rgba(255,255,255,0.12) !important; padding: 6px 6px !important;',
+)
+
 st.markdown(
     """
     <style>
-    /* Estilo do SideBar Filtros Específicos */
+    /* Estilo do SideBar Filtros Específicos
+       v5.3.0: apenas tipografia/raio — cor, borda e foco vêm do Design System
+       TOTALE para respeitar o tema ativo (Claro, Azul ou Laranja). */
     [data-testid="stSidebar"] [data-testid="stDateInput"] input {
         border-radius: 8px !important;
-        border: 1.5px solid #CBD5E1 !important;
         font-weight: 600 !important;
-        color: #012869 !important;
         font-size: 13px !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stDateInput"] input:focus {
-        border-color: #F37C04 !important;
-        box-shadow: 0 0 0 3px rgba(243, 124, 4, 0.15) !important;
     }
     [data-testid="stSidebar"] [data-testid="stRadio"] label {
         font-size: 13px !important;
         padding: 4px 0 !important;
     }
 
-    /* Estilo Tabela HTML DOM - Redução Geral de Fonte e Espaçamento */
+    /* Tabela HTML DOM — cores/centralização da página (base no Design System) */
     .corp-table-wrap {
         overflow-x: auto !important;
         overflow-y: auto !important;
         border: 1px solid #E2E8F0 !important;
         border-radius: 8px !important;
     }
-    
-    .corp-table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-        font-size: 10.5px !important; /* Redução do tamanho da fonte dos dados */
-    }
-    
-    .corp-table th, 
-    .corp-table td {
-        padding: 4px 6px !important; /* Células mais compactas vertical e horizontalmente */
-        line-height: 1.25 !important;
-    }
 
-    .corp-table thead th {
-        background: linear-gradient(180deg, #012869 0%, #1E40AF 100%) !important;
-        color: #FFFFFF !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.04em !important;
-        font-size: 10px !important; /* Redução do tamanho da fonte do cabeçalho */
-        border-right: 1px solid rgba(255,255,255,0.12) !important;
-        padding: 6px 6px !important;
-    }
-    
     .corp-table td.col-real {
         background: #F8FAFC !important;
         font-weight: 700 !important;
@@ -98,10 +84,7 @@ st.markdown(
         color: #991B1B !important;
         font-weight: 700 !important;
     }
-    .corp-table td.num {
-        text-align: right !important;
-        font-variant-numeric: tabular-nums !important;
-    }
+
     .corp-table-wrap.centralizada {
         width: min(100%, 1100px) !important;
         margin-left: auto !important;
@@ -112,22 +95,6 @@ st.markdown(
         text-align: center !important;
     }
 
-    /* ── Customização das Barras de Rolagem (Mais finas e discretas) ── */
-    .corp-table-wrap::-webkit-scrollbar {
-        width: 6px !important;   /* Rolagem vertical fina */
-        height: 6px !important;  /* Rolagem horizontal fina */
-    }
-    .corp-table-wrap::-webkit-scrollbar-track {
-        background: #F1F5F9 !important; /* Fundo do trilho */
-        border-radius: 4px !important;
-    }
-    .corp-table-wrap::-webkit-scrollbar-thumb {
-        background: #CBD5E1 !important; /* Cor da barra */
-        border-radius: 4px !important;
-    }
-    .corp-table-wrap::-webkit-scrollbar-thumb:hover {
-        background: #94A3B8 !important; /* Cor quando passa o mouse */
-    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -551,7 +518,7 @@ if "DATA" in df.columns and df["DATA"].notna().any():
     st.sidebar.button(
         "📅 Dia vigente",
         key="botao_dia_vigente",
-        use_container_width=True,
+        width="stretch",
         on_click=aplicar_dia_vigente,
     )
 
@@ -771,7 +738,7 @@ with aba1:
                     title="Top 10 Consultivos (Real)",
                     color_discrete_sequence=["#0EA5E9"],
                 ),
-                use_container_width=True,
+                width="stretch",
             )
     with g2:
         df_disp = df_exibir[df_exibir["Total Consultivos"] > 0]
@@ -785,7 +752,7 @@ with aba1:
                     title="Matriz: Consultivos x Produtos",
                     color_discrete_sequence=px.colors.qualitative.Prism,
                 ),
-                use_container_width=True,
+                width="stretch",
             )
 
 with aba2:
@@ -812,7 +779,7 @@ if tipo_exp == "CSV":
         df_exibir.to_csv(index=False, encoding="utf-8-sig", decimal=","),
         "relatorio_consultivos.csv",
         "text/csv",
-        use_container_width=True,
+        width="stretch",
     )
 else:
     out = BytesIO()
@@ -823,5 +790,5 @@ else:
         out.getvalue(),
         "relatorio_consultivos.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True,
+        width="stretch",
     )

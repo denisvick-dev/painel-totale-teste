@@ -19,6 +19,7 @@ Página do app Streamlit (rodar como página em pages/ ou como main).
 from __future__ import annotations
 
 import csv
+import math
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -61,7 +62,7 @@ def _kpi_fb(
 
 
 def _tabela_fb(df: object, **_k: object) -> None:
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
 
 def _hero_fb(**k: object) -> None:
@@ -131,7 +132,7 @@ class Configuracoes:
 
     @classmethod
     def vazio_texto(cls, valor: object) -> str:
-        if valor is None or (isinstance(valor, float) and valor != valor):
+        if valor is None or (isinstance(valor, float) and math.isnan(valor)):
             return ""
         texto = str(valor).strip()
         return "" if cls._RE_VAZIO.fullmatch(texto) is not None else texto
@@ -210,7 +211,7 @@ class ProcessadorDeDados:
     @staticmethod
     def _login_chave(valor: object) -> str:
         """Chave de join: sem sufixo de float ('12345.0'), caixa alta, sem vazio."""
-        if valor is None or (isinstance(valor, float) and valor != valor):
+        if valor is None or (isinstance(valor, float) and math.isnan(valor)):
             return ""
         s = str(valor).strip().upper()
         if re.fullmatch(r"\d+\.0+", s):
@@ -848,7 +849,7 @@ def _painel_dados(intervalo_seg: int) -> None:
     with col_btn:
         clicou = st.button(
             "🔄 Sincronizar Agora",
-            use_container_width=True,
+            width="stretch",
             type="primary",
             key="btn_sincronizar_dados",
         )
@@ -994,14 +995,11 @@ def _painel_fragmento() -> None:
 
 
 def _rodar() -> None:
-    try:
-        st.set_page_config(
-            page_title="Atualização de Dados | TOTALE",
-            page_icon="🔁",
-            layout="wide",
-        )
-    except Exception:
-        pass
+    st.set_page_config(
+        page_title="Atualização de Dados | TOTALE",
+        page_icon="🔁",
+        layout="wide",
+    )
     aplicar_estilo()
     render_page_sidebar_theme_selector()
 

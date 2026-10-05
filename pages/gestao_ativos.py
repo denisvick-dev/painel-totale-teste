@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import logging
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -33,6 +34,8 @@ from components.componentes import (
     render_page_sidebar_theme_selector,
 )
 
+logger = logging.getLogger(__name__)
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # [0] SAFE & AUTH (Mantido do código anterior)
@@ -52,13 +55,13 @@ class Safe:
             try:
                 if np.isnan(v):
                     return ""
-            except Exception:
+            except (TypeError, ValueError):
                 pass
             return str(int(v)) if v == int(v) else str(v)
         try:
             if pd.isna(v):
                 return ""
-        except Exception:
+        except (TypeError, ValueError):
             pass
         s = str(v).strip()
         return "" if s.lower() in cls._N else s
@@ -272,7 +275,7 @@ class Config:
                     "bases": [Safe.str(b) for b in list(d.get("bases", []))],
                 }
         except Exception:
-            pass
+            logger.warning("st.secrets['usuarios'] indisponível; usando base de usuários padrão.", exc_info=True)
         return base
 
 
@@ -584,7 +587,7 @@ def view_cadastro(svc, usr):
         )
         sit = c2.selectbox("Situação", Config.SITS_ATIVAS, key="cad_situacao")
         ok = st.form_submit_button(
-            "💾 Salvar", type="primary", use_container_width=True
+            "💾 Salvar", type="primary", width="stretch"
         )
 
     if ok:
@@ -663,7 +666,7 @@ def tela_login():
             u = st.text_input("👤 Usuário")
             p = st.text_input("🔑 Senha", type="password")
             ok = st.form_submit_button(
-                "Entrar →", type="primary", use_container_width=True
+                "Entrar →", type="primary", width="stretch"
             )
         if ok:
             chave = Safe.lower(str(u))
@@ -697,10 +700,10 @@ def tela_principal():
     st.sidebar.markdown("---")
 
     # Botões de ação
-    if st.sidebar.button("🔄 Sincronizar Dados", use_container_width=True):
+    if st.sidebar.button("🔄 Sincronizar Dados", width="stretch"):
         st.cache_data.clear()
         st.rerun()
-    if st.sidebar.button("🚪 Sair", use_container_width=True):
+    if st.sidebar.button("🚪 Sair", width="stretch"):
         st.session_state.update({"autenticado": False, "usuario": None})
         st.rerun()
 
