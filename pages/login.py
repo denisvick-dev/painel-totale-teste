@@ -26,20 +26,6 @@ def criptografar_senha(senha):
     return hashlib.sha256(senha.encode()).hexdigest()
 
 
-def cadastrar_usuario_padrao():
-    """Insere um usuário de teste inicial se o banco estiver vazio."""
-    conn, cursor = conectar_banco()
-    cursor.execute("SELECT * FROM usuarios WHERE username = 'admin'")
-    if not cursor.fetchone():
-        senha_hash = criptografar_senha("admin123")
-        cursor.execute(
-            "INSERT INTO usuarios (username, password) VALUES (?, ?)",
-            ("admin", senha_hash),
-        )
-        conn.commit()
-    conn.close()
-
-
 def verificar_login(usuario, senha):
     """Valida se o usuário e senha existem no banco de dados."""
     conn, cursor = conectar_banco()
@@ -78,10 +64,7 @@ if "logado" not in st.session_state:
 if "usuario" not in st.session_state:
     st.session_state.usuario = None
 
-# Garante que o banco e o usuário inicial existam
-cadastrar_usuario_padrao()
-
-
+# A tabela é criada sob demanda na primeira tentativa de login/cadastro.
 # --- INTERFACE GRÁFICA ---
 def area_autenticacao():
     """Renderiza as abas de Login e Cadastro de Usuários."""

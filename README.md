@@ -105,7 +105,7 @@ O **Painel TOTALE** é uma plataforma corporativa completa desenvolvida em [Stre
 
 | Categoria | Tecnologias |
 |-----------|-------------|
-| **Framework** | Streamlit 1.31+ |
+| **Framework** | Streamlit 1.52+ |
 | **Linguagem** | Python 3.11+ |
 | **Backend** | Google Sheets API |
 | **Visualização** | Plotly, Pandas |
@@ -144,8 +144,15 @@ source .venv/bin/activate
 ```
 
 ### 3. Instale as Dependências
+
+Para executar o app:
 ```bash
 pip install -r requirements.txt
+```
+
+Para desenvolver e executar a suíte completa de testes, use no lugar:
+```bash
+pip install -r requirements-dev.txt
 ```
 
 ### 4. Configure as Credenciais
@@ -156,6 +163,9 @@ cp .streamlit/secrets.example.toml .streamlit/secrets.toml
 ```
 
 Edite o `.streamlit/secrets.toml` com suas credenciais reais do Google Cloud e usuários.
+
+A página de Gestão de Ativos só habilita contas declaradas em `[usuarios.<login>]`;
+não há usuário/senha padrão. Configure uma senha forte antes de disponibilizar o app.
 
 ### 5. Configure o Google Sheets
 
@@ -175,6 +185,16 @@ streamlit run streamlit_app.py
 ```
 
 Acesse: **http://localhost:8501**
+
+### Testes
+
+```bash
+# Guarda de sintaxe/estrutura, sem dependências externas
+python tests/test_sintaxe.py
+
+# Suíte completa (após instalar requirements-dev.txt)
+pytest -q
+```
 
 ---
 
@@ -201,27 +221,23 @@ Acesse: **http://localhost:8501**
 
 ```
 painel-totale/
-├── 📄 streamlit_app.py           # Aplicação principal
-├── 📄 componentes.py             # Componentes reutilizáveis
-├── 📄 requirements.txt           # Dependências Python
-├── 📄 README.md                  # Este arquivo
-├── 📄 LICENSE                    # Licença
-├── 📄 .gitignore                 # Arquivos ignorados
-├── 📁 .streamlit/
-│   ├── config.toml               # Configurações Streamlit
-│   └── secrets.example.toml      # Exemplo de credenciais
-├── 📁 pages/
-│   ├── gestao_ativos.py          # Gestão de Ativos
-│   ├── gerador_assinatura.py     # Gerador de Assinatura
-│   └── ...                       # Outras páginas
-├── 📁 assets/
-│   ├── icons/                    # Ícones
-│   └── images/                   # Imagens e templates
-├── 📁 fonts/
-│   ├── Oscine-Regular.ttf        # Fonte corporativa
-│   └── Oscine-Bold.ttf
-└── 📁 docs/
-    └── screenshots/              # Documentação visual
+├── streamlit_app.py              # Entry point, navegação e shell global
+├── requirements.txt              # Dependências de execução
+├── requirements-dev.txt          # Dependências para desenvolvimento/testes
+├── README.md
+├── .streamlit/
+│   └── secrets.example.toml      # Modelo local de configuração (sem credenciais reais)
+├── components/
+│   ├── componentes.py            # Design System compartilhado
+│   ├── criterios.py              # Regras de classificação operacional
+│   └── css_paginas.py            # Estilos reutilizáveis das páginas
+├── pages/                        # Páginas do aplicativo Streamlit
+├── robo/                         # Leitura e monitoramento de arquivos locais
+├── tests/                        # Testes de regressão e guardas estáticas
+├── data/                         # Dados de referência
+├── assets/                       # Ícones, imagens e marca
+├── fonts/                        # Fontes corporativas
+└── old/                          # Scripts arquivados, fora do fluxo ativo
 ```
 
 ---

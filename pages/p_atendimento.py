@@ -878,14 +878,11 @@ def aplicar_cor_horario(valor: Any) -> str:
 # APP PRINCIPAL
 # ═══════════════════════════════════════════════════════
 def main() -> None:
-<<<<<<< HEAD
-    aplicar_estilo()
-    render_page_sidebar_theme_selector()
-=======
-    # Design System TOTALE (mantém a cor da sidebar escolhida no seletor de tema)
+    # O shell principal aplica o tema no app; a chamada também mantém a página
+    # operável quando executada isoladamente.
     aplicar_estilo_ds()
+    render_page_sidebar_theme_selector()
     _injetar_css_local()
->>>>>>> 6af438f806013e8baa6434cdc31e033aae0bd8b2
 
     render_hero(
         titulo="Painel de Primeiro Atendimento",

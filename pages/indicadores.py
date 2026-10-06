@@ -24,12 +24,7 @@ from components.componentes import (
     render_sidebar_footer_info,
     render_sidebar_status,
     render_table_html,
-<<<<<<< HEAD
-    converter_data_br,
-    Cores,
     render_page_sidebar_theme_selector,
-=======
->>>>>>> 6af438f806013e8baa6434cdc31e033aae0bd8b2
 )
 
 logger = logging.getLogger(__name__)

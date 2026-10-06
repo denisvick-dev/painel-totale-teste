@@ -15,12 +15,11 @@ Autor: TOTALE Tecnologia
 from __future__ import annotations
 
 import logging
-import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from functools import wraps
-from typing import Any
-from zoneinfo import ZoneInfo
+from typing import Any, ParamSpec, TypeVar
 
 import streamlit as st
 
@@ -43,6 +42,9 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 # ====================================================
@@ -73,13 +75,7 @@ class ConfiguracoesSistema:
     VERSAO: str = "3.4.0"
     AMBIENTE: str = "Produção"
     FUSO_HORARIO: str = "America/Sao_Paulo"
-    INTERVALO_REFRESH: int = 60
-    LOGO_PATH: str = "assets/images/novo-logo-totale.png"
-    ICON_PATH: str = "assets/images/icons/totale.ico"
-
-    @property
-    def timezone(self) -> ZoneInfo:
-        return ZoneInfo(self.FUSO_HORARIO)
+    ICON_PATH: str = "assets/icons/totale.ico"
 
 
 CORES = Cores()
@@ -89,11 +85,11 @@ CONFIG = ConfiguracoesSistema()
 # ====================================================
 # 🔧 BLOCO 2: DECORATORS E UTILITÁRIOS
 # ====================================================
-def handle_exceptions(func):
-    """Decorator para tratamento centralizado de exceções."""
+def handle_exceptions(func: Callable[P, R]) -> Callable[P, R | None]:
+    """Decorador que registra exceções e mostra um erro amigável no app."""
 
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | None:
         try:
             return func(*args, **kwargs)
         except Exception as exc:
@@ -102,11 +98,6 @@ def handle_exceptions(func):
             return None
 
     return wrapper
-
-
-def get_current_time() -> datetime:
-    """Retorna o horário atual no fuso configurado."""
-    return datetime.now(CONFIG.timezone)
 
 
 def format_datetime(
@@ -271,155 +262,7 @@ class GerenciadorEstilos:
 
 
 # ====================================================
-# 🏠 BLOCO 4: COMPONENTES DA PÁGINA HOME
-# ====================================================
-class ComponentesHome:
-    """Componentes reutilizáveis da página home."""
-
-    @staticmethod
-    def render_hero_banner() -> None:
-        st.markdown(
-            """
-            <div class="hero-banner">
-                <h1 style="font-size:32px; font-weight:900; margin:0; color:#FFFFFF !important; letter-spacing:.2px;">
-                    📊 Portal TOTALE
-                </h1>
-                <p style="font-size:14px; opacity:.92; margin:6px 0 0 0; color:#FFFFFF !important; font-weight:500;">
-                    Painéis de Produção, Indicadores e Gestão Estratégica
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    @staticmethod
-    def render_card_boas_vindas() -> None:
-        st.markdown(
-            f"""
-            <div class="card">
-                <p style="margin:0; font-size:14px; color:{CORES.TEXTO_PRIMARIO}; line-height:1.65;">
-                    <b style="color:{CORES.PRIMARIA};">Bem-vindo ao ambiente centralizado de dados da TOTALE.</b>
-
-                    Este portal fornece uma visão clara e estratégica dos processos produtivos
-                    e indicadores de performance, apoiando decisões com base em dados confiáveis.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    @staticmethod
-    def render_status_sistema() -> None:
-        dados_prod = st.session_state.get("dados_prod")
-
-        if dados_prod is None:
-            st.markdown(
-                """
-                <div class="card status-warning">
-                    <b style="color:#C2410C;">⚠️ Sistema aguardando atualização de dados</b>
-                    <p style="margin:8px 0 0 0; font-size:13px; color:#7C2D12; line-height:1.6;">
-                        1️⃣ Acesse <b>🔁 Atualização de Dados</b> no menu lateral<br>
-                        2️⃣ Clique em <b>Sincronizar Agora</b> para puxar as bases operacionais.
-                    </p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        else:
-            ultima = st.session_state.get("ultima_atualizacao")
-            hora = format_datetime(ultima)
-            st.markdown(
-                f"""
-                <div class="card status-ok">
-                    <b style="color:#15803D;">✅ Sistema operacional e atualizado</b>
-                    <span style="font-size:13px; color:#166534;">
-                        Última sincronização validada em {hora}
-                    </span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-    @staticmethod
-    def render_cards_modulos() -> None:
-        col1, col2 = st.columns(2, gap="medium")
-
-        with col1:
-            st.markdown(
-                f"""
-                <div class="card">
-                    <h4 style="margin:0 0 8px 0; color:{CORES.PRIMARIA}; font-weight:800;">
-                        ⚙️ Produção Operacional
-                    </h4>
-                    <p style="margin:0; font-size:13px; color:{CORES.TEXTO_SECUNDARIO}; line-height:1.55;">
-                        Monitore a eficiência e o volume produzido por técnicos e equipes em tempo real.
-                    </p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        with col2:
-            st.markdown(
-                f"""
-                <div class="card">
-                    <h4 style="margin:0 0 8px 0; color:{CORES.PRIMARIA}; font-weight:800;">
-                        📈 Indicadores de Performance
-                    </h4>
-                    <p style="margin:0; font-size:13px; color:{CORES.TEXTO_SECUNDARIO}; line-height:1.55;">
-                        Acompanhe a evolução de metas operacionais e KPIs estratégicos.
-                    </p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-    @staticmethod
-    def render_footer() -> None:
-        agora = get_current_time()
-        st.markdown(
-            f"""
-            <div class="footer">
-                🏢 <b>Painel TOTALE</b>
-                <span class="sep">|</span> 🌐 {CONFIG.AMBIENTE}
-                <span class="sep">|</span> 🕒 {agora.strftime("%d/%m/%Y")} • {agora.strftime("%H:%M")} BRT
-                <span class="sep">|</span> 🔖 v{CONFIG.VERSAO}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-
-# ====================================================
-# 🏠 BLOCO 5: PÁGINA HOME PRINCIPAL
-# ====================================================
-@handle_exceptions
-def pagina_home() -> None:
-    """Página principal do sistema."""
-    ComponentesHome.render_hero_banner()
-    ComponentesHome.render_card_boas_vindas()
-    ComponentesHome.render_status_sistema()
-
-    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
-    ComponentesHome.render_cards_modulos()
-    ComponentesHome.render_footer()
-    _gerenciar_refresh_automatico()
-
-
-def _gerenciar_refresh_automatico() -> None:
-    """Gerencia o refresh automático da página de forma segura."""
-    if "_last_refresh_time" not in st.session_state:
-        st.session_state["_last_refresh_time"] = time.time()
-
-    tempo_decorrido = time.time() - st.session_state["_last_refresh_time"]
-    if tempo_decorrido > CONFIG.INTERVALO_REFRESH:
-        logger.info("Executando refresh automático do portal.")
-        st.session_state["_last_refresh_time"] = time.time()
-        st.rerun()
-
-
-# ====================================================
-# 🚀 BLOCO 6: GERENCIADOR DE NAVEGAÇÃO
+# 🚀 BLOCO 4: GERENCIADOR DE NAVEGAÇÃO
 # ====================================================
 class GerenciadorNavegacao:
     """Gerencia navegação e conteúdo corporativo da sidebar."""
@@ -517,7 +360,7 @@ class GerenciadorNavegacao:
 
 
 # ====================================================
-# 🚀 BLOCO 7: APLICAÇÃO PRINCIPAL
+# 🚀 BLOCO 5: APLICAÇÃO PRINCIPAL
 # ====================================================
 @handle_exceptions
 def main() -> None:
