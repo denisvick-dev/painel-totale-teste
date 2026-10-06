@@ -192,6 +192,9 @@ Acesse: **http://localhost:8501**
 # Guarda de sintaxe/estrutura, sem dependências externas
 python tests/test_sintaxe.py
 
+# Lint configurado no repositório
+ruff check .
+
 # Suíte completa (após instalar requirements-dev.txt)
 pytest -q
 ```
@@ -223,8 +226,11 @@ pytest -q
 painel-totale/
 ├── streamlit_app.py              # Entry point, navegação e shell global
 ├── requirements.txt              # Dependências de execução
-├── requirements-dev.txt          # Dependências para desenvolvimento/testes
+├── requirements-dev.txt          # Ambiente completo de desenvolvimento
+├── requirements-test.txt         # Dependências mínimas para CI/testes
+├── .ruff.toml                    # Regras de lint
 ├── README.md
+├── .github/workflows/quality.yml # Lint e testes em push/PR
 ├── .streamlit/
 │   └── secrets.example.toml      # Modelo local de configuração (sem credenciais reais)
 ├── components/

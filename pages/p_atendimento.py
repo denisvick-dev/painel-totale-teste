@@ -27,12 +27,12 @@ from typing import Any
 
 import pandas as pd
 import streamlit as st
-from components.componentes import render_page_sidebar_theme_selector
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from streamlit_gsheets import GSheetsConnection
 
 from components.componentes import aplicar_estilo as aplicar_estilo_ds
+from components.componentes import render_page_sidebar_theme_selector
 
 logger = logging.getLogger(__name__)
 

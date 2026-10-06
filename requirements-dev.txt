@@ -1,2 +1,2 @@
 -r requirements.txt
-pytest>=8,<9
+-r requirements-test.txt

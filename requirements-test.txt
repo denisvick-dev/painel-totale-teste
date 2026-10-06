@@ -1,0 +1,6 @@
+pytest>=8,<9
+ruff>=0.16,<0.17
+streamlit>=1.52
+pandas
+numpy
+plotly

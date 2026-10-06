@@ -12,6 +12,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import importlib
+import logging
 import re
 import sys
 import unicodedata
@@ -28,6 +29,7 @@ import pandas as pd
 import streamlit as st
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+
 from components.componentes import render_page_sidebar_theme_selector
 
 # ─────────────────────────────────────────────────────────────────────
@@ -135,12 +137,10 @@ _component_section_header: Callable[..., Any] | None = None
 _component_sidebar_brand: Callable[..., Any] | None = None
 _component_table_html: Callable[..., Any] | None = None
 _component_insight: Callable[..., Any] | None = None
-_component_kpi: Callable[..., Any] | None = None
 _component_kpi_sm: Callable[..., Any] | None = None
 
 try:
     from components.componentes import render_insight as _component_insight
-    from components.componentes import render_kpi as _component_kpi
     from components.componentes import render_kpi_sm as _component_kpi_sm
     from components.componentes import (
         render_section_header as _component_section_header,
@@ -152,8 +152,6 @@ try:
 
 except ImportError:
     COMPONENTES_DISPONIVEIS = False
-
-import logging
 
 logger = logging.getLogger(__name__)
 

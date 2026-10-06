@@ -32,9 +32,9 @@ from components.componentes import (
     render_hero_totale_2,
     render_insight,
     render_kpi,
+    render_page_sidebar_theme_selector,
     render_section_header,
     render_spacer,
-    render_page_sidebar_theme_selector,
 )
 
 logger = logging.getLogger(__name__)

@@ -49,9 +49,9 @@ from components.componentes import (
     render_insight,
     render_kpi,
     render_kpi_sm,
+    render_page_sidebar_theme_selector,
     render_section_header,
     render_table_html,
-    render_page_sidebar_theme_selector,
 )
 from components.componentes import (
     aplicar_estilo as _aplicar_estilo_global,

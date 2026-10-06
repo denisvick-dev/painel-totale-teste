@@ -19,8 +19,8 @@ from components.componentes import (
     render_hero_totale_2,
     render_insight,
     render_kpi,
-    render_section_header,
     render_page_sidebar_theme_selector,
+    render_section_header,
 )
 from components.css_paginas import aplicar_css_tabela_corporativa
 

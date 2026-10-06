@@ -17,6 +17,7 @@ from components.componentes import (
     render_insight,
     render_kpi,
     render_metric_card,
+    render_page_sidebar_theme_selector,
     render_progress_bar,
     render_section_header,
     render_sidebar_brand,
@@ -24,7 +25,6 @@ from components.componentes import (
     render_sidebar_footer_info,
     render_sidebar_status,
     render_table_html,
-    render_page_sidebar_theme_selector,
 )
 
 logger = logging.getLogger(__name__)

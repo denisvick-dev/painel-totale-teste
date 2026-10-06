@@ -25,6 +25,7 @@ from components.componentes import (
     render_empty_state,
     render_hero_totale_1,
     render_kpi,
+    render_page_sidebar_theme_selector,
     render_section_header,
     render_sidebar_brand,
     render_sidebar_divider,
@@ -32,7 +33,6 @@ from components.componentes import (
     render_sidebar_info,
     render_sidebar_section,
     render_table_html,
-    render_page_sidebar_theme_selector,
 )
 
 logger = logging.getLogger(__name__)
