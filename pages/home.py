@@ -25,6 +25,14 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 import streamlit as st
 
+from components.alertas_automaticos import avaliar_alertas
+from components.metricas_executivas import (
+    comparar_periodos,
+    encontrar_coluna,
+    serie_atingimento_meta,
+    serie_diaria,
+    serie_quebra_diaria,
+)
 from components.componentes import (
     Cores,
     formatar_numero_br,
@@ -394,6 +402,191 @@ def render_status_operacional(info_base: dict[str, Any]) -> None:
     render_spacer(12)
 
 
+def _formatar_valor_serie(valor: float | None, unidade: str) -> str:
+    if valor is None:
+        return "Sem histórico"
+    if unidade == "%":
+        return f"{valor:.1f}%".replace(".", ",")
+    return formatar_numero_br(valor)
+
+
+def _delta_serie(valor: float | None, referencia: float | None) -> str | None:
+    if valor is None or referencia is None:
+        return None
+    diferenca = valor - referencia
+    if referencia:
+        variacao = (diferenca / abs(referencia)) * 100.0
+        return f"{variacao:+.1f}%".replace(".", ",")
+    return f"{diferenca:+.1f}".replace(".", ",")
+
+
+def _render_comparativo(
+    coluna: Any,
+    titulo: str,
+    serie: pd.Series,
+    unidade: str,
+    descricao: str,
+    *,
+    menor_melhor: bool = False,
+) -> None:
+    comparacao = comparar_periodos(serie)
+    atual = comparacao["atual"]
+    delta = _delta_serie(atual, comparacao["d1"])
+    delta_color = "inverse" if menor_melhor else "normal"
+    with coluna:
+        with st.container(border=True):
+            st.metric(
+                titulo,
+                _formatar_valor_serie(atual, unidade),
+                delta=delta,
+                delta_color=delta_color,
+                help=descricao,
+            )
+            data_ref = comparacao["data"]
+            st.caption(
+                f"Data mais recente: {data_ref.strftime('%d/%m/%Y') if data_ref else 'indisponível'}"
+            )
+            st.caption(
+                f"D-1: {_formatar_valor_serie(comparacao['d1'], unidade)} · "
+                f"W-1: {_formatar_valor_serie(comparacao['w1'], unidade)}"
+            )
+            if not serie.empty:
+                st.line_chart(
+                    serie.tail(14),
+                    height=150,
+                    alt=f"Evolução diária de {titulo.lower()}",
+                )
+
+
+def render_cockpit_executivo() -> None:
+    """Consolida metas, volumetria e quebra sem inventar comparações ausentes."""
+    render_section_header(
+        titulo="Cockpit executivo",
+        subtitulo="Tendências baseadas nas datas registradas nas fontes · D-1 e W-1",
+        icone="monitoring",
+    )
+
+    dados_prod = st.session_state.get("dados_prod")
+    frames_prod: list[pd.DataFrame] = []
+    if isinstance(dados_prod, pd.DataFrame):
+        frames_prod.append(dados_prod)
+    elif isinstance(dados_prod, dict):
+        frames_prod.extend(
+            frame for frame in dados_prod.values() if isinstance(frame, pd.DataFrame)
+        )
+    producao = (
+        pd.concat(frames_prod, ignore_index=True, sort=False)
+        if frames_prod
+        else pd.DataFrame()
+    )
+    df_robo = st.session_state.get("df_memoria")
+    operacional = df_robo if isinstance(df_robo, pd.DataFrame) else pd.DataFrame()
+
+    coluna_data_operacional = encontrar_coluna(
+        operacional,
+        (
+            "DATA",
+            "DATA OS",
+            "DATA BAIXA",
+            "DATA EXECUÇÃO",
+            "DATA AGENDAMENTO",
+        ),
+    )
+    coluna_volume = encontrar_coluna(
+        operacional, ("TOTAL DE TAREFAS", "QUANTIDADE", "QTD OS")
+    )
+    fonte_volume = operacional
+    if coluna_data_operacional is None:
+        fonte_volume = producao
+        coluna_volume = encontrar_coluna(producao, ("TOTAL DE TAREFAS", "QTD OS"))
+    serie_volume = serie_diaria(
+        fonte_volume,
+        valor_col=coluna_volume,
+    )
+    if coluna_volume is None:
+        serie_volume = serie_diaria(fonte_volume)
+
+    serie_meta = serie_atingimento_meta(producao)
+    serie_quebra = serie_quebra_diaria(operacional)
+    col_meta, col_volume, col_quebra = st.columns(3)
+    _render_comparativo(
+        col_meta,
+        "Equipes na meta mensal (≥ 300 pts)",
+        serie_meta,
+        "%",
+        "Percentual de equipes que atingiram 300 pontos acumulados no mês; comparação indisponível se a data correspondente não existir.",
+    )
+    _render_comparativo(
+        col_volume,
+        "Volumetria diária",
+        serie_volume,
+        "registros",
+        "Soma de tarefas quando a fonte informa quantidade; caso contrário, conta registros datados.",
+    )
+    _render_comparativo(
+        col_quebra,
+        "Quebra diária",
+        serie_quebra,
+        "%",
+        "Não execuções divididas pelas ordens executadas ou não executadas; pendências não entram no denominador.",
+        menor_melhor=True,
+    )
+
+    st.caption(
+        "As comparações usam a última data disponível, o dia imediatamente anterior (D-1) "
+        "e a mesma data da semana anterior (W-1). Datas sem registros são exibidas como “Sem histórico”."
+    )
+    links = st.columns(3)
+    with links[0]:
+        st.page_link(
+            "pages/pontos.py",
+            label="Detalhar metas e produção",
+            icon="📈",
+            width="stretch",
+        )
+    with links[1]:
+        st.page_link(
+            "pages/volumetria.py",
+            label="Detalhar volumetria",
+            icon="📊",
+            width="stretch",
+        )
+    with links[2]:
+        st.page_link(
+            "pages/quebra_unificada.py",
+            label="Detalhar quebra por segmento",
+            icon="📉",
+            width="stretch",
+        )
+    render_spacer(14)
+
+
+def render_resumo_alertas() -> None:
+    alertas = avaliar_alertas(dict(st.session_state))
+    render_section_header(
+        titulo="Alertas automáticos",
+        subtitulo="Falhas de sincronização, qualidade dos dados e estado do robô",
+        icone="notifications_active",
+        badge=f"{len(alertas)} ativo(s)",
+    )
+    if not alertas:
+        st.success("Nenhum alerta ativo nas fontes verificadas nesta sessão.")
+    else:
+        with st.container(border=True):
+            for alerta in alertas[:3]:
+                st.markdown(f"**{alerta.severidade} · {alerta.titulo}**")
+                st.caption(f"{alerta.origem}: {alerta.detalhe}")
+            if len(alertas) > 3:
+                st.caption(f"E mais {len(alertas) - 3} alerta(s).")
+    st.page_link(
+        "pages/alertas.py",
+        label="Abrir central de alertas",
+        icon="⚠️",
+        width="stretch",
+    )
+    render_spacer(14)
+
+
 def render_modulos_principais() -> None:
     """Exibe os módulos corporativos organizados em cartões estratégicos de alto padrão."""
     render_section_header(
@@ -611,6 +804,8 @@ def main() -> None:
     render_boas_vindas()
     render_kpi_strip(info_base)
     render_status_operacional(info_base)
+    render_cockpit_executivo()
+    render_resumo_alertas()
     render_modulos_principais()
     render_atalhos_rapidos()
     render_footer()

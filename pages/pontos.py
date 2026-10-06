@@ -12,6 +12,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from plotly.graph_objects import Figure
 
+from components.metricas_executivas import resumo_frequencia
 from components.componentes import (
     Cores,
     Fontes,
@@ -1175,8 +1176,13 @@ if "Nome Equipe" in df.columns:
         df, dias_brutos, dias_seguros, dias_passados
     )
 
-aba_ranking, aba_executivo, aba_evolucao = st.tabs(
-    ["🏆 Ranking & Metas", "👔 Visão Executiva", "📈 Evolução Temporal"]
+aba_ranking, aba_executivo, aba_evolucao, aba_frequencia = st.tabs(
+    [
+        "🏆 Ranking & Metas",
+        "👔 Visão Executiva",
+        "📈 Evolução Temporal",
+        "🗓️ Frequência",
+    ]
 )
 
 # ── ABA 1 ──────────────────────────────────────────
@@ -1331,6 +1337,46 @@ with aba_evolucao:
             "(ex: 'Data Agendamento' ou 'Data Conclusão').",
             tipo="info",
         )
+
+# ── ABA 4 ──────────────────────────────────────────
+with aba_frequencia:
+    render_section_header(
+        "🗓️",
+        "Frequência de produção",
+        "Dias com registros de produção por equipe no recorte selecionado",
+    )
+    col_data_frequencia = Utilitarios.encontrar_coluna_data(df)
+    frequencia = resumo_frequencia(df, data_col=col_data_frequencia)
+    if frequencia.empty:
+        render_insight(
+            "Não há equipe e data válidas para calcular frequência de produção.",
+            tipo="info",
+        )
+    else:
+        c_eq, c_dias, c_periodo = st.columns(3)
+        c_eq.metric("Equipes com produção", f"{frequencia['Equipe'].nunique():,}".replace(",", "."))
+        c_dias.metric(
+            "Maior frequência observada",
+            f"{int(frequencia['Dias com produção'].max())} dias",
+        )
+        data_min = pd.to_datetime(df[col_data_frequencia], errors="coerce").min()
+        data_max = pd.to_datetime(df[col_data_frequencia], errors="coerce").max()
+        c_periodo.metric(
+            "Período dos registros",
+            f"{data_min:%d/%m}–{data_max:%d/%m}"
+            if pd.notna(data_min) and pd.notna(data_max)
+            else "Indisponível",
+        )
+        st.dataframe(
+            frequencia,
+            hide_index=True,
+            width="stretch",
+            alt="Dias de produção observados por equipe",
+        )
+    st.caption(
+        "Este indicador conta apenas datas com produção registrada. Não identifica faltas: "
+        "para isso é necessária uma escala ou fonte explícita de presença."
+    )
 
 # ── Rodapé ──────────────────────────────────────────
 # FIX: antes o bloco só aparecia sob uma condição que era sempre verdadeira e
