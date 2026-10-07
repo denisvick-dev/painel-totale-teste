@@ -39,12 +39,12 @@ render_page_sidebar_theme_selector()
 # (a aparência de .corp-table vive em components/css_paginas.py)
 aplicar_css_tabela_corporativa(
     fonte_px=11,
-    padding='5px 8px',
-    altura_linha='1.2',
+    padding="5px 8px",
+    altura_linha="1.2",
     fonte_celula_px=11,
-    gradiente_cabecalho='linear-gradient(180deg, #012869 0%, #1E3A8A 100%)',
-    raio_scrollbar='4px',
-    cabecalho_extra='border-right: 1px solid rgba(255,255,255,0.12) !important; padding: 6px 8px !important; position: sticky !important; top: 0 !important; z-index: 3 !important; text-align: left !important;',
+    gradiente_cabecalho="linear-gradient(180deg, #012869 0%, #1E3A8A 100%)",
+    raio_scrollbar="4px",
+    cabecalho_extra="border-right: 1px solid rgba(255,255,255,0.12) !important; padding: 6px 8px !important; position: sticky !important; top: 0 !important; z-index: 3 !important; text-align: left !important;",
 )
 
 st.markdown(
@@ -102,6 +102,26 @@ st.markdown(
         display: flex;
         align-items: center;
         gap: 12px;
+    }
+
+    /* Cores para aderência */
+    .aderencia-alta {
+        background-color: #22C55E !important;
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
+        text-align: center !important;
+    }
+    .aderencia-media {
+        background-color: #FACC15 !important;
+        color: #1F2937 !important;
+        font-weight: 800 !important;
+        text-align: center !important;
+    }
+    .aderencia-baixa {
+        background-color: #EF4444 !important;
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
+        text-align: center !important;
     }
     </style>
     """,
@@ -185,6 +205,21 @@ def _serie_numerica(serie: pd.Series) -> pd.Series:
     return numerica.fillna(0.0)
 
 
+def _estilo_aderencia(valor: float) -> str:
+    """
+    Retorna estilo CSS para célula de aderência:
+    - > 75%: Verde (alta performance)
+    - 65% a 75%: Amarelo (atenção)
+    - < 65%: Vermelho (crítico)
+    """
+    if valor > 0.75:
+        return "background-color: #22C55E; color: #FFFFFF; font-weight: 800; text-align: center;"
+    elif valor >= 0.65:
+        return "background-color: #FACC15; color: #1F2937; font-weight: 800; text-align: center;"
+    else:
+        return "background-color: #EF4444; color: #FFFFFF; font-weight: 800; text-align: center;"
+
+
 # ====================================================
 # BLOCO 2: COMPONENTES VISUAIS
 # ====================================================
@@ -216,17 +251,12 @@ class ComponenteVisual:
                 f'<span class="ticker-sep">|</span>'
             )
 
-        # FIX: duração proporcional ao conteúdo (antes era fixa em 35s e a faixa
-        # "corria" rápido demais com poucos itens ou lento demais com muitos).
         duracao = max(20, min(90, len(dados) * 8))
 
-        # FIX (ticker congelado): o CSS puro parava de animar em máquinas com
-        # "reduzir animações" ligado (Windows/macOS/VDI). O script abaixo assume a
-        # rolagem se a animação CSS não estiver rodando — o ticker nunca fica parado.
         script_fallback = f"""
 <script>
 (function () {{
-  var DUR = {duracao};                              // s para percorrer 50% do conteúdo
+  var DUR = {duracao};
   var el = document.querySelector('.ticker-content');
   if (!el) return;
   var wrapper = el.parentElement;
@@ -239,7 +269,7 @@ class ComponenteVisual:
   }}
 
   window.setTimeout(function () {{
-    if (cssRodando()) return;                       // CSS deu conta: nada a fazer
+    if (cssRodando()) return;
     el.style.animation = 'none';
     var raf = window.requestAnimationFrame ||
               function (cb) {{ return window.setTimeout(function () {{ cb(Date.now()); }}, 16); }};
@@ -254,7 +284,7 @@ class ComponenteVisual:
       if (ultimo === null) ultimo = ts;
       var dt = (ts - ultimo) / 1000;
       ultimo = ts;
-      if (++contador % 30 === 0) largura = el.scrollWidth / 2;   // fonte/web-font carregou
+      if (++contador % 30 === 0) largura = el.scrollWidth / 2;
       if (!pausado && largura > 0) {{
         x -= (largura / DUR) * dt;
         if (-x >= largura) x += largura;
@@ -415,7 +445,6 @@ class ComponenteVisual:
         modo_diario: bool = False,
         height: int = 450,
     ) -> None:
-        """Ranking com fontes corporativas + cores de meta/projeção (DOM)."""
         if df.empty:
             render_insight("Nenhum dado disponível.", tipo="info")
             return
@@ -423,7 +452,6 @@ class ComponenteVisual:
         badge_txt = badge or f"{len(df)} equipes"
         modo_txt = "📅 Meta Diária" if modo_diario else "📆 Acumulado do Mês"
 
-        # Header do card
         st.markdown(
             f"""
             <div class="rank-card-header">
@@ -450,6 +478,7 @@ class ComponenteVisual:
             "Nome Equipe": "Equipe",
             "Supervisor": "Supervisor",
             "Projeto": "Projeto",
+            "Base": "Base",
             "Pontos": "Pontos",
             "Projeção": "Proj. Fechamento",
         }
@@ -460,16 +489,11 @@ class ComponenteVisual:
         if "Rank" in df_display.columns:
             df_display["Rank"] = df_display["Rank"].apply(Utilitarios.formatar_posicao)
 
-        # Formatação numérica
-        # FIX: removidas as "color_rules" (estavam declaradas e nunca usadas — o
-        # colorir() do Styler não é aplicado aqui, pois a tabela é HTML próprio).
         fmt: dict[str, Any] = {}
         for c in df_display.columns:
             if c in ("Pontos", "Proj. Fechamento") or "Meta" in str(c):
-                # mesma convencao numerica dos KPIs (1.234,5) — antes saia 1,234.5
                 fmt[c] = Utilitarios.formatar_decimal
 
-        # Render HTML local com classes de meta (mantém cores de fundo)
         ComponenteVisual._tabela_ranking_colorida(
             df_display,
             fmt=fmt,
@@ -483,7 +507,6 @@ class ComponenteVisual:
         height: int = 450,
         max_rows: int = 300,
     ) -> None:
-        """HTML corporativo com classes CSS de meta/projeção e scrollbar custom."""
         df_show = df.head(max_rows).copy()
         cols = list(df_show.columns)
         fmt = fmt or {}
@@ -547,13 +570,6 @@ class ComponenteVisual:
 # BLOCO 3: UTILITÁRIOS
 # ====================================================
 class Utilitarios:
-    """Regra de dias úteis (CONFIRMADA pela operação):
-    SÁBADO CONTA COMO DIA ÚTIL — apenas domingo é desconsiderado.
-
-    weekmask do numpy: 7 posições = seg, ter, qua, qui, sex, sáb, dom
-    "1111110" = seg..sáb (padrão atual)   |   "1111100" = seg..sex (se a regra mudar)
-    """
-
     DIAS_UTEIS = "1111110"
     SABADO_CONTA = DIAS_UTEIS[5] == "1"
 
@@ -565,6 +581,8 @@ class Utilitarios:
         "Data_Execucao",
     ]
 
+    COLUNAS_BASE = ["Base", "BASE", "Região", "REGIÃO", "Regiao", "REGIAO", "Filial"]
+
     @staticmethod
     def encontrar_coluna_data(df: pd.DataFrame) -> str | None:
         for c in Utilitarios.COLUNAS_DATA:
@@ -573,13 +591,14 @@ class Utilitarios:
         return None
 
     @staticmethod
-    def normalizar_coluna_data(df: pd.DataFrame) -> pd.DataFrame:
-        """FIX RAIZ DO CRASH: converte a coluna de data para datetime64.
+    def encontrar_coluna_base(df: pd.DataFrame) -> str | None:
+        for c in Utilitarios.COLUNAS_BASE:
+            if c in df.columns:
+                return c
+        return None
 
-        Sem isso, ao concatenar Prod (data já como datetime) com Gpon (data em
-        texto), a coluna vira 'object' mista e `df[col].max()` estoura com
-        `TypeError: '>=' not supported between instances of 'Timestamp' and 'str'`.
-        """
+    @staticmethod
+    def normalizar_coluna_data(df: pd.DataFrame) -> pd.DataFrame:
         col_data = Utilitarios.encontrar_coluna_data(df)
         if not col_data:
             return df
@@ -614,7 +633,6 @@ class Utilitarios:
 
     @staticmethod
     def formatar_decimal(v: float) -> str:
-        """FIX: pódio e tabelas misturavam padrão en-US (1,234.5)."""
         texto = f"{_para_float(v):,.1f}"
         return texto.replace(",", "\u00a0").replace(".", ",").replace("\u00a0", ".")
 
@@ -627,42 +645,10 @@ class Utilitarios:
         return {1: f"🥇 {v}º", 2: f"🥈 {v}º", 3: f"🥉 {v}º"}.get(v, f"{v}º")
 
     @staticmethod
-    def colorir_metas(valor: Any) -> str:
-        """Mantido para compatibilidade (não é usado nesta página: a tabela
-        aplica as classes CSS .meta-*)."""
-        v = _para_float(valor, default=float("-inf"))
-        if v >= 400:
-            return (
-                "background-color:#1E3A8A;color:#FFFFFF;font-weight:800;"
-                "border-left:3px solid #0F172A;text-align:center;"
-            )
-        if v >= 300:
-            return (
-                "background-color:#DCFCE7;color:#166534;font-weight:700;"
-                "border-left:3px solid #22C55E;text-align:center;"
-            )
-        if v >= 275:
-            return (
-                "background-color:#FEF9C3;color:#854D0E;font-weight:700;"
-                "border-left:3px solid #EAB308;text-align:center;"
-            )
-        return "font-weight:700;border-left:3px solid #EF4444;text-align:center;"
-
-    @staticmethod
-    def colorir_projecao(valor: Any) -> str:
-        """Mantido para compatibilidade."""
-        return (
-            "background-color:#0F172A;color:#FFFFFF;font-weight:800;"
-            "text-align:center;border-left:3px solid #64748B;"
-        )
-
-    @staticmethod
     def calcular_dias_uteis(df: pd.DataFrame) -> tuple[int, int, datetime.date, int]:
         data_referencia: datetime.date
         col_data = Utilitarios.encontrar_coluna_data(df)
         if col_data is not None:
-            # FIX: coage a coluna ANTES do .max() (evita TypeError com colunas
-            # mistas: datas + texto, Prod datetime64 + Gpon string, etc.)
             serie = pd.to_datetime(df[col_data], errors="coerce")
             data_maxima = serie.max() if serie.notna().any() else None
         else:
@@ -683,10 +669,14 @@ class Utilitarios:
         u_np = np.datetime64(ultimo)
 
         total = int(
-            np.busday_count(p_np, u_np + np.timedelta64(1, "D"), weekmask=Utilitarios.DIAS_UTEIS)
+            np.busday_count(
+                p_np, u_np + np.timedelta64(1, "D"), weekmask=Utilitarios.DIAS_UTEIS
+            )
         )
         passados = int(
-            np.busday_count(p_np, m_np + np.timedelta64(1, "D"), weekmask=Utilitarios.DIAS_UTEIS)
+            np.busday_count(
+                p_np, m_np + np.timedelta64(1, "D"), weekmask=Utilitarios.DIAS_UTEIS
+            )
         )
         brutos = max(0, total - passados)
         seguros = max(1, brutos)
@@ -772,7 +762,6 @@ class Utilitarios:
             for col in ws.columns:
                 letra = get_column_letter(col[0].column)
                 max_len = max((len(str(c.value)) for c in col if c.value), default=0)
-                # FIX: largura limitada (antes "Nome Equipe" muito longo inchava a coluna)
                 ws.column_dimensions[letra].width = min(max(max_len + 3, 12), 42)
 
             ws.freeze_panes = "A2"
@@ -786,9 +775,6 @@ class Utilitarios:
 # BLOCO 4: PROCESSAMENTO
 # ====================================================
 class ProcessamentoDados:
-    # Chaves de IDENTIDADE da equipe (CódAuxEquipe não entra aqui: ele é
-    # agregado, senão a mesma equipe viraria duas linhas quando a planilha
-    # viesse com o código vazio em uma das fontes).
     CHAVES_GRUPO = ["Nome Equipe", "Supervisor", "Projeto"]
 
     @staticmethod
@@ -802,10 +788,6 @@ class ProcessamentoDados:
         trabalho = df.copy()
         chaves = [c for c in ProcessamentoDados.CHAVES_GRUPO if c in trabalho.columns]
 
-        # Higiene de atributos: se a MESMA equipe aparece com Supervisor/Projeto
-        # preenchido em uma planilha e em branco na outra, o branco é completado.
-        # Sem isso a equipe aparecia 2x no ranking (uma linha "—" e outra normal),
-        # mesmo com o total de pontos correto.
         if "Nome Equipe" in trabalho.columns:
             for atributo in ("Supervisor", "Projeto", "CódAuxEquipe"):
                 if atributo not in trabalho.columns:
@@ -822,16 +804,11 @@ class ProcessamentoDados:
 
         agregacoes: dict[str, Any] = {"Pontos": "sum"}
         if "CódAuxEquipe" in trabalho.columns:
-            # ordena "código preenchido" primeiro para que o first() não pegue NaN
             trabalho = trabalho.sort_values(
                 "CódAuxEquipe", key=lambda s: s.isna(), kind="stable"
             )
             agregacoes["CódAuxEquipe"] = "first"
 
-        # FIX CRÍTICO: dropna=False. Com o padrão (dropna=True) TODA linha cuja
-        # chave fosse nula era descartada silenciosamente — ex.: Prod sem a coluna
-        # "CódAuxEquipe" (ou sem Supervisor) fazia ~54% dos pontos e 3 de 7 equipes
-        # desaparecerem do ranking, divergindo dos KPIs do topo da página.
         base = (
             trabalho.groupby(chaves, dropna=False, as_index=False)
             .agg(agregacoes)
@@ -864,7 +841,6 @@ class ProcessamentoDados:
         else:
             dias_trab = pd.Series(float(dias_passados), index=base.index, dtype=float)
 
-        # FIX: .replace(0.0, 1.0) não tratava negativos nem NaN
         dias_trab = dias_trab.where(dias_trab > 0, 1.0)
 
         media_pts = base["Pontos"].div(dias_trab)
@@ -886,7 +862,6 @@ class ProcessamentoDados:
 
     @staticmethod
     def calcular_saude_operacao(ranking: pd.DataFrame) -> pd.DataFrame:
-        # FIX: guarda para ranking vazio/sem colunas (antes: KeyError 'Pontos')
         if ranking.empty or "Pontos" not in ranking.columns:
             return pd.DataFrame(columns=["Status", "count"])
         pts = pd.to_numeric(ranking["Pontos"], errors="coerce").fillna(0.0)
@@ -902,7 +877,6 @@ class ProcessamentoDados:
 
     @staticmethod
     def ranking_supervisores(ranking: pd.DataFrame) -> pd.DataFrame:
-        # FIX: guarda para ranking vazio/sem colunas (antes: KeyError 'Supervisor')
         colunas = ["Supervisor", "Qtd_Equipes", "Total_Pontos", "Media_por_Equipe"]
         if ranking.empty or "Supervisor" not in ranking.columns:
             return pd.DataFrame(columns=colunas)
@@ -915,14 +889,39 @@ class ProcessamentoDados:
         sup["Total_Pontos"] = pd.to_numeric(
             sup["Total_Pontos"], errors="coerce"
         ).fillna(0.0)
-        sup["Qtd_Equipes"] = pd.to_numeric(
-            sup["Qtd_Equipes"], errors="coerce"
-        ).fillna(1.0)
+        sup["Qtd_Equipes"] = pd.to_numeric(sup["Qtd_Equipes"], errors="coerce").fillna(
+            1.0
+        )
         sup["Qtd_Equipes"] = sup["Qtd_Equipes"].where(sup["Qtd_Equipes"] > 0, 1.0)
 
         sup["Supervisor"] = sup["Supervisor"].fillna("(Sem supervisor)")
         sup["Media_por_Equipe"] = sup["Total_Pontos"].div(sup["Qtd_Equipes"])
         return sup.sort_values("Media_por_Equipe", ascending=True)
+
+    @staticmethod
+    def calcular_aderencia(
+        ranking: pd.DataFrame, coluna_grupo: str, meta: float = 300.0
+    ) -> pd.DataFrame:
+        """Calcula o percentual de equipes de um grupo (ex: Supervisor/Projeto) com Projeção >= Meta."""
+        if (
+            ranking.empty
+            or coluna_grupo not in ranking.columns
+            or "Projeção" not in ranking.columns
+        ):
+            return pd.DataFrame()
+
+        temp = ranking.copy()
+        temp["_Atingiu"] = temp["Projeção"] >= meta
+
+        ag = (
+            temp.groupby(coluna_grupo, dropna=False)
+            .agg(Equipes=("Nome Equipe", "count"), Atingiram=("_Atingiu", "sum"))
+            .reset_index()
+        )
+
+        ag[coluna_grupo] = ag[coluna_grupo].fillna("(Sem classificação)")
+        ag["Aderência"] = ag["Atingiram"].astype(float) / ag["Equipes"].astype(float)
+        return ag.sort_values("Aderência", ascending=False)
 
 
 # ====================================================
@@ -955,8 +954,6 @@ class Graficos:
         fig.update_traces(
             texttemplate="%{text:.1f}", textposition="outside", textfont_size=12
         )
-        # FIX: com 1 supervisor só, a barra ocupava a altura toda e o rótulo
-        # externo era cortado — dá um respiro no eixo.
         fig.update_yaxes(automargin=True)
         fig.update_xaxes(automargin=True)
         return Graficos._layout(fig)
@@ -1015,16 +1012,12 @@ if "dados_prod" not in st.session_state:
 prod = st.session_state["dados_prod"]["Prod"].copy()
 gpon = st.session_state["dados_prod"]["Gpon"].copy()
 
-# FIX: as conversões numéricas estouravam KeyError se a coluna não existisse
 for _nome, _frame in (("Prod", prod), ("Gpon", gpon)):
     if "Pontos" not in _frame.columns:
         _frame["Pontos"] = 0.0
     _frame["Pontos"] = _serie_numerica(_frame["Pontos"])
 
 df = pd.concat([prod, gpon], ignore_index=True)
-
-# FIX RAIZ: normaliza a data DEPOIS do concat (Prod+Gpon podem vir com tipos
-# diferentes) — era aqui que a página morria no calcular_dias_uteis().
 df = Utilitarios.normalizar_coluna_data(df)
 
 colunas_ausentes = [
@@ -1055,25 +1048,28 @@ st.divider()
 # ====================================================
 # BLOCO 7: FILTROS
 # ====================================================
-CHAVES_FILTRO = ["sel_Projeto", "sel_Supervisor", "sel_Nome Equipe"]
+CHAVES_FILTRO = ["sel_Projeto", "sel_Supervisor", "sel_Nome Equipe", "sel_Base"]
 
 st.sidebar.header("🎯 Filtros Avançados")
 
-for col_nome, label, chave in [
+col_base_df = Utilitarios.encontrar_coluna_base(df)
+
+filtros_dinamicos = [
     ("Projeto", "Projeto:", "sel_Projeto"),
     ("Supervisor", "Supervisor:", "sel_Supervisor"),
     ("Nome Equipe", "Equipe:", "sel_Nome Equipe"),
-]:
+]
+
+if col_base_df:
+    filtros_dinamicos.insert(0, (col_base_df, "Base / Região:", "sel_Base"))
+
+for col_nome, label, chave in filtros_dinamicos:
     if col_nome in df.columns:
-        opcoes = ["Todos"] + sorted(
-            df[col_nome].dropna().astype(str).unique().tolist()
-        )
+        opcoes = ["Todos"] + sorted(df[col_nome].dropna().astype(str).unique().tolist())
         sel = st.sidebar.selectbox(label, opcoes, key=chave)
         if sel != "Todos":
             df = df[df[col_nome].astype(str) == sel]
 
-# FIX: o botão não limpava os filtros de fato (os widgets mantinham o valor
-# no session_state). Agora apaga as chaves antes do rerun.
 if st.sidebar.button("🔄 Limpar Filtros", key="btn_limpar_filtros"):
     for chave in CHAVES_FILTRO:
         st.session_state.pop(chave, None)
@@ -1171,15 +1167,17 @@ st.divider()
 # ====================================================
 ranking = pd.DataFrame()
 ranking_dia = pd.DataFrame()
+
 if "Nome Equipe" in df.columns:
     ranking, ranking_dia = ProcessamentoDados.calcular_rankings(
         df, dias_brutos, dias_seguros, dias_passados
     )
 
-aba_ranking, aba_executivo, aba_evolucao, aba_frequencia = st.tabs(
+aba_ranking, aba_executivo, aba_aderencia, aba_evolucao, aba_frequencia = st.tabs(
     [
         "🏆 Ranking & Metas",
         "👔 Visão Executiva",
+        "🎯 Aderência (Projeção)",
         "📈 Evolução Temporal",
         "🗓️ Frequência",
     ]
@@ -1202,7 +1200,6 @@ with aba_ranking:
     df_exibir = ranking_dia if por_dia else ranking
     modo_txt = "Meta Diária" if por_dia else "Meta Mensal"
 
-    # Ranking compacto renderizado com o novo CSS ajustado
     ComponenteVisual.render_ranking_html(
         df_exibir,
         titulo=f"Performance por Equipe — {modo_txt}",
@@ -1224,14 +1221,11 @@ with aba_ranking:
             width="stretch",
         )
     with col_dl2:
-        # FIX: separador ";" + decimal "," (padrão que o Excel pt-BR abre
-        # corretamente; antes o decimal "," num arquivo separado por vírgula
-        # virava texto na planilha).
         st.download_button(
             "📄 **Exportar CSV**",
-            data=df_exibir.to_csv(
-                index=False, decimal=",", sep=";"
-            ).encode("utf-8-sig"),
+            data=df_exibir.to_csv(index=False, decimal=",", sep=";").encode(
+                "utf-8-sig"
+            ),
             file_name=nome_arq.replace(".xlsx", ".csv"),
             mime="text/csv",
             width="stretch",
@@ -1288,12 +1282,73 @@ with aba_executivo:
                 render_insight("Sem dados de supervisor no recorte atual.", tipo="info")
             else:
                 st.plotly_chart(
-                    Graficos.barras_horizontal(df_sup, "Media_por_Equipe", "Supervisor"),
+                    Graficos.barras_horizontal(
+                        df_sup, "Media_por_Equipe", "Supervisor"
+                    ),
                     width="stretch",
                     key="graf_sup",
                 )
 
 # ── ABA 3 ──────────────────────────────────────────
+with aba_aderencia:
+    render_section_header("🎯", "Aderência de Equipes (Projeção ≥ 300 pts)")
+
+    if ranking.empty:
+        render_insight("Sem dados disponíveis para calcular a aderência.", tipo="info")
+    else:
+        col_ad_sup, col_ad_proj = st.columns(2)
+
+        with col_ad_sup:
+            st.markdown("#### Por Supervisor (Monitor)")
+            df_ad_sup = ProcessamentoDados.calcular_aderencia(
+                ranking, "Supervisor", meta=300.0
+            )
+            if not df_ad_sup.empty:
+                # Aplicar estilo condicional na coluna Aderência
+                styler_sup = df_ad_sup.style.format({"Aderência": "{:.1%}"})
+                styler_sup = styler_sup.map(_estilo_aderencia, subset=["Aderência"])
+                st.dataframe(styler_sup, hide_index=True, use_container_width=True)
+            else:
+                st.info("Sem dados de Supervisor.")
+
+        with col_ad_proj:
+            st.markdown("#### Por Projeto")
+            df_ad_proj = ProcessamentoDados.calcular_aderencia(
+                ranking, "Projeto", meta=300.0
+            )
+            if not df_ad_proj.empty:
+                # Aplicar estilo condicional na coluna Aderência
+                styler_proj = df_ad_proj.style.format({"Aderência": "{:.1%}"})
+                styler_proj = styler_proj.map(_estilo_aderencia, subset=["Aderência"])
+                st.dataframe(styler_proj, hide_index=True, use_container_width=True)
+            else:
+                st.info(
+                    "Sem dados de Projeto. Verifique se a coluna 'Projeto' existe na planilha."
+                )
+
+        # Legenda de cores
+        st.markdown(
+            """
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;
+                 padding:12px 16px;background:#F8FAFC;border-radius:8px;
+                 border:1px solid #E2E8F0;font-size:0.78rem;
+                 font-family:{Fontes.TEXTO};">
+                <span style="font-weight:700;color:{Cores.TEXTO_3};
+                     text-transform:uppercase;letter-spacing:0.05em;">🎨 Legenda:</span>
+                <span style="background:#22C55E;color:white;padding:3px 10px;
+                     border-radius:6px;font-weight:700;">🟢 > 75% — Alta Aderência</span>
+                <span style="background:#FACC15;color:#1F2937;padding:3px 10px;
+                     border-radius:6px;font-weight:700;">🟡 65% - 75% — Atenção</span>
+                <span style="background:#EF4444;color:white;padding:3px 10px;
+                     border-radius:6px;font-weight:700;">🔴 < 65% — Crítico</span>
+            </div>
+            """.replace("{Fontes.TEXTO}", Fontes.TEXTO).replace(
+                "{Cores.TEXTO_3}", Cores.TEXTO_3
+            ),
+            unsafe_allow_html=True,
+        )
+
+# ── ABA 4 ──────────────────────────────────────────
 with aba_evolucao:
     col_data = Utilitarios.encontrar_coluna_data(df)
     render_section_header("📈", "Curva de Tendência Diária")
@@ -1302,8 +1357,6 @@ with aba_evolucao:
         top5 = ranking.head(5)["Nome Equipe"].dropna().astype(str).tolist()
         df_ev = df[df["Nome Equipe"].astype(str).isin(top5)].copy()
 
-        # A coluna já foi normalizada no Bloco 6; a coerção extra garante
-        # robustez caso a normalização seja removida no futuro.
         df_ev[col_data] = pd.to_datetime(df_ev[col_data], errors="coerce").dt.date
         df_ev = df_ev.dropna(subset=[col_data])
 
@@ -1318,9 +1371,7 @@ with aba_evolucao:
                 .sum()
                 .sort_values(col_data)
             )
-            df_ag["Pontos Acumulados"] = df_ag.groupby("Nome Equipe")[
-                "Pontos"
-            ].cumsum()
+            df_ag["Pontos Acumulados"] = df_ag.groupby("Nome Equipe")["Pontos"].cumsum()
 
             st.plotly_chart(
                 Graficos.linhas(df_ag, col_data, "Pontos Acumulados", "Nome Equipe"),
@@ -1338,7 +1389,7 @@ with aba_evolucao:
             tipo="info",
         )
 
-# ── ABA 4 ──────────────────────────────────────────
+# ── ABA 5 ──────────────────────────────────────────
 with aba_frequencia:
     render_section_header(
         "🗓️",
@@ -1354,7 +1405,10 @@ with aba_frequencia:
         )
     else:
         c_eq, c_dias, c_periodo = st.columns(3)
-        c_eq.metric("Equipes com produção", f"{frequencia['Equipe'].nunique():,}".replace(",", "."))
+        c_eq.metric(
+            "Equipes com produção",
+            f"{frequencia['Equipe'].nunique():,}".replace(",", "."),
+        )
         c_dias.metric(
             "Maior frequência observada",
             f"{int(frequencia['Dias com produção'].max())} dias",
@@ -1363,9 +1417,11 @@ with aba_frequencia:
         data_max = pd.to_datetime(df[col_data_frequencia], errors="coerce").max()
         c_periodo.metric(
             "Período dos registros",
-            f"{data_min:%d/%m}–{data_max:%d/%m}"
-            if pd.notna(data_min) and pd.notna(data_max)
-            else "Indisponível",
+            (
+                f"{data_min:%d/%m}–{data_max:%d/%m}"
+                if pd.notna(data_min) and pd.notna(data_max)
+                else "Indisponível"
+            ),
         )
         st.dataframe(
             frequencia,
@@ -1379,8 +1435,6 @@ with aba_frequencia:
     )
 
 # ── Rodapé ──────────────────────────────────────────
-# FIX: antes o bloco só aparecia sob uma condição que era sempre verdadeira e
-# não informava os dias úteis considerados.
 _regra_dias = "seg a sáb" if Utilitarios.SABADO_CONTA else "seg a sex"
 st.sidebar.divider()
 st.sidebar.caption(

@@ -3,7 +3,7 @@ quebra.py
 =========
 Super Relatório Corporativo Unificado | Quebra Operacional TOTALE
 
-Versão: 5.0.0 (Refatoração completa - modularização e clareza)
+Versão: 5.4.0 (Busca Avançada no Google Sheets + Conversão Login -> Nome do Técnico/Monitor)
 Author: TOTALE Tecnologia
 """
 
@@ -16,6 +16,7 @@ import logging
 import re
 import sys
 import unicodedata
+import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -31,69 +32,8 @@ import streamlit as st
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-from components.componentes import render_page_sidebar_theme_selector
-
-# ─────────────────────────────────────────────────────────────────────
-# IMPORTAÇÃO DO MÓDULO CRITÉRIOS
-# ─────────────────────────────────────────────────────────────────────
-CRITERIOS_DISPONIVEL: bool = False
-_classificar_tipo_servico_criterios: Callable[..., Any] | None = None
-_criar_flag_gpon: Callable[..., Any] | None = None
-_detectar_col_tipo_os_1: Callable[..., Any] | None = None
-_detectar_col_habilidade: Callable[..., Any] | None = None
-_detectar_col_flag_gpon: Callable[..., Any] | None = None
-_render_painel_criterios: Callable[..., Any] | None = None
-
-TERMOS_ND: tuple[str, ...] = ("ADESAO", "ADESÃO")
-TERMO_GPON_HABILIDADE: str = "PON"
-TERMO_MIGRACAO_OS: str = "MUDANCA DE PACOTE"
-TERMO_PME_HABILIDADE: str = "PME"
-VAZIOS_GERAIS: set[str] = set()
-
-try:
-    from components.criterios import (
-        TERMO_GPON_HABILIDADE as _TERMO_GPON_HABILIDADE,
-    )
-    from components.criterios import (
-        TERMO_MIGRACAO_OS as _TERMO_MIGRACAO_OS,
-    )
-    from components.criterios import (
-        TERMO_PME_HABILIDADE as _TERMO_PME_HABILIDADE,
-    )
-    from components.criterios import (
-        TERMOS_ND as _TERMOS_ND,
-    )
-    from components.criterios import (
-        VAZIOS_GERAIS as _VAZIOS_GERAIS,
-    )
-    from components.criterios import (
-        classificar_tipo_servico as _classificar_tipo_servico_criterios,
-    )
-    from components.criterios import (
-        criar_flag_gpon as _criar_flag_gpon,
-    )
-    from components.criterios import (
-        detectar_col_flag_gpon as _detectar_col_flag_gpon,
-    )
-    from components.criterios import (
-        detectar_col_habilidade as _detectar_col_habilidade,
-    )
-    from components.criterios import (
-        detectar_col_tipo_os_1 as _detectar_col_tipo_os_1,
-    )
-    from components.criterios import (
-        render_painel_criterios as _render_painel_criterios,
-    )
-
-    CRITERIOS_DISPONIVEL = True
-    TERMOS_ND = _TERMOS_ND
-    TERMO_GPON_HABILIDADE = _TERMO_GPON_HABILIDADE
-    TERMO_MIGRACAO_OS = _TERMO_MIGRACAO_OS
-    TERMO_PME_HABILIDADE = _TERMO_PME_HABILIDADE
-    VAZIOS_GERAIS = _VAZIOS_GERAIS
-
 # ═════════════════════════════════════════════════════════════════════
-# PATH BOOTSTRAP
+# PATH BOOTSTRAP (antes de qualquer import local)
 # ═════════════════════════════════════════════════════════════════════
 _DIR: Final[Path] = Path(__file__).resolve().parent
 _ROOT: Final[Path] = _DIR.parent
@@ -101,6 +41,7 @@ for _path in (_DIR, _ROOT):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+logger = logging.getLogger(__name__)
 
 # ═════════════════════════════════════════════════════════════════════
 # TIPOS
@@ -111,118 +52,122 @@ TemaKPI = Literal[
 TipoInsight = Literal["ok", "info", "alerta", "critico", "acao"]
 
 
-# ─────────────────────────────────────────────────────────────────────
-# COMPONENTES VISUAIS OPCIONAIS
-# ─────────────────────────────────────────────────────────────────────
-_component_section_header: Callable[..., Any] | None = None
-_component_sidebar_brand: Callable[..., Any] | None = None
-_component_table_html: Callable[..., Any] | None = None
-_component_insight: Callable[..., Any] | None = None
-_component_kpi_sm: Callable[..., Any] | None = None
+# ═════════════════════════════════════════════════════════════════════
+# IMPORTS OPCIONAIS – CRITÉRIOS
+# ═════════════════════════════════════════════════════════════════════
+@dataclass
+class ModuloCriterios:
+    """Encapsula o módulo opcional de critérios."""
 
-try:
-    from components.componentes import render_insight as _component_insight
-    from components.componentes import render_kpi_sm as _component_kpi_sm
-    from components.componentes import (
-        render_section_header as _component_section_header,
-    )
-    from components.componentes import render_sidebar_brand as _component_sidebar_brand
-    from components.componentes import render_table_html as _component_table_html
-
-    COMPONENTES_DISPONIVEIS: bool = True
-
-except ImportError:
-    COMPONENTES_DISPONIVEIS = False
-
-logger = logging.getLogger(__name__)
+    disponivel: bool = False
+    termos_nd: tuple[str, ...] = ("ADESAO", "ADESÃO")
+    termo_gpon: str = "PON"
+    termo_migracao: str = "MUDANCA DE PACOTE"
+    termo_pme: str = "PME"
+    vazios_gerais: set[str] = field(default_factory=set)
+    classificar: Callable[..., Any] | None = None
+    criar_flag_gpon: Callable[..., Any] | None = None
+    detect_tipo_os: Callable[..., Any] | None = None
+    detect_habilidade: Callable[..., Any] | None = None
+    detect_flag_gpon: Callable[..., Any] | None = None
+    render_painel: Callable[..., Any] | None = None
 
 
-def render_section_header(icone: str, titulo: str) -> None:
-    if _component_section_header is not None:
-        _component_section_header(icone, titulo)
-        return
-    st.subheader(f"{icone} {titulo}" if icone else titulo)
+def _carregar_criterios() -> ModuloCriterios:
+    try:
+        from components import criterios as c  # type: ignore
+
+        return ModuloCriterios(
+            disponivel=True,
+            termos_nd=c.TERMOS_ND,
+            termo_gpon=c.TERMO_GPON_HABILIDADE,
+            termo_migracao=c.TERMO_MIGRACAO_OS,
+            termo_pme=c.TERMO_PME_HABILIDADE,
+            vazios_gerais=c.VAZIOS_GERAIS,
+            classificar=c.classificar_tipo_servico,
+            criar_flag_gpon=c.criar_flag_gpon,
+            detect_tipo_os=c.detectar_col_tipo_os_1,
+            detect_habilidade=c.detectar_col_habilidade,
+            detect_flag_gpon=c.detectar_col_flag_gpon,
+            render_painel=c.render_painel_criterios,
+        )
+    except ImportError as erro:
+        logger.warning("Módulo critérios não disponível: %s", erro)
+        return ModuloCriterios()
 
 
-def render_sidebar_brand(**kwargs: Any) -> None:
-    if _component_sidebar_brand is not None:
-        _component_sidebar_brand(**kwargs)
+CRITERIOS: Final[ModuloCriterios] = _carregar_criterios()
 
 
-def render_table_html(df: pd.DataFrame, **kwargs: Any) -> None:
-    if _component_table_html is not None:
-        _component_table_html(df, **kwargs)
-        return
-    st.dataframe(df, width="stretch", hide_index=True)
+# ═════════════════════════════════════════════════════════════════════
+# IMPORTS OPCIONAIS – COMPONENTES VISUAIS
+# ═════════════════════════════════════════════════════════════════════
+@dataclass
+class ComponentesVisuais:
+    """Componentes de UI opcionais."""
+
+    disponivel: bool = False
+    section_header: Callable[..., Any] | None = None
+    sidebar_brand: Callable[..., Any] | None = None
+    table_html: Callable[..., Any] | None = None
+    insight: Callable[..., Any] | None = None
+    kpi: Callable[..., Any] | None = None
+    kpi_sm: Callable[..., Any] | None = None
+    theme_selector: Callable[..., Any] | None = None
 
 
-def render_insight(
-    texto: str,
-    tipo: Literal["ok", "info", "alerta", "critico", "acao"] = "info",
-) -> None:
-    if _component_insight is not None:
-        _component_insight(texto, tipo)
-        return
-    if tipo == "ok":
-        st.success(texto)
-    elif tipo in {"critico", "alerta"}:
-        st.warning(texto)
-    elif tipo == "acao":
-        st.error(texto)
-    else:
-        st.info(texto)
+def _carregar_componentes() -> ComponentesVisuais:
+    try:
+        from components import componentes as m  # type: ignore
+
+        return ComponentesVisuais(
+            disponivel=True,
+            section_header=getattr(m, "render_section_header", None),
+            sidebar_brand=getattr(m, "render_sidebar_brand", None),
+            table_html=getattr(m, "render_table_html", None),
+            insight=getattr(m, "render_insight", None),
+            kpi=getattr(m, "render_kpi", None),
+            kpi_sm=getattr(m, "render_kpi_sm", None),
+            theme_selector=getattr(m, "render_page_sidebar_theme_selector", None),
+        )
+    except ImportError as erro:
+        logger.warning("Módulo componentes não disponível: %s", erro)
+        return ComponentesVisuais()
 
 
-# ─────────────────────────────────────────────────────────────────────
-# ROBÔ OPCIONAL
-# ─────────────────────────────────────────────────────────────────────
-RoboCallable = Callable[..., Any]
-
-ROBO_DISPONIVEL: bool = False
-_impl_robo: RoboCallable | None = None
-_ROBO_IMPORT_ERRO: str = ""
+COMPONENTES: Final[ComponentesVisuais] = _carregar_componentes()
 
 
-def _tentar_import_robo() -> tuple[RoboCallable | None, str]:
+# ═════════════════════════════════════════════════════════════════════
+# IMPORTS OPCIONAIS – ROBÔ
+# ═════════════════════════════════════════════════════════════════════
+def _carregar_robo() -> tuple[Callable[..., Any] | None, str]:
     try:
         module = importlib.import_module("robo.robo_local")
-        funcao = getattr(module, "renderizar_robo_local", None)
-        if not callable(funcao):
-            funcao = getattr(module, "render_robo_local", None)
+        funcao = getattr(module, "renderizar_robo_local", None) or getattr(
+            module, "render_robo_local", None
+        )
         if callable(funcao):
-            arquivo_modulo = getattr(module, "__file__", "módulo sem caminho")
-            return funcao, f"OK ({arquivo_modulo})"
-        return None, "Módulo encontrado, mas sem função de renderização compatível."
+            return funcao, f"OK ({getattr(module, '__file__', '?')})"
+        return None, "Função de renderização não encontrada."
     except Exception as erro:
         logger.debug("Robô local não pôde ser importado.", exc_info=True)
         return None, f"{type(erro).__name__}: {erro}"
 
 
-_impl_robo, _ROBO_IMPORT_ERRO = _tentar_import_robo()
-ROBO_DISPONIVEL = _impl_robo is not None
+_ROBO_FN, _ROBO_ERRO = _carregar_robo()
+ROBO_DISPONIVEL: bool = _ROBO_FN is not None
 
 
-def renderizar_robo_local(*args: Any, **kwargs: Any) -> None:
-    if _impl_robo is None:
-        st.sidebar.warning("🤖 Robô offline. Utilize upload manual.")
-        return
-    try:
-        _impl_robo(*args, **kwargs)
-    except Exception as erro:
-        st.sidebar.error(f"Erro no Robô: {erro}")
-
-
-# ─────────────────────────────────────────────────────────────────────
+# ═════════════════════════════════════════════════════════════════════
 # CONFIGURAÇÕES
-# ─────────────────────────────────────────────────────────────────────
+# ═════════════════════════════════════════════════════════════════════
 class Config:
     """Constantes de negócio e visuais."""
 
-    # SLAs
     SLA_QUEBRA_MAXIMA: Final[float] = 0.20
     SLA_MIGRACAO_MAXIMA: Final[float] = 0.25
 
-    # Google Sheets
     URL_LISTA_ATIVOS: Final[str] = (
         "https://docs.google.com/spreadsheets/d/"
         "1LQKDcLshC6XSXLBVWaEYSpxrro6uydyU9pwDLc38pEg/edit"
@@ -230,7 +175,6 @@ class Config:
     SHEET_ID_ATIVOS: Final[str] = "1LQKDcLshC6XSXLBVWaEYSpxrro6uydyU9pwDLc38pEg"
     WORKSHEET_ATIVOS: Final[str] = "lista_ativos"
 
-    # Ordens de classificação
     STATUS_ORDEM: Final[tuple[str, ...]] = ("Executada", "Não Executada", "Pendente")
     ORDEM_TIPOS: Final[tuple[str, ...]] = (
         "Novos Domicílios",
@@ -239,7 +183,6 @@ class Config:
         "Outros",
     )
 
-    # Nomes de coluna reconhecidos
     COLUNAS_TIPO_SERVICO: Final[tuple[str, ...]] = (
         "TIPO_SERVICO",
         "TIPO SERVICO",
@@ -248,7 +191,6 @@ class Config:
         "TIPO O.S. 1",
     )
 
-    # Paleta
     CORES_STATUS: Final[dict[str, str]] = {
         "Executada": "#10B981",
         "Não Executada": "#EF4444",
@@ -366,7 +308,6 @@ VALORES_AUSENTES: Final[frozenset[str]] = frozenset(
     }
 )
 
-# Regex compilados
 RE_ESPACOS: Final[re.Pattern[str]] = re.compile(r"\s+")
 RE_ALFANUMERICO: Final[re.Pattern[str]] = re.compile(r"[^A-Z0-9]")
 RE_NUMERO_INICIAL: Final[re.Pattern[str]] = re.compile(r"^(\d+)")
@@ -374,112 +315,13 @@ RE_LOGIN_DECIMAL: Final[re.Pattern[str]] = re.compile(r"^(\d+)\.0+$")
 
 
 # ═════════════════════════════════════════════════════════════════════
-# IMPORTS OPCIONAIS (Critérios / Componentes / Robô)
-# ═════════════════════════════════════════════════════════════════════
-@dataclass
-class ModuloCriterios:
-    """Encapsula o módulo opcional de critérios."""
-
-    disponivel: bool = False
-    termos_nd: tuple[str, ...] = ("ADESAO", "ADESÃO")
-    termo_gpon: str = "PON"
-    termo_migracao: str = "MUDANCA DE PACOTE"
-    termo_pme: str = "PME"
-    vazios_gerais: set[str] = field(default_factory=set)
-    classificar: Callable[..., Any] | None = None
-    criar_flag_gpon: Callable[..., Any] | None = None
-    detect_tipo_os: Callable[..., Any] | None = None
-    detect_habilidade: Callable[..., Any] | None = None
-    detect_flag_gpon: Callable[..., Any] | None = None
-    render_painel: Callable[..., Any] | None = None
-
-
-def _carregar_criterios() -> ModuloCriterios:
-    try:
-        from components import criterios as c  # type: ignore
-
-        return ModuloCriterios(
-            disponivel=True,
-            termos_nd=c.TERMOS_ND,
-            termo_gpon=c.TERMO_GPON_HABILIDADE,
-            termo_migracao=c.TERMO_MIGRACAO_OS,
-            termo_pme=c.TERMO_PME_HABILIDADE,
-            vazios_gerais=c.VAZIOS_GERAIS,
-            classificar=c.classificar_tipo_servico,
-            criar_flag_gpon=c.criar_flag_gpon,
-            detect_tipo_os=c.detectar_col_tipo_os_1,
-            detect_habilidade=c.detectar_col_habilidade,
-            detect_flag_gpon=c.detectar_col_flag_gpon,
-            render_painel=c.render_painel_criterios,
-        )
-    except ImportError as erro:
-        st.warning(f"⚠️ Módulo critérios não disponível: {erro}")
-        return ModuloCriterios()
-
-
-CRITERIOS: Final[ModuloCriterios] = _carregar_criterios()
-
-
-@dataclass
-class ComponentesVisuais:
-    """Componentes de UI opcionais."""
-
-    disponivel: bool = False
-    section_header: Callable[..., Any] | None = None
-    sidebar_brand: Callable[..., Any] | None = None
-    table_html: Callable[..., Any] | None = None
-    insight: Callable[..., Any] | None = None
-    kpi: Callable[..., Any] | None = None
-    kpi_sm: Callable[..., Any] | None = None
-
-
-def _carregar_componentes() -> ComponentesVisuais:
-    try:
-        from components import componentes as m  # type: ignore
-
-        return ComponentesVisuais(
-            disponivel=True,
-            section_header=m.render_section_header,
-            sidebar_brand=m.render_sidebar_brand,
-            table_html=m.render_table_html,
-            insight=m.render_insight,
-            kpi=m.render_kpi,
-            kpi_sm=m.render_kpi_sm,
-        )
-    except ImportError:
-        return ComponentesVisuais()
-
-
-COMPONENTES: Final[ComponentesVisuais] = _carregar_componentes()
-
-
-def _carregar_robo() -> tuple[Callable[..., Any] | None, str]:
-    try:
-        module = importlib.import_module("robo.robo_local")
-        funcao = getattr(module, "renderizar_robo_local", None) or getattr(
-            module, "render_robo_local", None
-        )
-        if callable(funcao):
-            return funcao, f"OK ({getattr(module, '__file__', '?')})"
-        return None, "Função de renderização não encontrada."
-    except Exception as erro:
-        return None, f"{type(erro).__name__}: {erro}"
-
-
-_ROBO_FN, _ROBO_ERRO = _carregar_robo()
-ROBO_DISPONIVEL: Final[bool] = _ROBO_FN is not None
-
-
-# ═════════════════════════════════════════════════════════════════════
 # HELPERS DE FORMATAÇÃO
 # ═════════════════════════════════════════════════════════════════════
 def html_safe(valor: Any) -> str:
-    """Escapa HTML."""
     return escape(str(valor), quote=True)
 
 
 def fmt_pct_br(valor: Any) -> str:
-    """Formata percentual (0..1) em padrão BR."""
     try:
         n = float(valor)
         if not np.isfinite(n):
@@ -490,7 +332,6 @@ def fmt_pct_br(valor: Any) -> str:
 
 
 def fmt_int_br(valor: Any) -> str:
-    """Formata inteiro com separador BR."""
     try:
         n = float(valor)
         if not np.isfinite(n):
@@ -501,7 +342,6 @@ def fmt_int_br(valor: Any) -> str:
 
 
 def is_missing(valor: Any) -> bool:
-    """Verifica se valor escalar é ausente."""
     try:
         r = pd.isna(valor)
         return bool(r) if isinstance(r, (bool, np.bool_)) else False
@@ -510,7 +350,6 @@ def is_missing(valor: Any) -> bool:
 
 
 def div_segura(num: pd.Series, den: pd.Series, padrao: float = 0.0) -> pd.Series:
-    """Divisão element-wise segura (0/0 => padrão)."""
     n = pd.to_numeric(num, errors="coerce").fillna(0).to_numpy(dtype=float)
     d = pd.to_numeric(den, errors="coerce").fillna(0).to_numpy(dtype=float)
     out = np.full_like(n, padrao, dtype=float)
@@ -531,7 +370,6 @@ def df_sessao(chave: str) -> pd.DataFrame | None:
 # NORMALIZAÇÃO DE TEXTO E TIPOS
 # ═════════════════════════════════════════════════════════════════════
 def normalizar_texto(valor: Any) -> str:
-    """Remove acentos, uppercase, trim e colapsa espaços."""
     if valor is None:
         return ""
     try:
@@ -545,22 +383,20 @@ def normalizar_texto(valor: Any) -> str:
 
 
 def normalizar_coluna(valor: Any) -> str:
-    """Normaliza nome de coluna removendo não-alfanuméricos."""
     return RE_ALFANUMERICO.sub("", normalizar_texto(valor))
 
 
 def normalizar_login(valor: Any) -> str:
-    """Normaliza login removendo decimais (ex: 12345.0 -> 12345)."""
+    if valor is None:
+        return ""
     texto = normalizar_texto(valor).replace(" ", "")
     m = RE_LOGIN_DECIMAL.match(texto)
-    return m.group(1) if m else texto
+    if m:
+        texto = m.group(1)
+    return texto
 
 
 def padronizar_tipo_servico(tipo: Any) -> str:
-    """
-    Normaliza qualquer variação textual para 4 tipos padrão:
-    Novos Domicílios | PME | Migração | Outros.
-    """
     if tipo is None or (isinstance(tipo, float) and np.isnan(tipo)):
         return "Outros"
 
@@ -568,7 +404,6 @@ def padronizar_tipo_servico(tipo: Any) -> str:
     if not t:
         return "Outros"
 
-    # Ordem importa (PME antes de outros padrões similares)
     if any(k in t for k in ("PME", "PJ", "JURIDICO", "CORPORATIVO", "EMPRESA")):
         return "PME"
     if any(k in t for k in ("MIGRA", "MUDANCA DE PACOTE", "UPGRADE", "TROCA", "SWAP")):
@@ -597,8 +432,6 @@ def padronizar_tipo_servico(tipo: Any) -> str:
 # UTILITÁRIOS DE DATAFRAME
 # ═════════════════════════════════════════════════════════════════════
 class DF:
-    """Operações auxiliares sobre DataFrames."""
-
     @staticmethod
     def obter_serie(
         df: pd.DataFrame | None,
@@ -607,7 +440,6 @@ class DF:
         *,
         copiar: bool = False,
     ) -> pd.Series:
-        """Retorna série da coluna (consolida duplicadas se existirem)."""
         if df is None:
             return pd.Series(dtype="object", name=coluna)
         if coluna is None or coluna not in df.columns:
@@ -615,20 +447,23 @@ class DF:
 
         obtido = df[coluna]
         if isinstance(obtido, pd.DataFrame):
-            obtido = (
-                obtido.bfill(axis=1).iloc[:, 0]
-                if obtido.shape[1] > 1
-                else obtido.iloc[:, 0]
-            )
-        serie = cast(pd.Series, obtido)
-        if not serie.index.equals(df.index):
-            serie = serie.reindex(df.index)
-        serie.name = coluna
-        return serie.copy() if copiar else serie
+            df_obtido = cast(pd.DataFrame, obtido)
+            if df_obtido.shape[1] > 1:
+                transposta = df_obtido.T
+                transposta_preenchida = cast(pd.DataFrame, transposta.bfill())
+                serie = transposta_preenchida.iloc[0]
+            else:
+                serie = df_obtido.T.iloc[0]
+            obtido = cast(pd.Series, serie)
+
+        serie_final = cast(pd.Series, obtido)
+        if not serie_final.index.equals(df.index):
+            serie_final = serie_final.reindex(df.index)
+        serie_final.name = coluna
+        return serie_final.copy() if copiar else serie_final
 
     @staticmethod
     def padronizar_colunas(df: pd.DataFrame) -> pd.DataFrame:
-        """Renomeia colunas normalizando e desambiguando duplicatas."""
         resultado = df.copy()
         nomes, usados = [], {}
         for col in resultado.columns:
@@ -642,19 +477,16 @@ class DF:
     def buscar_coluna(
         df: pd.DataFrame | None, palavras: tuple[str, ...] | list[str]
     ) -> str | None:
-        """Busca coluna por nome (exato ou fuzzy)."""
         if df is None:
             return None
         mapa = {normalizar_coluna(c): str(c) for c in df.columns}
-        # Match exato
         for p in palavras:
             alvo = normalizar_coluna(p)
             if alvo and alvo in mapa:
                 return mapa[alvo]
-        # Match fuzzy
         for p in palavras:
             alvo = normalizar_coluna(p)
-            if len(alvo) < 4:
+            if len(alvo) < 3:
                 continue
             for norm, orig in mapa.items():
                 if alvo == "CONTRATO" and "STATUS" in norm:
@@ -665,7 +497,6 @@ class DF:
 
     @staticmethod
     def remover_duplicatas_coluna(df: pd.DataFrame) -> pd.DataFrame:
-        """Remove colunas com nomes normalizados duplicados (mantém a primeira)."""
         df = df.copy()
         vistos: dict[str, str] = {}
         a_remover: list[str] = []
@@ -679,7 +510,6 @@ class DF:
 
     @staticmethod
     def corrigir_colunas_vazias(df: pd.DataFrame) -> pd.DataFrame:
-        """Preenche colunas problemáticas (ex: DATA AGENDA MDU, ID SGD) a partir de alternativas."""
         df = df.copy()
         problema = ["DATA AGENDA MDU", "ID SGD", "DATA_AGENDA_MDU", "ID_SGD"]
         for col in problema:
@@ -697,7 +527,6 @@ class DF:
 
     @staticmethod
     def limpar_texto(serie: pd.Series, padrao: str) -> pd.Series:
-        """Limpa, uppercase e substitui ausentes pelo padrão."""
         r = serie.fillna("").astype(str).str.strip().str.upper()
         return r.mask(r.isin(VALORES_AUSENTES), padrao)
 
@@ -706,7 +535,6 @@ class DF:
 # CONVERSÕES NUMÉRICAS
 # ═════════════════════════════════════════════════════════════════════
 def converter_numero(valor: Any) -> float:
-    """Converte string em número, tratando separadores PT-BR."""
     if valor is None:
         return np.nan
     if isinstance(valor, (int, float, np.number)):
@@ -719,7 +547,6 @@ def converter_numero(valor: Any) -> float:
 
     try:
         if "," in texto and "." in texto:
-            # Decide pelo último separador
             texto = (
                 texto.replace(".", "").replace(",", ".")
                 if texto.rfind(",") > texto.rfind(".")
@@ -743,8 +570,6 @@ def converter_numero(valor: Any) -> float:
 # CLASSIFICAÇÃO DE STATUS
 # ═════════════════════════════════════════════════════════════════════
 class ClassificadorStatus:
-    """Centraliza regras de interpretação de status de O.S."""
-
     @staticmethod
     def status_texto(valor: Any) -> str | None:
         texto = normalizar_texto(valor)
@@ -776,7 +601,6 @@ class ClassificadorStatus:
 
     @classmethod
     def classificar(cls, df: pd.DataFrame) -> pd.Series:
-        """Compõe status final considerando múltiplas colunas e regras."""
         col_inicio = DF.buscar_coluna(
             df, ("INÍCIO", "INICIO", "DATA INÍCIO", "DT INICIO", "HORA INICIO")
         )
@@ -814,11 +638,9 @@ class ClassificadorStatus:
         s_atividade = atividade.map(cls.status_texto)
         s_codigo = cod_baixa.map(cls.codigo_baixa)
 
-        # Pipeline de resolução
         resultado = s_codigo.where(s_codigo.notna(), status_os)
         resultado = resultado.where(resultado.notna(), s_atividade).fillna("Pendente")
 
-        # Overrides por regras específicas
         fech_alvo = {"LIBERADO NO SISTEMA NETSMS", "CANCELADO NO SISTEMA NETSMS"}
         inicio_vazio = inicio.isin(VALORES_AUSENTES)
         c_fech = fechamento.isin(fech_alvo)
@@ -856,7 +678,6 @@ _PALAVRAS_PCT_EXCEL: Final[tuple[str, ...]] = (
 
 
 def gerar_excel(df: pd.DataFrame, aba: str = "Dados") -> bytes:
-    """Gera arquivo Excel formatado em bytes."""
     nome_aba = re.sub(r"[\[\]:*?/\\]", "_", aba).strip()[:31] or "Dados"
     buffer = BytesIO()
 
@@ -864,7 +685,6 @@ def gerar_excel(df: pd.DataFrame, aba: str = "Dados") -> bytes:
         df.to_excel(writer, index=False, sheet_name=nome_aba)
         ws = writer.sheets[nome_aba]
 
-        # Header
         header_fill = PatternFill("solid", fgColor="0F172A")
         header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
         header_border = Border(bottom=Side(style="thin", color="CBD5E1"))
@@ -877,7 +697,6 @@ def gerar_excel(df: pd.DataFrame, aba: str = "Dados") -> bytes:
         ws.freeze_panes = "A2"
         ws.auto_filter.ref = ws.dimensions
 
-        # Formatação de colunas
         for i, col in enumerate(df.columns, start=1):
             nome_upper = str(col).upper()
             amostra = df[col].head(2000).fillna("").astype(str).tolist()
@@ -894,14 +713,31 @@ def gerar_excel(df: pd.DataFrame, aba: str = "Dados") -> bytes:
 
 
 # ═════════════════════════════════════════════════════════════════════
+# CLASSE DE COMPATIBILIDADE EXTRA (UTILS)
+# ═════════════════════════════════════════════════════════════════════
+class Utils:
+    """
+    Abstração unificada de funções de formatação e processamento
+    utilizada por múltiplos módulos da plataforma (ex: quebra_unificada.py).
+    """
+
+    @staticmethod
+    def classificar_status_excel(df: pd.DataFrame) -> pd.Series:
+        """Interface estática para classificar o status contratual da base."""
+        return ClassificadorStatus.classificar(df)
+
+    @staticmethod
+    def gerar_excel(df: pd.DataFrame, aba: str = "Dados") -> bytes:
+        """Interface estática para gerar arquivos Excel binários e formatados."""
+        return gerar_excel(df, aba)
+
+
+# ═════════════════════════════════════════════════════════════════════
 # LOADER DE ARQUIVOS
 # ═════════════════════════════════════════════════════════════════════
 class DataLoader:
-    """Carrega e prepara os dados de O.S. e Lista de Ativos."""
-
     _ENCODINGS_CSV: Final[tuple[str, ...]] = ("utf-8-sig", "utf-8", "latin-1", "cp1252")
 
-    # ───────────── Leitura bruta ─────────────
     @staticmethod
     @st.cache_data(show_spinner=False)
     def ler_arquivo(file_bytes: bytes, filename: str) -> pd.DataFrame:
@@ -941,11 +777,62 @@ class DataLoader:
             keep_default_na=False,
         )
 
-    # ───────────── Google Sheets ─────────────
     @staticmethod
-    @st.cache_data(ttl=600, show_spinner="Sincronizando Lista de Ativos...")
+    @st.cache_data(ttl=300, show_spinner="Sincronizando Lista de Ativos...")
     def buscar_gsheets() -> pd.DataFrame:
-        # Tentativa 1: streamlit_gsheets
+        """
+        Download multi-estratégia do Google Sheets público:
+        1. Exportação CSV direta com User-Agent customizado.
+        2. Endpoint GViz/TQ.
+        3. Streamlit Connection (caso configurada).
+        """
+        # Método 1: Export CSV direto (Mais confiável para sheets públicos)
+        url_export = (
+            f"https://docs.google.com/spreadsheets/d/"
+            f"{Config.SHEET_ID_ATIVOS}/export?format=csv&sheet={quote(Config.WORKSHEET_ATIVOS)}"
+        )
+        try:
+            req = urllib.request.Request(
+                url_export,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                },
+            )
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                data = resp.read()
+            if data:
+                raw = pd.read_csv(BytesIO(data), dtype=str)
+                if not raw.empty:
+                    df_proc = DataLoader.processar_lista_ativos(raw)
+                    if not df_proc.empty:
+                        return df_proc
+        except Exception as e:
+            logger.debug("Falha Método 1 (Export CSV): %s", e)
+
+        # Método 2: Endpoint GViz
+        url_gviz = (
+            f"https://docs.google.com/spreadsheets/d/"
+            f"{Config.SHEET_ID_ATIVOS}/gviz/tq?tqx=out:csv&sheet={quote(Config.WORKSHEET_ATIVOS)}"
+        )
+        try:
+            req = urllib.request.Request(
+                url_gviz,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                },
+            )
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                data = resp.read()
+            if data:
+                raw = pd.read_csv(BytesIO(data), dtype=str)
+                if not raw.empty:
+                    df_proc = DataLoader.processar_lista_ativos(raw)
+                    if not df_proc.empty:
+                        return df_proc
+        except Exception as e:
+            logger.debug("Falha Método 2 (GViz): %s", e)
+
+        # Método 3: Streamlit GSheets Connection
         try:
             m = importlib.import_module("streamlit_gsheets")
             conn = st.connection("gsheets", type=m.GSheetsConnection)
@@ -954,27 +841,13 @@ class DataLoader:
             )
             if isinstance(raw, pd.DataFrame) and not raw.empty:
                 return DataLoader.processar_lista_ativos(raw)
-        except Exception:
-            pass
-
-        # Tentativa 2: CSV público
-        try:
-            aba = quote(Config.WORKSHEET_ATIVOS)
-            url = (
-                f"https://docs.google.com/spreadsheets/d/"
-                f"{Config.SHEET_ID_ATIVOS}/gviz/tq?tqx=out:csv&sheet={aba}"
-            )
-            raw = pd.read_csv(url, dtype=str)
-            if not raw.empty:
-                return DataLoader.processar_lista_ativos(raw)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Falha Método 3 (Streamlit Connection): %s", e)
 
         return pd.DataFrame()
 
     @staticmethod
     def processar_lista_ativos(raw: pd.DataFrame) -> pd.DataFrame:
-        """Normaliza e deduplica a Lista de Ativos."""
         if raw is None or raw.empty:
             return pd.DataFrame()
 
@@ -982,10 +855,42 @@ class DataLoader:
         base.columns = base.columns.astype(str).str.strip()
 
         aliases: dict[str, tuple[str, ...]] = {
-            "LOGIN": ("LOGIN", "MATRÍCULA", "MATRICULA", "ID", "USUARIO", "USUÁRIO"),
-            "TÉCNICO": ("TÉCNICO", "TECNICO", "NOME", "COLABORADOR"),
-            "MONITOR": ("MONITOR", "GESTOR", "SUPERVISOR"),
-            "BASE": ("BASE", "REGIÃO", "REGIAO"),
+            "LOGIN": (
+                "LOGIN",
+                "LOGIN DO TÉCNICO",
+                "LOGIN DO TECNICO",
+                "LOGIN_TECNICO",
+                "MATRÍCULA",
+                "MATRICULA",
+                "ID",
+                "USUARIO",
+                "USUÁRIO",
+                "RE",
+                "COD_TECNICO",
+            ),
+            "TÉCNICO": (
+                "TÉCNICO",
+                "TECNICO",
+                "NOME",
+                "COLABORADOR",
+                "NOME TÉCNICO",
+                "NOME TECNICO",
+                "NOME COMPLETO",
+                "NOME DO TÉCNICO",
+                "NOME DO TECNICO",
+            ),
+            "MONITOR": (
+                "MONITOR",
+                "GESTOR",
+                "SUPERVISOR",
+                "COORDENADOR",
+                "LIDER",
+                "LÍDER",
+                "NOME MONITOR",
+                "NOME SUPERVISOR",
+                "NOME GESTOR",
+            ),
+            "BASE": ("BASE", "REGIÃO", "REGIAO", "FILIAL", "LOCALIDADE"),
         }
 
         resultado = pd.DataFrame(index=base.index)
@@ -999,11 +904,21 @@ class DataLoader:
 
         resultado["LOGIN"] = resultado["LOGIN"].map(normalizar_login)
         resultado = resultado.loc[~resultado["LOGIN"].isin(VALORES_AUSENTES)].copy()
+
+        # Limpar texto dos nomes para garantir apresentação perfeita
+        if "TÉCNICO" in resultado.columns:
+            resultado["TÉCNICO"] = (
+                resultado["TÉCNICO"].fillna("").astype(str).str.strip().str.upper()
+            )
+        if "MONITOR" in resultado.columns:
+            resultado["MONITOR"] = (
+                resultado["MONITOR"].fillna("").astype(str).str.strip().str.upper()
+            )
+
         return resultado.drop_duplicates(subset=["LOGIN"], keep="last").reset_index(
             drop=True
         )
 
-    # ───────────── Classificação de região ─────────────
     @staticmethod
     def classificar_regiao(valor: Any) -> str:
         cidade = normalizar_texto(valor)
@@ -1015,10 +930,8 @@ class DataLoader:
             return "ABCDM"
         return cidade if cidade in CORES_REGIAO else "OUTRAS"
 
-    # ───────────── Tipo de serviço e FLAG_GPON ─────────────
     @staticmethod
     def gerar_tipo_servico(df: pd.DataFrame) -> pd.Series:
-        """Gera TIPO_SERVICO usando critérios externos ou fallback interno."""
         if df.empty:
             return pd.Series(dtype="object")
 
@@ -1036,7 +949,6 @@ class DataLoader:
 
     @staticmethod
     def criar_flag_gpon(df: pd.DataFrame) -> pd.DataFrame:
-        """Adiciona coluna FLAG_GPON (Sim/Não)."""
         if df.empty:
             df["FLAG_GPON"] = "Não"
             return df
@@ -1061,47 +973,131 @@ class DataLoader:
             df["FLAG_GPON"] = "Não"
         return df
 
-    # ───────────── Enriquecimento com Lista de Ativos ─────────────
     @staticmethod
     def _mesclar_ativos(
         base: pd.DataFrame, ativos: pd.DataFrame, col_login: str | None
     ) -> pd.DataFrame:
-        """Mescla com Lista de Ativos para preencher TÉCNICO, MONITOR, BASE."""
-        if col_login is None or ativos.empty:
-            if "TÉCNICO" not in base.columns:
-                base["TÉCNICO"] = "NÃO MAPEADO"
-            if "MONITOR" not in base.columns:
-                base["MONITOR"] = "SEM MONITOR"
+        """
+        Merge DIRETO e RESILIENTE entre 'LOGIN DO TÉCNICO' (da O.S.) e 'LOGIN' (da lista_ativos).
+        Converte o Login da O.S. no NOME DO TÉCNICO e NOME DO MONITOR correspondentes.
+        """
+        col_mon_os = DF.buscar_coluna(
+            base, ("MONITOR", "GESTOR", "SUPERVISOR", "COORDENADOR")
+        )
+        col_tec_os = DF.buscar_coluna(
+            base, ("TÉCNICO", "TECNICO", "NOME TÉCNICO", "NOME TECNICO", "COLABORADOR")
+        )
+
+        mon_os = (
+            DF.obter_serie(base, col_mon_os).map(normalizar_texto)
+            if col_mon_os
+            else pd.Series("", index=base.index)
+        )
+        tec_os = (
+            DF.obter_serie(base, col_tec_os).map(normalizar_texto)
+            if col_tec_os
+            else pd.Series("", index=base.index)
+        )
+
+        # Se ativos não estiver disponível, usa os valores da O.S.
+        if ativos is None or ativos.empty or "LOGIN" not in ativos.columns:
+            base["TÉCNICO"] = tec_os.mask(
+                tec_os.isin(VALORES_AUSENTES) | (tec_os == ""), "NÃO MAPEADO"
+            )
+            base["MONITOR"] = mon_os.mask(
+                mon_os.isin(VALORES_AUSENTES) | (mon_os == ""), "SEM MONITOR"
+            )
             return base
 
-        base["_LOGIN_CHAVE"] = DF.obter_serie(base, col_login).map(normalizar_login)
-        merge = pd.DataFrame({"_LOGIN_CHAVE": ativos["LOGIN"], "_ATIVO": True})
+        # 1. Preparar lista_ativos
+        at = ativos.copy()
+        at["_JOIN_KEY"] = at["LOGIN"].map(normalizar_login)
+        at["_JOIN_CLEAN"] = at["_JOIN_KEY"].str.lstrip("0")
 
-        for col_ativo, col_merge in (
-            ("TÉCNICO", "_T"),
-            ("MONITOR", "_M"),
-            ("BASE", "_B"),
-        ):
-            if col_ativo in ativos.columns:
-                merge[col_merge] = ativos[col_ativo]
+        for col_def in ["TÉCNICO", "MONITOR", "BASE"]:
+            if col_def not in at.columns:
+                at[col_def] = ""
 
-        merge = merge.drop_duplicates(subset=["_LOGIN_CHAVE"], keep="last")
-        base = base.merge(merge, on="_LOGIN_CHAVE", how="left", validate="m:1")
-        encontrado = base["_ATIVO"].fillna(False).astype(bool)
+        at_key = at.drop_duplicates(subset=["_JOIN_KEY"], keep="last")
+        at_clean = at.loc[at["_JOIN_CLEAN"] != ""].drop_duplicates(
+            subset=["_JOIN_CLEAN"], keep="last"
+        )
 
-        if "_T" in base.columns:
-            tec = DF.limpar_texto(base["_T"], "NÃO MAPEADO")
-            base["TÉCNICO"] = tec.where(encontrado, "NÃO MAPEADO")
-        else:
-            base["TÉCNICO"] = "NÃO MAPEADO"
+        # 2. Preparar chaves da O.S.
+        os_login = (
+            DF.obter_serie(base, col_login)
+            if col_login
+            else pd.Series("", index=base.index)
+        )
+        base_work = base.copy()
+        base_work["_JOIN_KEY"] = os_login.map(normalizar_login)
+        base_work["_JOIN_CLEAN"] = base_work["_JOIN_KEY"].str.lstrip("0")
+        base_work["_MON_OS"] = mon_os
+        base_work["_TEC_OS"] = tec_os
 
-        if "_M" in base.columns:
-            mon = DF.limpar_texto(base["_M"], "SEM MONITOR")
-            base["MONITOR"] = mon.where(encontrado, "SEM MONITOR")
-        else:
-            base["MONITOR"] = "SEM MONITOR"
+        cols_rename = {"TÉCNICO": "_TEC_AT", "MONITOR": "_MON_AT", "BASE": "_BASE_AT"}
 
-        return base
+        # 3. Merge 1: Exato pelo LOGIN
+        m1 = base_work.merge(
+            at_key[["_JOIN_KEY", "TÉCNICO", "MONITOR", "BASE"]].rename(
+                columns=cols_rename
+            ),
+            on="_JOIN_KEY",
+            how="left",
+        )
+
+        # 4. Merge 2: Fallback sem zeros à esquerda (ex: 001234 -> 1234)
+        m2 = base_work.merge(
+            at_clean[["_JOIN_CLEAN", "TÉCNICO", "MONITOR", "BASE"]].rename(
+                columns=cols_rename
+            ),
+            on="_JOIN_CLEAN",
+            how="left",
+        )
+
+        # 5. Consolidação de Colunas (Ativos Exato -> Ativos Clean -> O.S. Original -> Valor Padrão)
+
+        # Consolidação Técnico (Puxa o NOME DO TÉCNICO de lista_ativos)
+        t_at1 = m1["_TEC_AT"].fillna("").astype(str).str.strip()
+        t_at2 = m2["_TEC_AT"].fillna("").astype(str).str.strip()
+        t_orig = m1["_TEC_OS"].fillna("").astype(str).str.strip()
+
+        t_final = np.where(t_at1 != "", t_at1, np.where(t_at2 != "", t_at2, t_orig))
+        t_final = np.where(
+            (t_final != "") & (~pd.Series(t_final).isin(VALORES_AUSENTES)),
+            t_final,
+            "NÃO MAPEADO",
+        )
+
+        # Consolidação Monitor (Puxa o NOME DO MONITOR de lista_ativos)
+        m_at1 = m1["_MON_AT"].fillna("").astype(str).str.strip()
+        m_at2 = m2["_MON_AT"].fillna("").astype(str).str.strip()
+        m_orig = m1["_MON_OS"].fillna("").astype(str).str.strip()
+
+        m_final = np.where(m_at1 != "", m_at1, np.where(m_at2 != "", m_at2, m_orig))
+        m_final = np.where(
+            (m_final != "") & (~pd.Series(m_final).isin(VALORES_AUSENTES)),
+            m_final,
+            "SEM MONITOR",
+        )
+
+        # Consolidação de Base
+        b_at1 = m1["_BASE_AT"].fillna("").astype(str).str.strip()
+        b_at2 = m2["_BASE_AT"].fillna("").astype(str).str.strip()
+        b_final = np.where(b_at1 != "", b_at1, b_at2)
+
+        # Atribuição Garantida mantendo o índice original da base
+        res = base.copy()
+        res["TÉCNICO"] = DF.limpar_texto(
+            pd.Series(t_final, index=res.index), "NÃO MAPEADO"
+        )
+        res["MONITOR"] = DF.limpar_texto(
+            pd.Series(m_final, index=res.index), "SEM MONITOR"
+        )
+        if any(b_final != ""):
+            res["_B"] = pd.Series(b_final, index=res.index)
+
+        return res
 
     @staticmethod
     def _definir_regiao(base: pd.DataFrame) -> pd.Series:
@@ -1116,14 +1112,12 @@ class DataLoader:
             return base["BASE"].map(DataLoader.classificar_regiao)
         return pd.Series("OUTRAS", index=base.index)
 
-    # ───────────── Pipeline principal ─────────────
     @staticmethod
     def preparar_base(
         df: pd.DataFrame,
         df_gs: pd.DataFrame | None,
         filename: str = "",
     ) -> pd.DataFrame:
-        """Pipeline completo de ETL."""
         if df is None or df.empty:
             return pd.DataFrame()
 
@@ -1135,7 +1129,6 @@ class DataLoader:
         base = DataLoader.criar_flag_gpon(base)
         flag_gpon_sim = int((base["FLAG_GPON"] == "Sim").sum())
 
-        # Captura amostras do tipo de serviço original (auditoria)
         col_tipo_origem = DF.buscar_coluna(base, Config.COLUNAS_TIPO_SERVICO)
         valores_tipo_origem: dict[str, int] = {}
         if col_tipo_origem:
@@ -1146,7 +1139,6 @@ class DataLoader:
                 str(k): int(v) for k, v in serie.value_counts().head(20).items()
             }
 
-        # Classifica status e remove suspensos/cancelados
         base["STATUS CONTRATO"] = ClassificadorStatus.classificar(base)
         status_up = (
             base["STATUS CONTRATO"].fillna("").astype(str).str.upper().str.strip()
@@ -1157,7 +1149,6 @@ class DataLoader:
         if base.empty:
             return pd.DataFrame()
 
-        # Remove contratos inválidos
         col_contrato = DF.buscar_coluna(
             base,
             (
@@ -1179,7 +1170,6 @@ class DataLoader:
         if base.empty:
             return pd.DataFrame()
 
-        # Total de tarefas
         col_total = DF.buscar_coluna(
             base, ("TOTAL DE TAREFAS", "QTD TAREFAS", "QUANTIDADE", "VOLUME")
         )
@@ -1195,36 +1185,40 @@ class DataLoader:
         else:
             base["TOTAL DE TAREFAS"] = 1
 
-        # Enriquecimento
+        # Mapeamento estrito com prioridade máxima para LOGIN DO TÉCNICO
         col_login = DF.buscar_coluna(
             base,
             (
                 "LOGIN DO TÉCNICO",
                 "LOGIN DO TECNICO",
+                "LOGIN_DO_TECNICO",
+                "LOGIN TÉCNICO",
+                "LOGIN TECNICO",
+                "LOGIN_TECNICO",
                 "LOGIN",
-                "USUÁRIO",
-                "USUARIO",
                 "MATRÍCULA",
                 "MATRICULA",
+                "RE",
+                "ID TÉCNICO",
+                "ID TECNICO",
+                "ID_TECNICO",
+                "COD_TECNICO",
             ),
         )
+
         ativos = (
             DataLoader.processar_lista_ativos(df_gs)
             if isinstance(df_gs, pd.DataFrame)
             else pd.DataFrame()
         )
         base = DataLoader._mesclar_ativos(base, ativos, col_login)
-        base["TÉCNICO"] = DF.limpar_texto(base["TÉCNICO"], "NÃO MAPEADO")
-        base["MONITOR"] = DF.limpar_texto(base["MONITOR"], "SEM MONITOR")
 
-        # Região e tipo de serviço
         base["REGIÃO"] = DataLoader._definir_regiao(base)
         base["TIPO_SERVICO"] = DataLoader.gerar_tipo_servico(base).map(
             padronizar_tipo_servico
         )
         base["Status Contrato"] = base["STATUS CONTRATO"]
 
-        # Limpa auxiliares
         aux = [
             c
             for c in base.columns
@@ -1234,7 +1228,6 @@ class DataLoader:
         ]
         base = base.drop(columns=aux, errors="ignore").reset_index(drop=True)
 
-        # Metadados
         base.attrs.update(
             {
                 "arquivo_origem": filename,
@@ -1250,7 +1243,6 @@ class DataLoader:
 
         return base
 
-    # ───────────── Callback do Robô ─────────────
     @staticmethod
     def callback_robo_etl(df_raw: pd.DataFrame, df_gs: pd.DataFrame) -> pd.DataFrame:
         caminho = st.session_state.get("robo_candidato_path", "")
@@ -1274,9 +1266,6 @@ class DataLoader:
 # MOTOR ANALÍTICO
 # ═════════════════════════════════════════════════════════════════════
 class Motor:
-    """Análises e projeções."""
-
-    # ───── Matriz Executiva ─────
     @staticmethod
     def _matriz_logic(df: pd.DataFrame) -> pd.DataFrame:
         obrig = {"MONITOR", "TIPO_SERVICO", "Status Contrato", "TOTAL DE TAREFAS"}
@@ -1347,7 +1336,6 @@ class Motor:
         )
         pivot = pivot.reset_index().rename(columns={"MONITOR": "Monitor"})
 
-        # Linha TOTAL GERAL
         exec_g = float(validos["_EXEC"].sum())
         nex_g = float(validos["_NEX"].sum())
         denom_g = exec_g + nex_g
@@ -1371,10 +1359,8 @@ class Motor:
             return pd.DataFrame()
         return _cache_matriz(df.copy())
 
-    # ───── Projeções ─────
     @staticmethod
     def _pivot_status(df: pd.DataFrame, grupo: str) -> pd.DataFrame:
-        """Pivota status por grupo preservando as 3 colunas padrão."""
         t = df.copy()
         t["TOTAL DE TAREFAS"] = (
             pd.to_numeric(t["TOTAL DE TAREFAS"], errors="coerce")
@@ -1492,11 +1478,14 @@ class Motor:
         ):
             if col not in t.columns:
                 t[col] = pad
-        t["TOTAL DE TAREFAS"] = (
-            pd.to_numeric(t.get("TOTAL DE TAREFAS", 1), errors="coerce")
-            .fillna(0)
-            .clip(lower=0)
-        )
+        if "TOTAL DE TAREFAS" in t.columns:
+            t["TOTAL DE TAREFAS"] = (
+                pd.to_numeric(t["TOTAL DE TAREFAS"], errors="coerce")
+                .fillna(0)
+                .clip(lower=0)
+            )
+        else:
+            t["TOTAL DE TAREFAS"] = 0
 
         fila = t.loc[t["Status Contrato"].isin(["Não Executada", "Pendente"])].copy()
         if fila.empty:
@@ -1664,15 +1653,14 @@ def render_insight(texto: str, tipo: TipoInsight = "info") -> None:
     if COMPONENTES.insight:
         COMPONENTES.insight(texto, tipo)
         return
-    (
-        st.success
-        if tipo == "ok"
-        else (
-            st.warning
-            if tipo in {"critico", "alerta"}
-            else st.error if tipo == "acao" else st.info
-        )
-    )(texto)
+    if tipo == "ok":
+        st.success(texto)
+    elif tipo in {"critico", "alerta"}:
+        st.warning(texto)
+    elif tipo == "acao":
+        st.error(texto)
+    else:
+        st.info(texto)
 
 
 def render_kpi_sm(
@@ -1782,7 +1770,7 @@ def render_matriz_executiva(
 
     for _, linha in df.iterrows():
         is_total = str(linha.iloc[0]).strip().upper() == "TOTAL GERAL"
-        linhas.append(f"<tr class='total-row'>" if is_total else "<tr>")
+        linhas.append("<tr class='total-row'>" if is_total else "<tr>")
 
         for i, col in enumerate(df.columns):
             v = linha.iloc[i]
@@ -2005,14 +1993,15 @@ def render_card_gpon(df: pd.DataFrame) -> None:
 # ═════════════════════════════════════════════════════════════════════
 def view_resumo_executivo(df: pd.DataFrame, meta_sla: float) -> None:
     col_tipo = str(df.attrs.get("tipo_servico_coluna", ""))
-    tipos_proc = set(df.get("TIPO_SERVICO", pd.Series()).dropna().astype(str).unique())
+    tipos_proc = set(
+        df.get("TIPO_SERVICO", pd.Series(dtype="object")).dropna().astype(str).unique()
+    )
 
     if not col_tipo:
         st.warning(
             "⚠️ A base não possui uma coluna identificável de tipo de serviço. "
             "Todos os registros foram classificados como 'Outros'."
         )
-        return
 
     if tipos_proc and tipos_proc <= {"Outros"}:
         originais = df.attrs.get("valores_tipo_servico_originais", {})
@@ -2034,7 +2023,6 @@ def view_resumo_executivo(df: pd.DataFrame, meta_sla: float) -> None:
         st.warning("⚠️ Dados insuficientes para montar a Matriz Executiva.")
         return
 
-    # Garante TOTAL GERAL no final
     if "Monitor" in matriz.columns:
         mask = matriz["Monitor"].astype(str).str.strip().str.upper().eq("TOTAL GERAL")
         matriz = pd.concat([matriz.loc[~mask], matriz.loc[mask]], ignore_index=True)
@@ -2187,14 +2175,13 @@ def view_auditoria(df: pd.DataFrame) -> None:
         pme = int(dist.loc[dist["Segmento"] == "PME", "Registros"].sum())
 
         if nd == 0 and pme == 0:
-            st.error("""
-            **⚠️ ALERTA CRÍTICO:** Novos Domicílios e PME estão zerados!
-
-            **Possíveis causas:**
-            1. Coluna TIPO O.S 1 não está sendo detectada
-            2. Termos de busca (ADESAO, INSTALACAO) não correspondem aos dados
-            3. Coluna tem nome diferente do esperado
-            """)
+            st.error(
+                "**⚠️ ALERTA CRÍTICO:** Novos Domicílios e PME estão zerados!\n\n"
+                "**Possíveis causas:**\n"
+                "1. Coluna TIPO O.S 1 não está sendo detectada\n"
+                "2. Termos de busca (ADESAO, INSTALACAO) não correspondem aos dados\n"
+                "3. Coluna tem nome diferente do esperado"
+            )
 
     if (
         CRITERIOS.disponivel
@@ -2397,7 +2384,6 @@ def _render_upload_os(dados_prontos: bool, nonce: int) -> Any:
 def main() -> None:
     injetar_css()
 
-    # Flash messages
     msg = st.session_state.pop("mensagem_flash", "")
     if msg:
         st.success(str(msg))
@@ -2407,7 +2393,7 @@ def main() -> None:
         subtitulo="Quebra Operacional",
         logo="monitoring",
         ambiente="produção",
-        versao="v5.0.0",
+        versao="v5.4.0",
         mostrar_data=True,
     )
 
@@ -2418,17 +2404,23 @@ def main() -> None:
     _sidebar_ativos(nonce)
 
     # Base de Ativos
-    df_ativos = (
-        df_sessao("df_gs_manual")
-        if "df_gs_manual" in st.session_state
-        else DataLoader.buscar_gsheets()
-    ) or pd.DataFrame()
+    df_ativos_sessao = df_sessao("df_gs_manual")
+    if df_ativos_sessao is not None and not df_ativos_sessao.empty:
+        df_ativos = df_ativos_sessao
+    else:
+        df_ativos = DataLoader.buscar_gsheets()
+        if df_ativos is None:
+            df_ativos = pd.DataFrame()
+
     if not df_ativos.empty:
-        st.sidebar.caption(f"👥 Base de Ativos: {len(df_ativos)} registros")
+        st.sidebar.caption(f"👥 Base de Ativos: {len(df_ativos)} registros carregados")
+    else:
+        st.sidebar.warning(
+            "⚠️ Lista de Ativos indisponível. Utilize upload manual em Configurações."
+        )
 
     _sidebar_robo(df_ativos)
 
-    # Importação principal
     df_atual = df_sessao("df_memoria")
     dados_prontos = df_atual is not None and not df_atual.empty
 
@@ -2444,10 +2436,8 @@ def main() -> None:
         st.info("Carregue uma base de O.S. para iniciar a análise.")
         return
 
-    # Filtros
     p_ot, p_base, p_pess, min_aloc = _sidebar_filtros()
 
-    # Hero
     regioes = (
         sorted(df["REGIÃO"].dropna().astype(str).unique().tolist())
         if "REGIÃO" in df.columns
@@ -2462,7 +2452,6 @@ def main() -> None:
         origem=str(st.session_state.get("origem_dados", "Base Carregada")),
     )
 
-    # Alerta de integração
     if "TÉCNICO" in df.columns:
         nao_mapeados = int(df["TÉCNICO"].eq("NÃO MAPEADO").sum())
         if nao_mapeados > 0:
@@ -2474,7 +2463,6 @@ def main() -> None:
         else:
             st.success("🎉 Todos os logins estão mapeados na Lista de Ativos.")
 
-    # Navegação
     aba = st.radio(
         "Navegação Principal",
         ["Resumo Executivo", "Análise Detalhada", "Auditoria"],

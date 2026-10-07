@@ -601,7 +601,7 @@ class Visualization:
     ) -> list[tuple[str, TipoInsight]]:
         insights: list[tuple[str, TipoInsight]] = []
 
-        top_os = df_bases.loc[df_bases["Média OS"].idxmax()]
+        top_os = df_bases.iloc[df_bases["Média OS"].argmax()]
         insights.append(
             (
                 f"🥇 **{top_os['BASE']}** possui a maior Média OS: **{Utils.fmt_float(top_os['Média OS'])}** OS por rota.",
@@ -609,7 +609,7 @@ class Visualization:
             )
         )
 
-        low_os = df_bases.loc[df_bases["Média OS"].idxmin()]
+        low_os = df_bases.iloc[df_bases["Média OS"].argmin()]
         if str(low_os["BASE"]) != str(top_os["BASE"]):
             insights.append(
                 (
@@ -618,7 +618,7 @@ class Visualization:
                 )
             )
 
-        base_max = df_bases.loc[df_bases["OS"].idxmax()]
+        base_max = df_bases.iloc[df_bases["OS"].argmax()]
         total_os = Utils.to_float(total.get("OS"))
         valor_base = Utils.to_float(base_max["OS"])
         perc = (valor_base / total_os * 100) if total_os > 0 else 0.0

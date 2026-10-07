@@ -536,7 +536,8 @@ class ProcessadorDeDados:
         ativos_limpo = ativos_limpo.drop_duplicates(subset=["Login_JOIN"], keep="first")
         for c in Configuracoes.COLUNAS_ATIVOS:
             if c in ativos_limpo.columns:
-                ativos_limpo[c] = ativos_limpo[c].map(Configuracoes.vazio_texto).replace("", pd.NA)
+                ativos_limpo[c] = ativos_limpo[c].map(Configuracoes.vazio_texto)
+                ativos_limpo[c] = ativos_limpo[c].where(ativos_limpo[c].ne(""), pd.NA)
 
         cons = cons.copy()
         cons["Login_JOIN"] = cons["LOGIN NETSALES"].map(cls._login_chave)
