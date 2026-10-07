@@ -273,7 +273,9 @@ class GerenciadorNavegacao:
         return {
             "Menu Principal": [
                 st.Page("pages/home.py", title="Home", icon="🏠", default=True),
+                st.Page("pages/alertas.py", title="Alertas automáticos", icon="⚠️"),
                 st.Page("pages/envio_excel.py", title="Atualização de Dados", icon="🔁"),
+                st.Page("robo/main.py", title="Robô local", icon="🤖"),
             ],
             "Central de Performance": [
                 st.Page("pages/pontos.py", title="Produção Mensal", icon="📈"),

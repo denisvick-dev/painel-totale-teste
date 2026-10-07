@@ -35,6 +35,8 @@ import streamlit as st
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from components.saude_dados import avaliar_consistencia, avaliar_frescor
+
 AlinhamentoColuna = Literal["top", "center", "bottom"]
 
 
@@ -760,24 +762,58 @@ def _colunas(
         return list(st.columns(larguras))
 
 
+def _frames_carregados() -> dict[str, pd.DataFrame]:
+    frames: dict[str, pd.DataFrame] = {}
+    for fonte, chave in (
+        ("Produção", "dados_prod"),
+        ("Consultivo", "dados_cons"),
+        ("Ativos", "dados_ativos"),
+    ):
+        dados = st.session_state.get(chave)
+        if isinstance(dados, pd.DataFrame):
+            frames[fonte] = dados
+        elif isinstance(dados, dict):
+            partes = [
+                frame for frame in dados.values() if isinstance(frame, pd.DataFrame)
+            ]
+            if partes:
+                frames[fonte] = pd.concat(partes, ignore_index=True, sort=False)
+    return frames
+
+
 def _renderizar_status_fontes() -> None:
     stats = _mapa_status()
     if not stats:
         render_insight("Os dados ainda não foram carregados nesta sessão.", "alerta")
         return
+
+    render_section_header(
+        "🩺", "Saúde dos dados", "Frescor da sincronização e consistência estrutural"
+    )
+    frames = _frames_carregados()
     cols = st.columns(len(stats))
     for col, stf in zip(cols, stats.values()):
-        if stf.ok:
-            quando = stf.ultimo_sucesso.strftime("%H:%M:%S") if stf.ultimo_sucesso else "—"
-            col.metric(stf.nome, f"{_fmt_int(stf.linhas)} linhas", f"ok em {quando}")
-        elif stf.ultimo_sucesso is None:
-            col.metric(stf.nome, "sem carga", help=_erro_curto(stf.erro, 400))
-        else:
-            col.metric(
-                stf.nome,
-                f"{_fmt_int(stf.linhas)} linhas",
-                help=_erro_curto(stf.erro, 400) + " — exibindo a carga anterior",
-            )
+        estado_frescor, frescor = avaliar_frescor(
+            stf.ultimo_sucesso, stf.ok
+        )
+        estado_consistencia, consistencia = avaliar_consistencia(
+            frames.get(stf.nome)
+        )
+        icones = {"ok": "🟢", "alerta": "🟡", "critico": "🔴"}
+        with col:
+            with st.container(border=True):
+                st.markdown(f"**{stf.nome}**")
+                st.caption(f"{_fmt_int(stf.linhas)} linhas na última sincronização")
+                st.markdown(f"{icones[estado_frescor]} **Frescor:** {frescor}")
+                st.markdown(
+                    f"{icones[estado_consistencia]} **Consistência:** {consistencia}"
+                )
+                if stf.erro:
+                    st.caption(_erro_curto(stf.erro, 300))
+    st.caption(
+        "Frescor: verde até 15 min, amarelo até 60 min ou após falha recente, vermelho acima disso/sem sucesso. "
+        "Consistência estrutural verifica registros, colunas vazias e duplicatas; não substitui validação de negócio."
+    )
 
 
 def _render_sidebar_status() -> None:

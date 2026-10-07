@@ -19,7 +19,6 @@ Uso:
 
 from __future__ import annotations
 
-import logging
 import unicodedata
 from datetime import datetime, time
 from io import BytesIO
@@ -50,14 +49,7 @@ st.set_page_config(
 # ═══════════════════════════════════════════════════════
 # CSS CORPORATIVO
 # ═══════════════════════════════════════════════════════
-def _injetar_css_local() -> None:
-    """CSS específico do corpo da página.
-
-    v5.3.0: as regras de sidebar (fundo branco fixo e cor de título) foram
-    removidas — o sidebar é controlado pelo Design System TOTALE
-    (`components.componentes.aplicar_estilo`), que respeita o tema ativo
-    (Claro, Azul ou Laranja) escolhido no seletor de tema.
-    """
+def aplicar_estilo() -> None:
     st.markdown(
         """
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -76,6 +68,19 @@ def _injetar_css_local() -> None:
     .main .block-container {
         padding-top: 1.5rem;
         max-width: 1400px;
+    }
+
+    /* Sidebar Clean */
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF;
+        border-right: 1px solid #E2E8F0;
+    }
+    [data-testid="stSidebar"] h3 {
+        color: #0F172A !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
     /* ═════════ HERO TOTALE (Azul e Laranja) ═════════ */
@@ -422,9 +427,8 @@ def fmt_hora(t: time) -> str:
             return "-"
         if isinstance(t, (np.floating,)) and np.isnan(t):
             return "-"
-    except (TypeError, ValueError, AttributeError):
-        # Valor não reconhecido como NaT/NaN; segue para a formatação padrão.
-        logger.debug("Verificação de valor ausente falhou em fmt_hora.", exc_info=True)
+    except Exception:
+        pass
 
     return t.strftime("%H:%M:%S")
 
@@ -444,8 +448,7 @@ def carregar_lista_ativos() -> pd.DataFrame:
         if "GSHEETS_ID" in st.secrets:
             sheet_id = st.secrets["GSHEETS_ID"]
     except Exception:
-        # Sem secrets configurados (ex.: execução local) — segue com o ID padrão.
-        logger.debug("GSHEETS_ID não configurado em st.secrets; usando ID padrão.", exc_info=True)
+        pass
 
     df = None
 
@@ -586,7 +589,6 @@ def carregar_arquivo(file_bytes: bytes, filename: str) -> pd.DataFrame:
                 if len(df.columns) > 1:
                     return df
             except Exception:
-                logger.debug("Tentativa de leitura do arquivo falhou; tentando próxima configuração.", exc_info=True)
                 continue
 
     raise ValueError("Não foi possível ler o arquivo. Verifique o formato.")
@@ -869,8 +871,7 @@ def aplicar_cor_horario(valor: Any) -> str:
             return "background-color: #FEF3C7; color: #92400E; font-weight: 600;"
         else:
             return "background-color: #FEE2E2; color: #991B1B; font-weight: 600;"
-    except (TypeError, ValueError, AttributeError, IndexError):
-        logger.debug("Horário inválido; célula fica sem cor.", exc_info=True)
+    except:
         return ""
 
 
@@ -893,7 +894,7 @@ def main() -> None:
     with st.sidebar:
         st.markdown("### ⚙️ Painel de Controle")
 
-        if st.button("🔄 Reiniciar Aplicação", width="stretch"):
+        if st.button("🔄 Reiniciar Aplicação", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.cache_data.clear()
@@ -1006,12 +1007,10 @@ def main() -> None:
         col_contrato=col_contrato,
         col_status_atividade=col_status_atividade,
     )
-    logger.debug("Diagnóstico da limpeza da base: %s", diag_limpeza)
 
     # Merge com Google Sheets
     df_ativos = carregar_lista_ativos()
     df, diag_merge = aplicar_merge_ativos(df, df_ativos, col_login)
-    logger.debug("Diagnóstico do merge com a lista de ativos: %s", diag_merge)
 
     col_tecnico = (
         "Técnico"
@@ -1202,7 +1201,7 @@ def main() -> None:
 
         st.dataframe(
             styled_tec,
-            width="stretch",
+            use_container_width=True,
             hide_index=True,
             height=400,
             column_config={
@@ -1227,7 +1226,7 @@ def main() -> None:
                 data=gerar_excel(df_exibir_tec, "Ranking_Tecnicos"),
                 file_name=f"ranking_tecnicos_{timestamp}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                width="stretch",
+                use_container_width=True,
             )
         with col_dl2:
             csv_t = df_exibir_tec.to_csv(
@@ -1238,7 +1237,7 @@ def main() -> None:
                 data=csv_t,
                 file_name=f"ranking_tecnicos_{timestamp}.csv",
                 mime="text/csv",
-                width="stretch",
+                use_container_width=True,
             )
 
         # ─────────────────────────────────────────────────
@@ -1305,7 +1304,7 @@ def main() -> None:
 
             st.dataframe(
                 styled_mon,
-                width="stretch",
+                use_container_width=True,
                 hide_index=True,
                 height="auto",
                 column_config={
@@ -1339,7 +1338,7 @@ def main() -> None:
                     data=gerar_excel(df_exibir_mon, "Ranking_Monitores"),
                     file_name=f"ranking_monitores_{timestamp}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    width="stretch",
+                    use_container_width=True,
                 )
             with col_dm2:
                 csv_m = df_exibir_mon.to_csv(
@@ -1350,7 +1349,7 @@ def main() -> None:
                     data=csv_m,
                     file_name=f"ranking_monitores_{timestamp}.csv",
                     mime="text/csv",
-                    width="stretch",
+                    use_container_width=True,
                 )
 
     # ─────────────────────────────────────────────────
@@ -1457,7 +1456,7 @@ def main() -> None:
     df_exibir = df_filtrado[colunas_prio + outras].copy()
 
     with st.spinner("Montando tabela de pendentes..."):
-        st.dataframe(df_exibir, width="stretch", hide_index=True, height=500)
+        st.dataframe(df_exibir, use_container_width=True, hide_index=True, height=500)
 
     # Exportação
     render_section("📥", "Exportar Lista para Rota")
@@ -1471,7 +1470,7 @@ def main() -> None:
             data=gerar_excel(df_exibir, "Pendentes_Rota"),
             file_name=f"rota_pendentes_{timestamp}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            width="stretch",
+            use_container_width=True,
             type="primary",
         )
 
@@ -1484,7 +1483,7 @@ def main() -> None:
             data=csv,
             file_name=f"rota_pendentes_{timestamp}.csv",
             mime="text/csv",
-            width="stretch",
+            use_container_width=True,
         )
 
     with col_info:

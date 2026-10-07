@@ -26,8 +26,6 @@ for _p in (_DIR, _ROOT):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-import logging
-
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -58,8 +56,6 @@ from components.componentes import (
 )
 from components.criterios import classificar_tipo_servico, render_debug_criterios
 from pages.quebra_geral import Config, Motor, Utils
-
-logger = logging.getLogger(__name__)
 
 # ── Correções Avançadas Pylance (Type Safety) ────────────────────────
 _COL_REGIAO: str = str(getattr(Config, "COL_REGIAO", "REGIÃO"))
@@ -178,7 +174,6 @@ st.set_page_config(
     page_title="Análise de Quebra | TOTALE", page_icon="📉", layout="wide"
 )
 _aplicar_estilo_global()
-render_page_sidebar_theme_selector()
 
 if "df_memoria" not in st.session_state:
     st.session_state["df_memoria"] = None
@@ -230,7 +225,7 @@ def _fmt_int(v: Any) -> str:
         if v is None or (isinstance(v, float) and np.isnan(v)):
             return "0"
         return f"{int(float(v)):,}".replace(",", ".")
-    except (TypeError, ValueError):
+    except Exception:
         return "0"
 
 
@@ -280,9 +275,7 @@ def _hash_df(df: pd.DataFrame) -> str:
     try:
         b = pd.util.hash_pandas_object(df, index=True).to_numpy().tobytes()
         return hashlib.md5(b).hexdigest()[:10]
-    except (TypeError, ValueError, AttributeError):
-        # Tipos exóticos impedem o hash; usa o tamanho como chave de cache degradada.
-        logger.debug("Hash do DataFrame indisponível; usando o tamanho como chave.", exc_info=True)
+    except Exception:
         return str(len(df))
 
 
@@ -303,8 +296,7 @@ def _causa_raiz_segmento(
         return pd.DataFrame()
     try:
         return Motor.causa_raiz(df_seg, col_baixa, top_n=top_n)
-    except (ValueError, TypeError, KeyError):
-        logger.debug("Causa raiz indisponível para o segmento.", exc_info=True)
+    except Exception:
         return pd.DataFrame()
 
 
@@ -596,7 +588,7 @@ class _PDFExecutivoBase:
                 for row_i, (_, row) in enumerate(base.iterrows(), start=1):
                     try:
                         val = float(row[cor_col_quebra])
-                    except (TypeError, ValueError):
+                    except Exception:
                         continue
                     if np.isnan(val):
                         continue
@@ -1070,7 +1062,7 @@ def _gerar_alertas(
                     }
                 )
         except Exception:
-            logger.debug("Alerta de causa raiz não pôde ser calculado.", exc_info=True)
+            pass
     return alerts
 
 
@@ -1248,7 +1240,7 @@ def _sub_visao_geral(segmento, df_seg, m_seg, p_ot, p_base, p_pess, sla_meta):
             legend=dict(orientation="h"),
         )
         st.plotly_chart(
-            fig_pie, width="stretch", config={"displayModeBar": False}
+            fig_pie, use_container_width=True, config={"displayModeBar": False}
         )
     with col_gauge:
         cor_bar = "#EF4444" if m_seg["quebra_atual"] > sla_meta else "#10B981"
@@ -1282,7 +1274,7 @@ def _sub_visao_geral(segmento, df_seg, m_seg, p_ot, p_base, p_pess, sla_meta):
             )
         )
         fig.update_layout(height=280, margin=dict(t=40, b=10, l=20, r=20))
-        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
     st.markdown("")
     render_section("📈 Projeções de Fechamento")
@@ -1329,10 +1321,10 @@ def _sub_visao_geral(segmento, df_seg, m_seg, p_ot, p_base, p_pess, sla_meta):
                 fig_line.add_hline(y=sla_meta, line_dash="dash", line_color="#DC2626")
                 fig_line.update_layout(yaxis_tickformat=".1%", height=300)
                 st.plotly_chart(
-                    fig_line, width="stretch", config={"displayModeBar": False}
+                    fig_line, use_container_width=True, config={"displayModeBar": False}
                 )
         except Exception:
-            logger.debug("Fallback de cálculo falhou.", exc_info=True)
+            pass
 
     st.markdown("")
     render_section("🛡️ Folga de SLA")
@@ -1475,7 +1467,7 @@ def _sub_causa_raiz(segmento, df_seg):
         xaxis=dict(tickangle=-30),
         margin=dict(t=60, b=160),
     )
-    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
     if _COL_REGIAO in df_seg.columns and col_baixa:
         try:
@@ -1494,10 +1486,10 @@ def _sub_causa_raiz(segmento, df_seg):
             )
             fig_reg.update_layout(yaxis_tickformat=".1%", height=320)
             st.plotly_chart(
-                fig_reg, width="stretch", config={"displayModeBar": False}
+                fig_reg, use_container_width=True, config={"displayModeBar": False}
             )
         except Exception:
-            logger.debug("Fallback de cálculo falhou.", exc_info=True)
+            pass
 
 
 def _sub_tecnicos(segmento, df_seg, p_ot, p_base, p_pess, min_aloc, top_n, sla_meta):
@@ -1550,7 +1542,7 @@ def _sub_tecnicos(segmento, df_seg, p_ot, p_base, p_pess, min_aloc, top_n, sla_m
             xaxis_tickformat=".1%",
             height=max(360, len(df_plot) * 42),
         )
-        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
 def _sub_plano_acao(segmento, df_seg, p_base, sla_meta):
@@ -1668,14 +1660,14 @@ def _sub_pendentes(segmento, df_seg):
         Utils.gerar_excel(df_view, "Filtrado"),
         f"pendentes_{_slug(segmento)}_filtrado.xlsx",
         key=f"dl_pend_f_{segmento}",
-        width="stretch",
+        use_container_width=True,
     )
     c2.download_button(
         "📥 Completo",
         Utils.gerar_excel(df_pend, "Completo"),
         f"pendentes_{_slug(segmento)}_completo.xlsx",
         key=f"dl_pend_c_{segmento}",
-        width="stretch",
+        use_container_width=True,
     )
 
 
@@ -1734,7 +1726,7 @@ def _sub_sem_registro(segmento, df_seg):
         Utils.gerar_excel(df_view, "Sem_Registro"),
         f"sem_registro_{_slug(segmento)}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
         key=f"dl_sr_{segmento}",
-        width="stretch",
+        use_container_width=True,
     )
 
 
@@ -1799,7 +1791,7 @@ def _sub_comparativo(df_full, sla_meta, p_base, p_ot, p_pess):
         annotation_text=f"Meta {sla_meta:.0%}",
     )
     fig.update_layout(barmode="group", yaxis_tickformat=".1%", height=380)
-    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     render_table_html(
         df_comp,
         fmt={
@@ -1830,10 +1822,10 @@ def _sub_comparativo(df_full, sla_meta, p_base, p_ot, p_pess):
             )
             fig_h.update_layout(height=320)
             st.plotly_chart(
-                fig_h, width="stretch", config={"displayModeBar": False}
+                fig_h, use_container_width=True, config={"displayModeBar": False}
             )
         except Exception:
-            logger.debug("Heatmap de região x segmento indisponível.", exc_info=True)
+            pass
 
 
 # =====================================================================
@@ -1921,9 +1913,9 @@ def main():
         top_n = int(top_n)
         st.divider()
         with st.expander("⚙️ Sistema", expanded=False):
-            if st.button("🔄 Reiniciar", width="stretch"):
+            if st.button("🔄 Reiniciar", use_container_width=True):
                 st.rerun()
-            if st.button("🗑️ Limpar Cache", width="stretch"):
+            if st.button("🗑️ Limpar Cache", use_container_width=True):
                 st.cache_data.clear()
                 st.cache_resource.clear()
                 st.success("Cache limpo!")
@@ -1965,7 +1957,7 @@ def main():
                 "⚙️ Gerar PDF Comparativo",
                 key="gen_pdf_todos",
                 type="primary",
-                width="stretch",
+                use_container_width=True,
             ):
                 with st.spinner("Gerando PDF Comparativo..."):
                     try:
@@ -1982,7 +1974,7 @@ def main():
                     f"comparativo_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
                     "application/pdf",
                     key="dl_pdf_todos",
-                    width="stretch",
+                    use_container_width=True,
                 )
         st.divider()
         t1, t2, t3, t4, t5 = st.tabs(
@@ -2043,7 +2035,7 @@ def main():
             f"⚙️ Gerar PDF — {segmento}",
             key=f"gen_pdf_{segmento}",
             type="primary",
-            width="stretch",
+            use_container_width=True,
         ):
             with st.spinner("Gerando PDF..."):
                 try:
@@ -2060,7 +2052,7 @@ def main():
                 f"relatorio_{_slug(segmento)}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
                 "application/pdf",
                 key=f"dl_pdf_{segmento}",
-                width="stretch",
+                use_container_width=True,
             )
     with col_desc:
         render_insight(
