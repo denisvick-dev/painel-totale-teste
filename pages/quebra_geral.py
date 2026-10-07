@@ -12,6 +12,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import importlib
+import logging
 import re
 import sys
 import unicodedata
@@ -29,6 +30,67 @@ import pandas as pd
 import streamlit as st
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+
+from components.componentes import render_page_sidebar_theme_selector
+
+# ─────────────────────────────────────────────────────────────────────
+# IMPORTAÇÃO DO MÓDULO CRITÉRIOS
+# ─────────────────────────────────────────────────────────────────────
+CRITERIOS_DISPONIVEL: bool = False
+_classificar_tipo_servico_criterios: Callable[..., Any] | None = None
+_criar_flag_gpon: Callable[..., Any] | None = None
+_detectar_col_tipo_os_1: Callable[..., Any] | None = None
+_detectar_col_habilidade: Callable[..., Any] | None = None
+_detectar_col_flag_gpon: Callable[..., Any] | None = None
+_render_painel_criterios: Callable[..., Any] | None = None
+
+TERMOS_ND: tuple[str, ...] = ("ADESAO", "ADESÃO")
+TERMO_GPON_HABILIDADE: str = "PON"
+TERMO_MIGRACAO_OS: str = "MUDANCA DE PACOTE"
+TERMO_PME_HABILIDADE: str = "PME"
+VAZIOS_GERAIS: set[str] = set()
+
+try:
+    from components.criterios import (
+        TERMO_GPON_HABILIDADE as _TERMO_GPON_HABILIDADE,
+    )
+    from components.criterios import (
+        TERMO_MIGRACAO_OS as _TERMO_MIGRACAO_OS,
+    )
+    from components.criterios import (
+        TERMO_PME_HABILIDADE as _TERMO_PME_HABILIDADE,
+    )
+    from components.criterios import (
+        TERMOS_ND as _TERMOS_ND,
+    )
+    from components.criterios import (
+        VAZIOS_GERAIS as _VAZIOS_GERAIS,
+    )
+    from components.criterios import (
+        classificar_tipo_servico as _classificar_tipo_servico_criterios,
+    )
+    from components.criterios import (
+        criar_flag_gpon as _criar_flag_gpon,
+    )
+    from components.criterios import (
+        detectar_col_flag_gpon as _detectar_col_flag_gpon,
+    )
+    from components.criterios import (
+        detectar_col_habilidade as _detectar_col_habilidade,
+    )
+    from components.criterios import (
+        detectar_col_tipo_os_1 as _detectar_col_tipo_os_1,
+    )
+    from components.criterios import (
+        render_painel_criterios as _render_painel_criterios,
+    )
+
+    CRITERIOS_DISPONIVEL = True
+    TERMOS_ND = _TERMOS_ND
+    TERMO_GPON_HABILIDADE = _TERMO_GPON_HABILIDADE
+    TERMO_MIGRACAO_OS = _TERMO_MIGRACAO_OS
+    TERMO_PME_HABILIDADE = _TERMO_PME_HABILIDADE
+    VAZIOS_GERAIS = _VAZIOS_GERAIS
 
 # ═════════════════════════════════════════════════════════════════════
 # PATH BOOTSTRAP
@@ -49,9 +111,110 @@ TemaKPI = Literal[
 TipoInsight = Literal["ok", "info", "alerta", "critico", "acao"]
 
 
-# ═════════════════════════════════════════════════════════════════════
-# CONFIGURAÇÃO CENTRAL
-# ═════════════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────
+# COMPONENTES VISUAIS OPCIONAIS
+# ─────────────────────────────────────────────────────────────────────
+_component_section_header: Callable[..., Any] | None = None
+_component_sidebar_brand: Callable[..., Any] | None = None
+_component_table_html: Callable[..., Any] | None = None
+_component_insight: Callable[..., Any] | None = None
+_component_kpi_sm: Callable[..., Any] | None = None
+
+try:
+    from components.componentes import render_insight as _component_insight
+    from components.componentes import render_kpi_sm as _component_kpi_sm
+    from components.componentes import (
+        render_section_header as _component_section_header,
+    )
+    from components.componentes import render_sidebar_brand as _component_sidebar_brand
+    from components.componentes import render_table_html as _component_table_html
+
+    COMPONENTES_DISPONIVEIS: bool = True
+
+except ImportError:
+    COMPONENTES_DISPONIVEIS = False
+
+logger = logging.getLogger(__name__)
+
+
+def render_section_header(icone: str, titulo: str) -> None:
+    if _component_section_header is not None:
+        _component_section_header(icone, titulo)
+        return
+    st.subheader(f"{icone} {titulo}" if icone else titulo)
+
+
+def render_sidebar_brand(**kwargs: Any) -> None:
+    if _component_sidebar_brand is not None:
+        _component_sidebar_brand(**kwargs)
+
+
+def render_table_html(df: pd.DataFrame, **kwargs: Any) -> None:
+    if _component_table_html is not None:
+        _component_table_html(df, **kwargs)
+        return
+    st.dataframe(df, width="stretch", hide_index=True)
+
+
+def render_insight(
+    texto: str,
+    tipo: Literal["ok", "info", "alerta", "critico", "acao"] = "info",
+) -> None:
+    if _component_insight is not None:
+        _component_insight(texto, tipo)
+        return
+    if tipo == "ok":
+        st.success(texto)
+    elif tipo in {"critico", "alerta"}:
+        st.warning(texto)
+    elif tipo == "acao":
+        st.error(texto)
+    else:
+        st.info(texto)
+
+
+# ─────────────────────────────────────────────────────────────────────
+# ROBÔ OPCIONAL
+# ─────────────────────────────────────────────────────────────────────
+RoboCallable = Callable[..., Any]
+
+ROBO_DISPONIVEL: bool = False
+_impl_robo: RoboCallable | None = None
+_ROBO_IMPORT_ERRO: str = ""
+
+
+def _tentar_import_robo() -> tuple[RoboCallable | None, str]:
+    try:
+        module = importlib.import_module("robo.robo_local")
+        funcao = getattr(module, "renderizar_robo_local", None)
+        if not callable(funcao):
+            funcao = getattr(module, "render_robo_local", None)
+        if callable(funcao):
+            arquivo_modulo = getattr(module, "__file__", "módulo sem caminho")
+            return funcao, f"OK ({arquivo_modulo})"
+        return None, "Módulo encontrado, mas sem função de renderização compatível."
+    except Exception as erro:
+        logger.debug("Robô local não pôde ser importado.", exc_info=True)
+        return None, f"{type(erro).__name__}: {erro}"
+
+
+_impl_robo, _ROBO_IMPORT_ERRO = _tentar_import_robo()
+ROBO_DISPONIVEL = _impl_robo is not None
+
+
+def renderizar_robo_local(*args: Any, **kwargs: Any) -> None:
+    if _impl_robo is None:
+        st.sidebar.warning("🤖 Robô offline. Utilize upload manual.")
+        return
+    try:
+        _impl_robo(*args, **kwargs)
+    except Exception as erro:
+        st.sidebar.error(f"Erro no Robô: {erro}")
+
+
+# ─────────────────────────────────────────────────────────────────────
+# CONFIGURAÇÕES
+# ─────────────────────────────────────────────────────────────────────
 class Config:
     """Constantes de negócio e visuais."""
 

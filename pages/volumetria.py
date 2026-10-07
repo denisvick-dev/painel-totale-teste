@@ -34,8 +34,8 @@ from components.componentes import (
     render_hero_totale_1,
     render_insight,
     render_kpi_sm,
-    render_section_header,
     render_page_sidebar_theme_selector,
+    render_section_header,
 )
 from components.componentes import (
     aplicar_estilo as aplicar_estilo_corp,

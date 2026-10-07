@@ -30,6 +30,11 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from streamlit_gsheets import GSheetsConnection
 
+from components.componentes import aplicar_estilo as aplicar_estilo_ds
+from components.componentes import render_page_sidebar_theme_selector
+
+logger = logging.getLogger(__name__)
+
 # ═══════════════════════════════════════════════════════
 # CONFIGURAÇÃO
 # ═══════════════════════════════════════════════════════
@@ -874,7 +879,11 @@ def aplicar_cor_horario(valor: Any) -> str:
 # APP PRINCIPAL
 # ═══════════════════════════════════════════════════════
 def main() -> None:
-    aplicar_estilo()
+    # O shell principal aplica o tema no app; a chamada também mantém a página
+    # operável quando executada isoladamente.
+    aplicar_estilo_ds()
+    render_page_sidebar_theme_selector()
+    _injetar_css_local()
 
     render_hero(
         titulo="Painel de Primeiro Atendimento",

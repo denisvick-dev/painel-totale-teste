@@ -18,7 +18,10 @@ Execução:
 
 from __future__ import annotations
 
+import ast
+import re
 import sys
+import tomllib
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -42,6 +45,77 @@ def _erro_de_sintaxe(caminho: Path) -> str | None:
     except SyntaxError as exc:
         return f"{caminho.relative_to(RAIZ)}:{exc.lineno} -> {exc.msg}"
     return None
+
+
+def test_sem_marcadores_de_conflito() -> None:
+    """Nenhum arquivo Python deve conter marcadores de merge não resolvidos."""
+    padrao = re.compile(r"^(?:<{7}|={7}|>{7}|\|{7})(?:\s|$)")
+    problemas: list[str] = []
+
+    for caminho in sorted(RAIZ.rglob("*.py")):
+        if any(parte in IGNORADOS for parte in caminho.relative_to(RAIZ).parts):
+            continue
+        for numero, linha in enumerate(
+            caminho.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            if padrao.match(linha):
+                problemas.append(
+                    f"{caminho.relative_to(RAIZ)}:{numero}: {linha.strip()}"
+                )
+
+    assert not problemas, (
+        "Marcadores de conflito de merge encontrados:\n  " + "\n  ".join(problemas)
+    )
+
+
+def test_paginas_navegacao_existem() -> None:
+    """Toda página registrada no shell deve apontar para um arquivo existente."""
+    caminho_app = RAIZ / "streamlit_app.py"
+    arvore = ast.parse(caminho_app.read_text(encoding="utf-8"))
+    paginas = [
+        chamada.args[0].value
+        for chamada in ast.walk(arvore)
+        if isinstance(chamada, ast.Call)
+        and isinstance(chamada.func, ast.Attribute)
+        and isinstance(chamada.func.value, ast.Name)
+        and chamada.func.value.id == "st"
+        and chamada.func.attr == "Page"
+        and chamada.args
+        and isinstance(chamada.args[0], ast.Constant)
+        and isinstance(chamada.args[0].value, str)
+    ]
+
+    assert paginas, "Nenhuma página foi registrada em streamlit_app.py."
+    faltantes = [pagina for pagina in paginas if not (RAIZ / pagina).is_file()]
+    assert not faltantes, "Páginas registradas inexistentes: " + ", ".join(faltantes)
+
+
+def test_icone_do_app_existe() -> None:
+    """O ícone da configuração precisa corresponder a um asset versionado."""
+    arvore = ast.parse((RAIZ / "streamlit_app.py").read_text(encoding="utf-8"))
+    caminho_icone: str | None = None
+    for no in ast.walk(arvore):
+        if not isinstance(no, ast.AnnAssign) or not isinstance(no.target, ast.Name):
+            continue
+        if no.target.id == "ICON_PATH" and isinstance(no.value, ast.Constant):
+            caminho_icone = no.value.value
+            break
+
+    assert caminho_icone, "ConfiguracoesSistema precisa declarar ICON_PATH."
+    assert (RAIZ / caminho_icone).is_file(), (
+        f"O ícone configurado não existe: {caminho_icone}"
+    )
+
+
+def test_exemplo_de_secrets_e_seguro_e_valido() -> None:
+    """O modelo de secrets deve ser TOML válido e não ativar uma senha padrão."""
+    caminho = RAIZ / ".streamlit" / "secrets.example.toml"
+    config = tomllib.loads(caminho.read_text(encoding="utf-8"))
+
+    assert config["usuarios"]["admin"]["senha"] == ""
+    for pagina in ("gestao_ativos.py", "login.py"):
+        codigo = (RAIZ / "pages" / pagina).read_text(encoding="utf-8")
+        assert "admin123" not in codigo, f"Senha padrão insegura encontrada em {pagina}."
 
 
 def test_todos_modulos_compilam() -> None:

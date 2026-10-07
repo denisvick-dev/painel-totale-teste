@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import logging
 import time
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any
@@ -24,6 +25,7 @@ from components.componentes import (
     render_empty_state,
     render_hero_totale_1,
     render_kpi,
+    render_page_sidebar_theme_selector,
     render_section_header,
     render_sidebar_brand,
     render_sidebar_divider,
@@ -31,7 +33,6 @@ from components.componentes import (
     render_sidebar_info,
     render_sidebar_section,
     render_table_html,
-    render_page_sidebar_theme_selector,
 )
 
 logger = logging.getLogger(__name__)
@@ -256,27 +257,51 @@ class Config:
     }
 
     @staticmethod
-    def usuarios() -> dict[str, dict]:
-        base = {
-            "denisvick": {
-                "senha": "admin123",
-                "nome": "Denis Vick",
-                "role": "admin",
-                "bases": [],
-            }
-        }
+    def usuarios() -> dict[str, dict[str, Any]]:
+        """Carrega somente contas definidas em secrets; sem usuário padrão inseguro."""
         try:
-            raw = dict(st.secrets.get("usuarios", {}))
-            for login, d in raw.items():
-                base[Safe.lower(str(login))] = {
-                    "senha": Safe.str(d.get("senha", "")),
-                    "nome": Safe.str(d.get("nome", login)),
-                    "role": Safe.str(d.get("role", "leitura")),
-                    "bases": [Safe.str(b) for b in list(d.get("bases", []))],
-                }
+            configurados = st.secrets.get("usuarios", {})
         except Exception:
-            logger.warning("st.secrets['usuarios'] indisponível; usando base de usuários padrão.", exc_info=True)
-        return base
+            logger.warning("Nenhum usuário configurado em st.secrets['usuarios'].")
+            return {}
+
+        if not isinstance(configurados, Mapping):
+            logger.warning(
+                "A seção st.secrets['usuarios'] precisa ser uma tabela TOML."
+            )
+            return {}
+
+        usuarios: dict[str, dict[str, Any]] = {}
+        for login, dados in configurados.items():
+            login_normalizado = Safe.lower(str(login))
+            if not login_normalizado or not isinstance(dados, Mapping):
+                continue
+
+            senha = Safe.str(dados.get("senha", ""))
+            if not senha:
+                logger.warning(
+                    "Conta '%s' ignorada: senha não configurada.", login_normalizado
+                )
+                continue
+
+            bases_configuradas = dados.get("bases", [])
+            if isinstance(bases_configuradas, str):
+                bases_configuradas = [bases_configuradas]
+            elif not isinstance(bases_configuradas, (list, tuple, set)):
+                bases_configuradas = []
+
+            usuarios[login_normalizado] = {
+                "senha": senha,
+                "nome": Safe.str(dados.get("nome", login), login_normalizado),
+                "role": Safe.lower(dados.get("role", "leitura"), "leitura"),
+                "bases": [
+                    Safe.str(base)
+                    for base in bases_configuradas
+                    if Safe.str(base)
+                ],
+            }
+
+        return usuarios
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -659,6 +684,12 @@ def _init():
 
 
 def tela_login():
+    usuarios = Config.usuarios()
+    if not usuarios:
+        st.error("Acesso indisponível: configure ao menos um usuário em secrets.toml.")
+        st.caption("Use a seção [usuarios.<login>] do arquivo de exemplo.")
+        return
+
     _, col, _ = st.columns([1, 1.4, 1])
     with col:
         render_hero_totale_1(Config.APP_NOME, "Plataforma Corporativa de Gestão")
@@ -670,7 +701,7 @@ def tela_login():
             )
         if ok:
             chave = Safe.lower(str(u))
-            dados = Config.usuarios().get(chave)
+            dados = usuarios.get(chave)
             if dados and _verificar_senha(p, dados["senha"]):
                 st.session_state.update(
                     {

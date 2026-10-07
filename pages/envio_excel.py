@@ -82,10 +82,10 @@ try:
         render_hero_totale_1,
         render_insight,
         render_kpi,
+        render_page_sidebar_theme_selector,
         render_section_header,
         render_sidebar_brand,
         render_table_html,
-        render_page_sidebar_theme_selector,
     )
 except Exception:  # ambiente sem o design system — o app ainda abre
     aplicar_estilo = _noop

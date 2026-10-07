@@ -60,6 +60,7 @@ try:
         render_insight,
         render_kpi,
         render_metric_card,
+        render_page_sidebar_theme_selector,
         render_progress_bar,
         render_section_header,
         render_sidebar_brand,
@@ -70,7 +71,6 @@ try:
         render_sidebar_spacer,
         render_sidebar_status,
         render_table_html,
-        render_page_sidebar_theme_selector,
     )
 except ImportError:
 
@@ -128,12 +128,25 @@ except ImportError:
         else:
             st.info(texto)
 
+    def _fallback_empty_state(**kwargs: Any) -> None:
+        st.info(kwargs.get("titulo") or kwargs.get("descricao") or "Sem dados")
+
+    def _fallback_hero(**kwargs: Any) -> None:
+        st.title(kwargs.get("titulo", "Dashboard"))
+
+    def _fallback_sidebar_section(*args: Any, **kwargs: Any) -> None:
+        st.sidebar.header(args[0] if args else "")
+
+    def _fallback_sidebar_status(**kwargs: Any) -> None:
+        st.sidebar.success(kwargs.get("status", "OK"))
+
+    def _fallback_table(df: pd.DataFrame, **kwargs: Any) -> None:
+        st.dataframe(df, width="stretch")
+
     aplicar_estilo = _noop
     aplicar_sidebar_corp = _noop
-    render_empty_state = lambda **k: st.info(
-        k.get("titulo") or k.get("descricao") or "Sem dados"
-    )
-    render_hero_totale_2 = lambda **k: st.title(k.get("titulo", "Dashboard"))
+    render_empty_state = _fallback_empty_state
+    render_hero_totale_2 = _fallback_hero
     render_insight = _fallback_insight
     render_kpi = _fallback_kpi
     render_metric_card = _fallback_metric_card
@@ -143,10 +156,10 @@ except ImportError:
     render_sidebar_divider = _noop
     render_sidebar_footer_info = _noop
     render_sidebar_info = _noop
-    render_sidebar_section = lambda *a, **k: st.sidebar.header(a[0] if a else "")
+    render_sidebar_section = _fallback_sidebar_section
     render_sidebar_spacer = _noop
-    render_sidebar_status = lambda **k: st.sidebar.success(k.get("status", "OK"))
-    render_table_html = lambda df, **k: st.dataframe(df, width="stretch")
+    render_sidebar_status = _fallback_sidebar_status
+    render_table_html = _fallback_table
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

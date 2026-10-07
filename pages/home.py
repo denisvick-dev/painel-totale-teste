@@ -3,21 +3,23 @@ pages/home.py
 =============
 Home — Portal TOTALE de Inteligência Operacional
 
-Versão: 3.3.0 (Integração Total Design System TOTALE v4.9.0)
+Versão: 3.4.0 (Integração Total Design System TOTALE v5.4.0)
 Autor: TOTALE Tecnologia
 
 Evoluções desta versão:
-• Header Hero dinâmico com métricas em tempo real e identificação contextual de ambiente.
-• Faixa executiva de KPIs resumidos (Status, Volume, Módulos e Integridade da Base).
-• Card inteligente de status operacional com direcionamento dinâmico para sincronização.
-• Grid interativo de módulos estratégicos com atalhos diretos e cartões executivos.
-• Acesso rápido categorizado para as páginas mais acessadas do dia a dia.
-• Tipagem estrita, tratamento resiliente de exceções e alinhamento cromático à marca TOTALE.
+• Hero contextual com contagem de registros, data local e status real da sincronização.
+• KPIs derivados do volume em memória, abas carregadas e saúde das fontes.
+• Diagnóstico por fonte, incluindo falhas, dados preservados e último sucesso.
+• Acesso direto aos módulos estratégicos e às ferramentas de rotina.
+• Datas em português sem depender do locale configurado no servidor.
+• Tipagem explícita, apresentação resiliente e alinhamento à marca TOTALE.
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -40,9 +42,9 @@ from components.componentes import (
     render_hero_totale_2,
     render_insight,
     render_kpi,
+    render_page_sidebar_theme_selector,
     render_section_header,
     render_spacer,
-    render_page_sidebar_theme_selector,
 )
 
 logger = logging.getLogger(__name__)
@@ -51,8 +53,80 @@ logger = logging.getLogger(__name__)
 # 🔧 BLOCO 1: CONFIGURAÇÕES E CONSTANTES
 # ====================================================
 FUSO_BR = ZoneInfo("America/Sao_Paulo")
-VERSAO_SISTEMA = "3.3.0"
+VERSAO_SISTEMA = "3.4.0"
 AMBIENTE_SISTEMA = "Produção"
+MESES_PT_BR = (
+    "janeiro",
+    "fevereiro",
+    "março",
+    "abril",
+    "maio",
+    "junho",
+    "julho",
+    "agosto",
+    "setembro",
+    "outubro",
+    "novembro",
+    "dezembro",
+)
+
+
+@dataclass(frozen=True)
+class ResumoDados:
+    """Métricas consolidadas da carga de produção disponível na sessão."""
+
+    registros: int = 0
+    tabelas: int = 0
+    tabelas_com_dados: int = 0
+
+    @property
+    def carregado(self) -> bool:
+        return self.tabelas > 0 or self.registros > 0
+
+
+def _coletar_dataframes(valor: Any) -> list[pd.DataFrame]:
+    """Extrai DataFrames de containers aninhados sem contar chaves como linhas."""
+    if isinstance(valor, pd.DataFrame):
+        return [valor]
+    if isinstance(valor, Mapping):
+        return [
+            frame
+            for conteudo in valor.values()
+            for frame in _coletar_dataframes(conteudo)
+        ]
+    if isinstance(valor, (list, tuple)):
+        return [
+            frame
+            for conteudo in valor
+            for frame in _coletar_dataframes(conteudo)
+        ]
+    return []
+
+
+def resumir_dados_producao(dados: Any) -> ResumoDados:
+    """Conta linhas e abas com dados, inclusive quando a carga é um dict de abas."""
+    frames = _coletar_dataframes(dados)
+    if frames:
+        return ResumoDados(
+            registros=sum(len(frame) for frame in frames),
+            tabelas=len(frames),
+            tabelas_com_dados=sum(not frame.empty for frame in frames),
+        )
+
+    # Compatibilidade com cargas antigas que guardavam linhas diretamente.
+    if isinstance(dados, (list, tuple)):
+        quantidade = len(dados)
+        return ResumoDados(
+            registros=quantidade,
+            tabelas=1 if quantidade else 0,
+            tabelas_com_dados=1 if quantidade else 0,
+        )
+    return ResumoDados()
+
+
+def formatar_data_pt_br(valor: datetime) -> str:
+    """Formata a data em português sem depender do locale do sistema operacional."""
+    return f"{valor.day} de {MESES_PT_BR[valor.month - 1]} de {valor.year}"
 
 
 # ====================================================
@@ -225,37 +299,103 @@ def _agora() -> datetime:
     return datetime.now(FUSO_BR)
 
 
-def _formatar_data_hora(valor: Any) -> str:
+def _formatar_data_hora(valor: Any, *, com_segundos: bool = True) -> str:
     """Formata com segurança datetime, string ou timestamp."""
     if valor is None:
         return "Não disponível"
     if isinstance(valor, datetime):
         dt = valor if valor.tzinfo is not None else valor.replace(tzinfo=FUSO_BR)
-        return dt.strftime("%d/%m/%Y às %H:%M:%S")
+        formato = "%d/%m/%Y às %H:%M:%S" if com_segundos else "%d/%m/%Y %H:%M"
+        return dt.strftime(formato)
     txt = str(valor).strip()
     return txt if txt and txt.lower() != "none" else "Não disponível"
 
 
-def _obter_metricas_base() -> dict[str, Any]:
-    """Inspeciona o session_state para extrair métricas de volume e integridade."""
-    dados_prod = st.session_state.get("dados_prod")
-    carregado = False
-    total_linhas = 0
+def _resumir_fontes(status_fontes: Any) -> list[dict[str, Any]]:
+    """Normaliza objetos/status em dicts para a camada de apresentação."""
+    if not isinstance(status_fontes, Mapping):
+        return []
 
-    if isinstance(dados_prod, pd.DataFrame):
-        carregado = not dados_prod.empty
-        total_linhas = len(dados_prod)
-    elif isinstance(dados_prod, (list, tuple, dict)):
-        carregado = len(dados_prod) > 0
-        total_linhas = len(dados_prod)
-    elif dados_prod is not None:
-        carregado = True
+    resumo: list[dict[str, Any]] = []
+    for nome, fonte in status_fontes.items():
+        if isinstance(fonte, Mapping):
+            ok = bool(fonte.get("ok", False))
+            linhas = fonte.get("linhas", 0)
+            ultimo_sucesso = fonte.get("ultimo_sucesso")
+            ultima_tentativa = fonte.get("ultima_tentativa")
+            erro = fonte.get("erro")
+        else:
+            ok = bool(getattr(fonte, "ok", False))
+            linhas = getattr(fonte, "linhas", 0)
+            ultimo_sucesso = getattr(fonte, "ultimo_sucesso", None)
+            ultima_tentativa = getattr(fonte, "ultima_tentativa", None)
+            erro = getattr(fonte, "erro", None)
+
+        try:
+            quantidade_linhas = max(0, int(linhas))
+        except (TypeError, ValueError, OverflowError):
+            quantidade_linhas = 0
+
+        texto_erro = " ".join(str(erro or "").split())
+        if len(texto_erro) > 180:
+            texto_erro = f"{texto_erro[:179]}…"
+
+        resumo.append(
+            {
+                "nome": str(nome),
+                "ok": ok,
+                "linhas": quantidade_linhas,
+                "ultimo_sucesso": _formatar_data_hora(
+                    ultimo_sucesso, com_segundos=False
+                ),
+                "ultima_tentativa": _formatar_data_hora(
+                    ultima_tentativa, com_segundos=False
+                ),
+                "tem_sucesso_anterior": ultimo_sucesso is not None,
+                "erro": texto_erro,
+            }
+        )
+    return resumo
+
+
+def _obter_metricas_base() -> dict[str, Any]:
+    """Extrai métricas reais da carga e do estado das fontes na sessão."""
+    resumo_dados = resumir_dados_producao(st.session_state.get("dados_prod"))
+    fontes = _resumir_fontes(st.session_state.get("status_fontes"))
+    fontes_ok = sum(fonte["ok"] for fonte in fontes)
+
+    if fontes:
+        if fontes_ok == len(fontes):
+            status_carga = "Atualizada"
+        elif fontes_ok:
+            status_carga = "Parcial"
+        else:
+            status_carga = "Com falhas"
+    elif resumo_dados.tabelas:
+        status_carga = "Dados disponíveis" if resumo_dados.registros else "Sem registros"
+    else:
+        status_carga = "Aguardando dados"
 
     ultima_atualizacao = st.session_state.get("ultima_atualizacao")
+    ultima_tentativa = st.session_state.get("ultima_tentativa_sync")
     return {
-        "carregado": carregado,
-        "total_linhas": total_linhas,
+        "carregado": resumo_dados.carregado,
+        "total_linhas": resumo_dados.registros,
+        "tabelas": resumo_dados.tabelas,
+        "tabelas_com_dados": resumo_dados.tabelas_com_dados,
+        "fontes": fontes,
+        "fontes_total": len(fontes),
+        "fontes_ok": fontes_ok,
+        "fontes_com_falha": [fonte["nome"] for fonte in fontes if not fonte["ok"]],
+        "status_carga": status_carga,
         "ultima_atualizacao": _formatar_data_hora(ultima_atualizacao),
+        "ultima_atualizacao_curta": _formatar_data_hora(
+            ultima_atualizacao, com_segundos=False
+        ),
+        "ultima_tentativa": _formatar_data_hora(ultima_tentativa),
+        "ultima_tentativa_curta": _formatar_data_hora(
+            ultima_tentativa, com_segundos=False
+        ),
     }
 
 
@@ -264,24 +404,24 @@ def _obter_metricas_base() -> dict[str, Any]:
 # ====================================================
 def render_header(info_base: dict[str, Any]) -> None:
     """Renderiza o Hero Banner adaptativo da TOTALE."""
-    data_hoje = _agora().strftime("%d de %B de %Y")
+    data_hoje = formatar_data_pt_br(_agora())
 
-    if info_base["carregado"] and info_base["total_linhas"] > 0:
+    if info_base["carregado"]:
         render_hero_totale_2(
             titulo="Portal TOTALE — Inteligência Operacional",
-            subtitulo=f"Visão consolidada de produção, eficiência de campo e KPIs estratégicos. {data_hoje}.",
+            subtitulo=f"Visão consolidada de produção, eficiência de campo e indicadores estratégicos. {data_hoje}.",
             valor_destaque=formatar_numero_br(info_base["total_linhas"]),
-            label_destaque="REGISTROS ATIVOS",
-            badge="AMBIENTE OPERACIONAL ATIVO",
-            tag_info=f"Sincronizado: {info_base['ultima_atualizacao']}",
+            label_destaque="REGISTROS NAS ABAS DE PRODUÇÃO",
+            badge=info_base["status_carga"].upper(),
+            tag_info=f"Última fonte atualizada: {info_base['ultima_atualizacao']}",
         )
     else:
         render_hero_totale_1(
             titulo="Portal TOTALE — Inteligência Operacional",
-            subtitulo="Ambiente unificado para monitoramento de rotas, produtividade técnica e gestão de metas.",
-            badge="PORTAL EXECUTIVO",
+            subtitulo="Acompanhe produção, eficiência de campo e indicadores estratégicos em um só lugar.",
+            badge="AGUARDANDO DADOS",
             icone="⚡",
-            meta_info=f"Atualizado em tempo real • {data_hoje} • São Paulo/SP",
+            meta_info=f"Última tentativa: {info_base['ultima_tentativa']} • {data_hoje} • São Paulo/SP",
         )
 
 
@@ -309,94 +449,192 @@ def render_boas_vindas() -> None:
 
 
 def render_kpi_strip(info_base: dict[str, Any]) -> None:
-    """Renderiza a faixa executiva de indicadores rápidos."""
+    """Renderiza indicadores derivados da carga e do estado real das fontes."""
     render_section_header(
         titulo="Visão Geral do Sistema",
-        subtitulo="Status dos serviços analíticos e integridade das bases de dados",
+        subtitulo="Volume da produção carregada e resultado da última tentativa de sincronização",
         icone="insights",
     )
 
     col1, col2, col3, col4 = st.columns(4)
+    status_carga = info_base["status_carga"]
+    tema_status = {
+        "Atualizada": "verde",
+        "Parcial": "laranja",
+        "Com falhas": "vermelho",
+        "Dados disponíveis": "azul",
+        "Sem registros": "laranja",
+        "Aguardando dados": "cinza",
+    }.get(status_carga, "cinza")
 
     with col1:
-        status_label = "Operacional" if info_base["carregado"] else "Aguardando Carga"
-        tema_status = "verde" if info_base["carregado"] else "laranja"
+        detalhe_status = (
+            f"{info_base['fontes_ok']} de {info_base['fontes_total']} fontes atualizadas"
+            if info_base["fontes_total"]
+            else "Estado das fontes não disponível"
+        )
         render_kpi(
             col1,
-            label="STATUS DA BASE",
-            valor=status_label,
-            sub="Serviços 100% online",
+            label="STATUS DA SINCRONIZAÇÃO",
+            valor=status_carga,
+            sub=detalhe_status,
             tema=tema_status,
-            icone="dns",
+            icone="sync",
         )
 
     with col2:
-        val_vol = (
+        registros = (
             formatar_numero_br(info_base["total_linhas"])
-            if info_base["total_linhas"] > 0
-            else "Pendente"
+            if info_base["carregado"]
+            else "—"
         )
         render_kpi(
             col2,
-            label="REGISTROS EM MEMÓRIA",
-            valor=val_vol,
-            sub=f"Última carga: {info_base['ultima_atualizacao']}",
+            label="REGISTROS DE PRODUÇÃO",
+            valor=registros,
+            sub=f"Última tentativa: {info_base['ultima_tentativa_curta']}",
             tema="azul",
             icone="storage",
         )
 
     with col3:
+        total_tabelas = info_base["tabelas"]
+        tabelas = formatar_numero_br(total_tabelas) if total_tabelas else "—"
         render_kpi(
             col3,
-            label="PAINÉIS DISPONÍVEIS",
-            valor="8 Módulos",
-            sub="Operação, Ativos e Metas",
+            label="ABAS DE PRODUÇÃO",
+            valor=tabelas,
+            sub=(
+                f"{info_base['tabelas_com_dados']} com registros"
+                if total_tabelas
+                else "Nenhuma aba carregada"
+            ),
             tema="gradiente",
-            icone="dashboard_customize",
+            icone="table_view",
         )
 
     with col4:
+        if info_base["fontes_total"]:
+            valor_fontes = f"{info_base['fontes_ok']}/{info_base['fontes_total']}"
+            subtitulo_fontes = "Fontes com atualização bem-sucedida"
+            tema_fontes = (
+                "verde"
+                if info_base["fontes_ok"] == info_base["fontes_total"]
+                else "vermelho"
+                if not info_base["fontes_ok"]
+                else "laranja"
+            )
+        else:
+            valor_fontes = "—"
+            subtitulo_fontes = "Diagnóstico indisponível"
+            tema_fontes = "cinza"
         render_kpi(
             col4,
-            label="AMBIENTE & SEGURANÇA",
-            valor=AMBIENTE_SISTEMA,
-            sub="Criptografia & Sessão Ativa",
-            tema="cinza",
-            icone="security",
+            label="FONTES ATUALIZADAS",
+            valor=valor_fontes,
+            sub=subtitulo_fontes,
+            tema=tema_fontes,
+            icone="cloud_sync",
         )
 
     render_spacer(14)
 
 
+def render_fontes_dados(info_base: dict[str, Any]) -> None:
+    """Mostra o sucesso, a falha ou a idade do último dado de cada fonte."""
+    render_section_header(
+        titulo="Saúde das Fontes de Dados",
+        subtitulo="Resultado por fonte na última tentativa; falhas preservam a carga anterior quando disponível",
+        icone="database",
+    )
+
+    fontes = info_base["fontes"]
+    if not fontes:
+        st.info("O monitoramento das fontes ainda não está disponível nesta sessão.")
+        render_spacer(8)
+        return
+
+    colunas = st.columns(min(3, len(fontes)), gap="small")
+    for indice, fonte in enumerate(fontes):
+        with colunas[indice % len(colunas)]:
+            with st.container(border=True):
+                st.markdown(f"**{fonte['nome']}**")
+                if fonte["ok"]:
+                    st.success(
+                        f"Atualizada • {formatar_numero_br(fonte['linhas'])} linhas"
+                    )
+                    st.caption(f"Último sucesso: {fonte['ultimo_sucesso']}")
+                elif fonte["tem_sucesso_anterior"]:
+                    st.warning(
+                        "Atualização falhou; os dados da carga anterior foram preservados."
+                    )
+                    st.caption(
+                        f"Carga preservada: {formatar_numero_br(fonte['linhas'])} linhas • "
+                        f"último sucesso em {fonte['ultimo_sucesso']}"
+                    )
+                else:
+                    st.error("Sem carga bem-sucedida para esta fonte.")
+                if fonte["ultima_tentativa"] != "Não disponível":
+                    st.caption(f"Última tentativa: {fonte['ultima_tentativa']}")
+                if fonte["erro"]:
+                    st.caption(f"Motivo: {fonte['erro']}")
+
+    render_spacer(8)
+
+
 def render_status_operacional(info_base: dict[str, Any]) -> None:
-    """Exibe o diagnóstico do sistema e CTA para atualização de dados."""
-    if not info_base["carregado"]:
+    """Resume o estado da carga sem afirmar disponibilidade não verificada."""
+    status = info_base["status_carga"]
+    if status == "Aguardando dados":
         col_msg, col_btn = st.columns([3, 1], gap="medium")
         with col_msg:
             render_insight(
-                msg="O ambiente está iniciado, porém **nenhuma base de dados foi carregada na sessão atual**. "
-                "Para visualizar os gráficos de volumetria, rotas e KPIs de produção, acesse o módulo de atualização.",
+                msg="Nenhuma aba de produção está carregada nesta sessão. Sincronize as fontes para disponibilizar os dados nos painéis.",
                 tipo="alerta",
-                titulo="Ação Necessária: Sincronização de Dados Pendente",
+                titulo="Dados de produção pendentes",
             )
         with col_btn:
             render_spacer(10)
             try:
                 st.page_link(
                     "pages/envio_excel.py",
-                    label="🔁 Sincronizar Bases Agora",
+                    label="🔁 Sincronizar bases",
                     icon="📥",
                     width="stretch",
                 )
             except Exception:
                 if st.button("🔁 Ir para Atualização", width="stretch"):
                     st.info("Navegue até 'Atualização de Dados' no menu lateral.")
+    elif status == "Com falhas":
+        render_insight(
+            msg="Todas as fontes monitoradas falharam na última tentativa. Confira os detalhes abaixo; cargas anteriores, quando disponíveis, podem estar desatualizadas.",
+            tipo="alerta",
+            titulo="Falha na sincronização",
+        )
+    elif status == "Parcial":
+        falhas = ", ".join(info_base["fontes_com_falha"])
+        render_insight(
+            msg=f"A sincronização foi parcial. Falha nas fontes: **{falhas}**. Consulte os detalhes por fonte acima; cargas anteriores são mantidas quando disponíveis.",
+            tipo="alerta",
+            titulo="Verifique as fontes com falha",
+        )
+    elif status == "Atualizada":
+        render_insight(
+            msg=f"Todas as fontes monitoradas reportaram sucesso. A planilha de produção contém **{formatar_numero_br(info_base['total_linhas'])} registros** em **{info_base['tabelas']} abas**.",
+            tipo="ok",
+            titulo="Sincronização concluída",
+        )
+    elif status == "Sem registros":
+        render_insight(
+            msg="A estrutura das abas de produção foi carregada, mas nenhuma linha de dados foi encontrada.",
+            tipo="alerta",
+            titulo="Produção sem registros",
+        )
     else:
         render_insight(
-            msg=f"Bases de produção validadas e ativas na sessão em **{info_base['ultima_atualizacao']}**. "
-            "Todos os cálculos analíticos, tabelas de quebra e relatórios diários estão prontos para consulta.",
-            tipo="ok",
-            titulo="Ambiente Operacional Atualizado e em Conformidade",
+            msg=f"Há **{formatar_numero_br(info_base['total_linhas'])} registros** de produção disponíveis na sessão. O estado de atualização das fontes não está disponível.",
+            tipo="info",
+            titulo="Dados disponíveis",
         )
 
     render_spacer(12)
@@ -803,6 +1041,7 @@ def main() -> None:
     render_header(info_base)
     render_boas_vindas()
     render_kpi_strip(info_base)
+    render_fontes_dados(info_base)
     render_status_operacional(info_base)
     render_cockpit_executivo()
     render_resumo_alertas()
