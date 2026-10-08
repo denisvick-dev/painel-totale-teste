@@ -161,7 +161,9 @@ def carregar_fonte(tamanho: int, negrito: bool = False):
             fonte = ImageFont.truetype(caminho_fonte, tamanho)
             return fonte, f"{nome_fonte} (fallback)"
         except Exception:
-            logger.debug("Fonte do sistema indisponível; seguindo com a próxima opção.", exc_info=True)
+            logger.debug(
+                "Fonte do sistema indisponível; seguindo com a próxima opção.", exc_info=True
+            )
             continue
 
     return ImageFont.load_default(), "DEFAULT (bitmap)"
@@ -248,9 +250,7 @@ def gerar_assinatura(
     return resultado, log
 
 
-def imagem_para_buffer(
-    img: Image.Image, formato: str, qualidade: int = 90
-) -> io.BytesIO:
+def imagem_para_buffer(img: Image.Image, formato: str, qualidade: int = 90) -> io.BytesIO:
     buf = io.BytesIO()
     if formato == "PNG":
         img.save(buf, format="PNG", optimize=True)
@@ -269,9 +269,7 @@ if not TEMPLATE_BASE.exists():
     render_hero_totale_2(
         "Erro Crítico", "Template da assinatura não encontrado", "FALHA", "vermelho"
     )
-    render_insight(
-        f"O arquivo base não foi localizado em: `{TEMPLATE_BASE}`", "critico"
-    )
+    render_insight(f"O arquivo base não foi localizado em: `{TEMPLATE_BASE}`", "critico")
     st.stop()
 
 # ============ HEADER ============
@@ -343,9 +341,7 @@ with col1:
         badge_tipo="info",
     )
 
-    nome = st.text_input(
-        "Nome Completo *", value="Denis Vick", placeholder="Ex: Denis Vick"
-    )
+    nome = st.text_input("Nome Completo *", value="Denis Vick", placeholder="Ex: Denis Vick")
     cargo = st.text_input(
         "Cargo / Função *",
         value="Analista de COP | Leste & ABCDM",
@@ -446,9 +442,7 @@ with col2:
             "azul",
             "📐",
         )
-        render_kpi_sm(
-            k2, "Tamanho", f"{tamanho_kb:.1f} KB", "peso do arquivo", "cinza", "💾"
-        )
+        render_kpi_sm(k2, "Tamanho", f"{tamanho_kb:.1f} KB", "peso do arquivo", "cinza", "💾")
         render_kpi_sm(k3, "Formato", extensao.upper(), "extensão final", "laranja", "🖼️")
 
         st.markdown("<br>", unsafe_allow_html=True)

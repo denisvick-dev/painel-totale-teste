@@ -89,11 +89,7 @@ def _css_local_por_pagina() -> dict[str, str]:
     for caminho in sorted((RAIZ / "pages").glob("*.py")):
         blocos = []
         for no in ast.walk(ast.parse(caminho.read_text(encoding="utf-8"))):
-            if (
-                isinstance(no, ast.Constant)
-                and isinstance(no.value, str)
-                and "<style>" in no.value
-            ):
+            if isinstance(no, ast.Constant) and isinstance(no.value, str) and "<style>" in no.value:
                 blocos += [m.group(1) for m in re.finditer(r"<style>(.*?)</style>", no.value, re.S)]
         resultado[caminho.name] = "\n".join(blocos)
     return resultado
@@ -122,8 +118,7 @@ def test_paginas_nao_reduplicam_css_da_tabela() -> None:
 def test_paginas_da_tabela_chamam_o_helper() -> None:
     """Páginas que exibem .corp-table precisam chamar o CSS compartilhado."""
     texto_completo = "\n".join(
-        caminho.read_text(encoding="utf-8")
-        for caminho in (RAIZ / "pages").glob("*.py")
+        caminho.read_text(encoding="utf-8") for caminho in (RAIZ / "pages").glob("*.py")
     )
     for pagina in PAGINAS_ESPERADAS:
         conteudo = (RAIZ / "pages" / pagina).read_text(encoding="utf-8")

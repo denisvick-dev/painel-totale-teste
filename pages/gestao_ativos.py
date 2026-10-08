@@ -157,9 +157,7 @@ def _gspread_sheet(worksheet_name: str) -> gspread.Worksheet:
 def _append_gspread(worksheet_name: str, linha: list[Any]) -> bool:
     try:
         ws = _gspread_sheet(worksheet_name)
-        ws.append_row(
-            [Safe.celula(v) for v in linha], value_input_option="USER_ENTERED"
-        )
+        ws.append_row([Safe.celula(v) for v in linha], value_input_option="USER_ENTERED")
         return True
     except Exception as exc:
         st.warning(f"️ Append falhou: {exc}")
@@ -266,9 +264,7 @@ class Config:
             return {}
 
         if not isinstance(configurados, Mapping):
-            logger.warning(
-                "A seção st.secrets['usuarios'] precisa ser uma tabela TOML."
-            )
+            logger.warning("A seção st.secrets['usuarios'] precisa ser uma tabela TOML.")
             return {}
 
         usuarios: dict[str, dict[str, Any]] = {}
@@ -279,9 +275,7 @@ class Config:
 
             senha = Safe.str(dados.get("senha", ""))
             if not senha:
-                logger.warning(
-                    "Conta '%s' ignorada: senha não configurada.", login_normalizado
-                )
+                logger.warning("Conta '%s' ignorada: senha não configurada.", login_normalizado)
                 continue
 
             bases_configuradas = dados.get("bases", [])
@@ -294,11 +288,7 @@ class Config:
                 "senha": senha,
                 "nome": Safe.str(dados.get("nome", login), login_normalizado),
                 "role": Safe.lower(dados.get("role", "leitura"), "leitura"),
-                "bases": [
-                    Safe.str(base)
-                    for base in bases_configuradas
-                    if Safe.str(base)
-                ],
+                "bases": [Safe.str(base) for base in bases_configuradas if Safe.str(base)],
             }
 
         return usuarios
@@ -341,9 +331,7 @@ class Repo:
             .reset_index(drop=True)
         )
 
-    def log(
-        self, usr: str, perfil: str, acao: str, alvo: str, detalhe: str = ""
-    ) -> None:
+    def log(self, usr: str, perfil: str, acao: str, alvo: str, detalhe: str = "") -> None:
         try:
             _append_gspread(
                 Config.ABAS["auditoria"],
@@ -427,9 +415,7 @@ class Svc:
             "ativos", pd.concat([df, pd.DataFrame([asdict(tec)])], ignore_index=True)
         )
         if ok:
-            self.r.log(
-                usr.login, usr.role, "CADASTRO", tec.RE, f"{tec.Técnico}|{tec.Base}"
-            )
+            self.r.log(usr.login, usr.role, "CADASTRO", tec.RE, f"{tec.Técnico}|{tec.Base}")
         return ok
 
     def editar(self, re: str, campo: str, novo: str, usr: Usuario) -> bool:
@@ -440,9 +426,7 @@ class Svc:
             return False
         ant = df.loc[mask, campo].values[0]
         df.loc[mask, campo] = Safe.str(novo)
-        df.loc[mask, "Ultima_Modificacao"] = (
-            f"{datetime.now():%d/%m/%y %H:%M} | Por {usr.login}"
-        )
+        df.loc[mask, "Ultima_Modificacao"] = f"{datetime.now():%d/%m/%y %H:%M} | Por {usr.login}"
         ok = self.r.gravar("ativos", df)
         if ok:
             self.r.log(usr.login, usr.role, "EDIÇÃO", re, f"{campo}:'{ant}'→'{novo}'")
@@ -458,18 +442,14 @@ class Svc:
         linha["Situação"] = "DESLIGADO"
         linha["Data_Desligamento"] = datetime.now().strftime("%d/%m/%Y %H:%M")
         linha["Motivo"] = Safe.str(motivo)
-        df_de = pd.concat(
-            [self.r.ler("desligados", Config.COL_DESLIG), linha], ignore_index=True
-        )
+        df_de = pd.concat([self.r.ler("desligados", Config.COL_DESLIG), linha], ignore_index=True)
         df_at = df_at[~mask].reset_index(drop=True)
         ok = self.r.gravar("desligados", df_de) and self.r.gravar("ativos", df_at)
         if ok:
             self.r.log(usr.login, usr.role, "DESLIGAMENTO", re, motivo)
         return ok
 
-    def importar(
-        self, df_imp: pd.DataFrame, usr: Usuario
-    ) -> tuple[int, int, list[str]]:
+    def importar(self, df_imp: pd.DataFrame, usr: Usuario) -> tuple[int, int, list[str]]:
         df_imp = Safe.limpar_df(df_imp)
         df_at = self.r.ler("ativos", Config.COL_ATIVOS)
         exist = set(df_at["RE"].str.upper())
@@ -498,9 +478,7 @@ class Svc:
             novos.append(asdict(tec))
             exist.add(re)
         if novos:
-            self.r.gravar(
-                "ativos", pd.concat([df_at, pd.DataFrame(novos)], ignore_index=True)
-            )
+            self.r.gravar("ativos", pd.concat([df_at, pd.DataFrame(novos)], ignore_index=True))
             self.r.log(
                 usr.login,
                 usr.role,
@@ -518,8 +496,7 @@ def _regras_cor_situacao():
     """Gera as regras de cor para a coluna Situação no render_table_html."""
     return {
         "Situação": [
-            (lambda x, sit=sit: x == sit, cor)
-            for sit, cor in Config.CORES_SITUACAO.items()
+            (lambda x, sit=sit: x == sit, cor) for sit, cor in Config.CORES_SITUACAO.items()
         ]
     }
 
@@ -530,9 +507,7 @@ def view_dashboard(df_raw, usr):
     with st.expander("🔎 Filtros Avançados", expanded=False):
         c1, c2, c3, c4 = st.columns(4)
         ft = c1.text_input("🔍 Nome/RE/Login", key="dash_busca")
-        fb = c2.multiselect(
-            "Base", sorted(df_raw["Base"].dropna().unique()), key="dash_base"
-        )
+        fb = c2.multiselect("Base", sorted(df_raw["Base"].dropna().unique()), key="dash_base")
         fm = c3.multiselect(
             "Monitor", sorted(df_raw["Monitor"].dropna().unique()), key="dash_monitor"
         )
@@ -563,9 +538,7 @@ def view_dashboard(df_raw, usr):
 
     k1, k2, k3, k4, k5 = st.columns(5)
     render_kpi(k1, "Total", str(tot), f"{df['Base'].nunique()} bases", "azul")
-    render_kpi(
-        k2, "Em Operação", str(atv), f"{atv / tot * 100:.1f}% disponível", "verde"
-    )
+    render_kpi(k2, "Em Operação", str(atv), f"{atv / tot * 100:.1f}% disponível", "verde")
     render_kpi(k3, "Em Férias", str(fer), "", "laranja")
     render_kpi(k4, "Inoperantes", str(inop), "", "vermelho")
     render_kpi(k5, "Monitores", str(df["Monitor"].nunique()), "", "roxo")
@@ -611,9 +584,7 @@ def view_cadastro(svc, usr):
             else c2.text_input("Monitor *", key="cad_monitor_txt")
         )
         sit = c2.selectbox("Situação", Config.SITS_ATIVAS, key="cad_situacao")
-        ok = st.form_submit_button(
-            "💾 Salvar", type="primary", width="stretch"
-        )
+        ok = st.form_submit_button("💾 Salvar", type="primary", width="stretch")
 
     if ok:
         erros = [
@@ -669,9 +640,7 @@ def view_auditoria(repo, usr):
     if fd:
         df = df[df["Detalhe"].str.contains(fd, case=False, na=False)]
 
-    render_table_html(
-        df.iloc[::-1].reset_index(drop=True), titulo="Log de Eventos", max_rows=100
-    )
+    render_table_html(df.iloc[::-1].reset_index(drop=True), titulo="Log de Eventos", max_rows=100)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -696,9 +665,7 @@ def tela_login():
         with st.form("login"):
             u = st.text_input("👤 Usuário")
             p = st.text_input("🔑 Senha", type="password")
-            ok = st.form_submit_button(
-                "Entrar →", type="primary", width="stretch"
-            )
+            ok = st.form_submit_button("Entrar →", type="primary", width="stretch")
         if ok:
             chave = Safe.lower(str(u))
             dados = usuarios.get(chave)

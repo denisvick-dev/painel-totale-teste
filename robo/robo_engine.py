@@ -92,9 +92,7 @@ class TotaleRoboEngine:
             return []
         try:
             arquivos = [
-                p
-                for p in (raiz.rglob("*") if recursivo else raiz.iterdir())
-                if p.is_file()
+                p for p in (raiz.rglob("*") if recursivo else raiz.iterdir()) if p.is_file()
             ]
         except OSError as e:
             TotaleRoboEngine._registrar(f"Não foi possível listar {raiz}: {e}")
@@ -154,10 +152,7 @@ class TotaleRoboEngine:
                 atual = arquivo.stat()
             except OSError:
                 return False
-            if (
-                atual.st_size != anterior.st_size
-                or atual.st_mtime_ns != anterior.st_mtime_ns
-            ):
+            if atual.st_size != anterior.st_size or atual.st_mtime_ns != anterior.st_mtime_ns:
                 return False
             anterior = atual
         return anterior.st_size > 0
@@ -181,9 +176,7 @@ class TotaleRoboEngine:
             TotaleRoboEngine._registrar(str(e))
             return None
         except OSError as e:
-            TotaleRoboEngine._registrar(
-                f"{arquivo.name} está bloqueado ou inacessível: {e}"
-            )
+            TotaleRoboEngine._registrar(f"{arquivo.name} está bloqueado ou inacessível: {e}")
             return None
 
         try:
@@ -192,15 +185,11 @@ class TotaleRoboEngine:
             elif ext == ".csv":
                 lido = _ler_csv(raw, arquivo.name)
                 if lido is None:
-                    TotaleRoboEngine._registrar(
-                        f"{arquivo.name}: falha ao decodificar CSV"
-                    )
+                    TotaleRoboEngine._registrar(f"{arquivo.name}: falha ao decodificar CSV")
                     return None
                 df, motor = lido
             else:
-                TotaleRoboEngine._registrar(
-                    f"{arquivo.name}: extensão {ext or '—'} não suportada"
-                )
+                TotaleRoboEngine._registrar(f"{arquivo.name}: extensão {ext or '—'} não suportada")
                 return None
         except Exception as e:
             TotaleRoboEngine._registrar(f"{arquivo.name}: {type(e).__name__} — {e}")
@@ -208,9 +197,7 @@ class TotaleRoboEngine:
             return None
 
         if df.empty:
-            TotaleRoboEngine._registrar(
-                f"{arquivo.name}: arquivo lido, porém sem linhas"
-            )
+            TotaleRoboEngine._registrar(f"{arquivo.name}: arquivo lido, porém sem linhas")
             return None
 
         if aplicar_base:
@@ -228,10 +215,7 @@ class TotaleRoboEngine:
             return False
         if baixo.endswith(_EXTENSOES_TEMP):
             return False
-        if any(
-            fnmatch.fnmatch(baixo, padrao.lower())
-            for padrao in TotaleRoboEngine.PADROES
-        ):
+        if any(fnmatch.fnmatch(baixo, padrao.lower()) for padrao in TotaleRoboEngine.PADROES):
             return True
         return "atividades" in baixo and caminho.suffix.lower() in {
             ".csv",
@@ -308,9 +292,7 @@ def _nomes_colunas(nomes: Iterable[object]) -> list[str]:
     saida: list[str] = []
     for i, bruto in enumerate(nomes):
         nome = (
-            ""
-            if bruto is None
-            else str(bruto).replace("\ufeff", "").replace("\xa0", " ").strip()
+            "" if bruto is None else str(bruto).replace("\ufeff", "").replace("\xa0", " ").strip()
         )
         if not nome or nome.lower().startswith("unnamed"):
             nome = f"col_{i}"
@@ -328,9 +310,7 @@ def _cabecalho_fraco(colunas: Sequence[object]) -> bool:
     if not nomes:
         return True
     ruins = sum(
-        1
-        for n in nomes
-        if not n or n.lower().startswith("unnamed") or n.lower().startswith("col_")
+        1 for n in nomes if not n or n.lower().startswith("unnamed") or n.lower().startswith("col_")
     )
     return ruins / len(nomes) >= 0.5
 
@@ -494,14 +474,8 @@ def _ler_excel(
     dica = ""
     joined = " | ".join(erros)
     if "engine ausente" in joined.lower():
-        dica = (
-            " → pip install openpyxl"
-            if ext != ".xls"
-            else " → pip install python-calamine"
-        )
-    raise RuntimeError(
-        f"{joined}{dica}" if erros else f"Falha desconhecida ao ler {nome}."
-    )
+        dica = " → pip install openpyxl" if ext != ".xls" else " → pip install python-calamine"
+    raise RuntimeError(f"{joined}{dica}" if erros else f"Falha desconhecida ao ler {nome}.")
 
 
 def _ler_csv(raw: bytes, nome: str) -> tuple[pd.DataFrame, str] | None:
@@ -530,9 +504,7 @@ def _ler_csv(raw: bytes, nome: str) -> tuple[pd.DataFrame, str] | None:
 
 def _aplicar_base(df: pd.DataFrame, base: str) -> pd.DataFrame:
     saida = df.copy()
-    variantes = [
-        col for col in saida.columns if str(col).casefold() == "base" and col != "BASE"
-    ]
+    variantes = [col for col in saida.columns if str(col).casefold() == "base" and col != "BASE"]
     if variantes and "BASE" not in saida.columns:
         saida = saida.rename(columns={variantes[0]: "BASE"})
         variantes = variantes[1:]

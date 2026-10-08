@@ -410,10 +410,11 @@ sobrescrevia o tema da sessão em toda troca de página.
 # Antes (v5.2.0) — qualquer página resetava o sidebar para o tema claro
 def aplicar_estilo(tema_sidebar: TemaSidebarType = "claro") -> None: ...
 
+
 # Depois (v5.3.0) — sem argumento, preserva o tema ativo da sessão
 def aplicar_estilo(tema_sidebar: TemaSidebarType | str | None = None) -> None:
     tema_norm = _obter_tema_sidebar(tema_sidebar)  # sessão > seletor > legado
-    definir_tema_sidebar(tema_norm)                # sincroniza o selectbox
+    definir_tema_sidebar(tema_norm)  # sincroniza o selectbox
     ...
 ```
 

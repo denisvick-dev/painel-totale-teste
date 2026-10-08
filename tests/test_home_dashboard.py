@@ -50,9 +50,7 @@ def test_resumir_dados_aceita_estrutura_legada_e_vazia() -> None:
 
 def test_formatar_data_pt_br_nao_depende_do_locale() -> None:
     """Nomes de meses aparecem em português em qualquer locale do servidor."""
-    assert home.formatar_data_pt_br(datetime(2025, 3, 8, tzinfo=FUSO)) == (
-        "8 de março de 2025"
-    )
+    assert home.formatar_data_pt_br(datetime(2025, 3, 8, tzinfo=FUSO)) == ("8 de março de 2025")
 
 
 def test_metricas_refletem_registros_e_estado_de_cada_fonte(monkeypatch) -> None:

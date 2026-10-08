@@ -311,9 +311,7 @@ def _eh_vazio(valor: Any) -> bool:
     return str(valor).strip().lower() in VALORES_VAZIOS
 
 
-def _serie(
-    df: pd.DataFrame, coluna: str | None, default: Any = PLACEHOLDER
-) -> pd.Series:
+def _serie(df: pd.DataFrame, coluna: str | None, default: Any = PLACEHOLDER) -> pd.Series:
     """Retorna sempre uma Series — inclusive com coluna ausente ou duplicada."""
     if not coluna or coluna not in df.columns:
         return pd.Series([default] * len(df), index=df.index, dtype="object")
@@ -327,13 +325,7 @@ def _normalizar_nomes_colunas(df: pd.DataFrame) -> pd.DataFrame:
     novos: list[str] = []
     contador: dict[str, int] = {}
     for col in df.columns:
-        nome = (
-            str(col)
-            .strip()
-            .replace("\ufeff", "")
-            .replace("\u200b", "")
-            .replace("\xa0", " ")
-        )
+        nome = str(col).strip().replace("\ufeff", "").replace("\u200b", "").replace("\xa0", " ")
         nome = re.sub(r"\s+", " ", nome).strip() or "coluna_sem_nome"
         if nome in contador:
             contador[nome] += 1
@@ -424,7 +416,9 @@ def carregar_arquivo(
             if score > melhor_score:
                 melhor_score, melhor_df, melhor_cfg = score, df, cfg
         except Exception:
-            logger.debug("Tentativa de leitura do CSV falhou; tentando próximo formato.", exc_info=True)
+            logger.debug(
+                "Tentativa de leitura do CSV falhou; tentando próximo formato.", exc_info=True
+            )
             continue
 
     if melhor_df is None or melhor_score == 0:
@@ -543,9 +537,7 @@ def refinar_base_toa(
     # 2. Remoção de Suspensos
     if col_status and col_status in df_filt.columns:
         mask_suspenso = (
-            _serie(df_filt, col_status)
-            .astype(str)
-            .str.contains("suspen", case=False, na=False)
+            _serie(df_filt, col_status).astype(str).str.contains("suspen", case=False, na=False)
         )
         stats["suspensos_removidos"] = int(mask_suspenso.sum())
         stats["filtro_suspenso_aplicado"] = True
@@ -604,9 +596,7 @@ def cruzar_com_sinapse(
     # Limpeza de suspensos no Sinapse
     if col_status_sin and col_status_sin in df_s.columns:
         mask_susp = (
-            _serie(df_s, col_status_sin)
-            .astype(str)
-            .str.contains("suspen", case=False, na=False)
+            _serie(df_s, col_status_sin).astype(str).str.contains("suspen", case=False, na=False)
         )
         stats["suspensos_sinapse"] = int(mask_susp.sum())
         df_s = df_s[~mask_susp].copy()
@@ -658,14 +648,10 @@ def cruzar_com_sinapse(
     df_resultado["DONO_CÓD_AUX_EQUIPE"] = cod_aux.where(mask_identificado, "SEM_EQUIPE")
 
     nome_tec = _serie(df_resultado, "DONO_TÉCNICO_NOME", default=None)
-    df_resultado["DONO_TÉCNICO_NOME"] = nome_tec.where(
-        ~nome_tec.map(_eh_vazio), "NÃO INFORMADO"
-    )
+    df_resultado["DONO_TÉCNICO_NOME"] = nome_tec.where(~nome_tec.map(_eh_vazio), "NÃO INFORMADO")
 
     monitor = _serie(df_resultado, "DONO_MONITOR_SUPERVISOR", default=None)
-    df_resultado["DONO_MONITOR_SUPERVISOR"] = monitor.where(
-        ~monitor.map(_eh_vazio), "SEM MONITOR"
-    )
+    df_resultado["DONO_MONITOR_SUPERVISOR"] = monitor.where(~monitor.map(_eh_vazio), "SEM MONITOR")
 
     data_sin = _serie(df_resultado, "SINAPSE_DATA_ORIGINAL", default=None)
     data_fmt = converter_data_robusto(data_sin).dt.strftime("%d/%m/%Y")
@@ -787,9 +773,7 @@ def gerar_excel_por_equipe(
 
 def secao(titulo: str, sub: str = "") -> None:
     subhtml = (
-        f'<span style="font-size:12px;color:#9CA3AF;margin-left:12px;">{sub}</span>'
-        if sub
-        else ""
+        f'<span style="font-size:12px;color:#9CA3AF;margin-left:12px;">{sub}</span>' if sub else ""
     )
     st.markdown(
         f'<div style="margin:28px 0 12px 0;padding-bottom:8px;border-bottom:1px solid #E5E7EB;">'
@@ -829,9 +813,7 @@ with c_up1:
 
 with c_up2:
     st.markdown("### 2️⃣ Base Sinapse (Histórico)")
-    st.caption(
-        "Origem dos contratos para identificar CódAuxEquipe, Nome Equipe e Monitor."
-    )
+    st.caption("Origem dos contratos para identificar CódAuxEquipe, Nome Equipe e Monitor.")
     arquivo_sinapse = st.file_uploader(
         "Importar arquivo Sinapse", type=["csv", "xlsx", "xls"], key="up_sinapse"
     )
@@ -892,15 +874,11 @@ col_data_sin = _detectar_sin(SINAPSE_DATA)
 col_status_sin = _detectar_sin(SINAPSE_STATUS)
 
 if not col_contrato_toa:
-    render_insight(
-        "❌ Coluna de **Contrato** não localizada no arquivo TOA.", tipo="critico"
-    )
+    render_insight("❌ Coluna de **Contrato** não localizada no arquivo TOA.", tipo="critico")
     st.stop()
 
 if not col_contrato_sin:
-    render_insight(
-        "❌ Coluna de **Contrato** não localizada no arquivo Sinapse.", tipo="critico"
-    )
+    render_insight("❌ Coluna de **Contrato** não localizada no arquivo Sinapse.", tipo="critico")
     st.stop()
 
 # FIX #10 — transparência sobre o mapeamento
@@ -1042,9 +1020,7 @@ if busca_contrato:
     alvo = _normalizar_contrato(busca_contrato)
     mask_busca = df_view["Contrato"].map(_normalizar_contrato).str.contains(
         alvo, na=False
-    ) | df_view["Número da O.S 1"].astype(str).str.contains(
-        busca_contrato, case=False, na=False
-    )
+    ) | df_view["Número da O.S 1"].astype(str).str.contains(busca_contrato, case=False, na=False)
     df_view = df_view[mask_busca]
 
 df_view = df_view.reset_index(drop=True)
@@ -1205,16 +1181,12 @@ else:
     with exp_c1:
         # FIX #8 — geração cacheada (não reprocessa a cada rerun de filtro)
         try:
-            excel_bytes = gerar_excel_por_equipe(
-                df_view, coluna_agrupamento="DONO_CÓD_AUX_EQUIPE"
-            )
+            excel_bytes = gerar_excel_por_equipe(df_view, coluna_agrupamento="DONO_CÓD_AUX_EQUIPE")
             st.download_button(
                 "📊 Baixar Relatório Excel (Abas por CódAuxEquipe)",
                 data=excel_bytes,
                 file_name=f"retornos_auditoria_{sufixo}.xlsx",
-                mime=(
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                ),
+                mime=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
                 width="stretch",
                 type="primary",
             )

@@ -104,9 +104,7 @@ class Configuracoes:
         "https://docs.google.com/spreadsheets/d/"
         "11Dp9WdZYUrT_LBvfo07Mi8muKXZykU7v/export?format=xlsx"
     )
-    URL_CONS = (
-        "https://drive.google.com/uc?id=1YOWJ0HuGcEP2vJaZwl2kcgrtNgsoMBDs&export=download"
-    )
+    URL_CONS = "https://drive.google.com/uc?id=1YOWJ0HuGcEP2vJaZwl2kcgrtNgsoMBDs&export=download"
     URL_ATIVOS = (
         "https://docs.google.com/spreadsheets/d/"
         "1LQKDcLshC6XSXLBVWaEYSpxrro6uydyU9pwDLc38pEg/export?format=csv"
@@ -152,11 +150,7 @@ class StatusFonte:
     erro: str | None = None
 
     def rotulo(self) -> str:
-        quando = (
-            self.ultimo_sucesso.strftime("%d/%m às %H:%M")
-            if self.ultimo_sucesso
-            else "nunca"
-        )
+        quando = self.ultimo_sucesso.strftime("%d/%m às %H:%M") if self.ultimo_sucesso else "nunca"
         if self.ok:
             return f"{self.nome} • {_fmt_int(self.linhas)} linhas • ok em {quando}"
         if self.ultimo_sucesso is None:
@@ -504,9 +498,7 @@ class ProcessadorDeDados:
         qtde_prod = cons["QTDE_PRODUTOS"].fillna(0).astype(int)
 
         tem_tv_bool = tipo_servico.str.contains("TV", case=False, regex=False, na=False)
-        tem_virtua_bool = tipo_servico.str.contains(
-            r"MEGA|GIGA", case=False, regex=True, na=False
-        )
+        tem_virtua_bool = tipo_servico.str.contains(r"MEGA|GIGA", case=False, regex=True, na=False)
         # Sem '&', 'TV ... MEGA' ainda é combo. Senão TV e Virtua levam a qtde inteira.
         is_combinado = tipo_servico.str.contains("&", case=False, regex=False, na=False) | (
             tem_tv_bool & tem_virtua_bool
@@ -516,17 +508,15 @@ class ProcessadorDeDados:
         cons["QTDE_TV"] = (tem_tv * qtde_prod).mask(is_combinado, tem_tv).astype(int)
         cons["QTDE_VIRTUA"] = (tem_virtua * qtde_prod).mask(is_combinado, tem_virtua).astype(int)
         cons["QTDE_MESH"] = (
-            cons["QTDE_PRODUTOS"] - cons["QTDE_TV"] - cons["QTDE_VIRTUA"]
-        ).clip(lower=0).astype(int)
+            (cons["QTDE_PRODUTOS"] - cons["QTDE_TV"] - cons["QTDE_VIRTUA"])
+            .clip(lower=0)
+            .astype(int)
+        )
         return cons
 
     @classmethod
     def merge_ativos(cls, cons: pd.DataFrame, ativos: pd.DataFrame) -> pd.DataFrame:
-        if (
-            ativos.empty
-            or "Login" not in ativos.columns
-            or "LOGIN NETSALES" not in cons.columns
-        ):
+        if ativos.empty or "Login" not in ativos.columns or "LOGIN NETSALES" not in cons.columns:
             return cons
 
         cols = [c for c in ("Login", *Configuracoes.COLUNAS_ATIVOS) if c in ativos.columns]
@@ -562,9 +552,7 @@ class ProcessadorDeDados:
                 merged[c] = atual.mask(atual.eq(""), extra)
                 merged = merged.drop(columns=[alt])
             if c in merged.columns:
-                merged[c] = (
-                    merged[c].map(Configuracoes.vazio_texto).replace("", "Não Identificado")
-                )
+                merged[c] = merged[c].map(Configuracoes.vazio_texto).replace("", "Não Identificado")
         return merged
 
     # Nomes antigos, caso outra página importe estes métodos.
@@ -734,10 +722,15 @@ def _resolver_aba(
         if str(nome).casefold() == alvo:
             return df, None
     nome, df = next(iter(dados.items()))
-    return df, f"Aba '{nome_aba}' não encontrada. Exibindo '{nome}'. Disponíveis: {', '.join(dados)}."
+    return (
+        df,
+        f"Aba '{nome_aba}' não encontrada. Exibindo '{nome}'. Disponíveis: {', '.join(dados)}.",
+    )
 
 
-def _obter_dataframe(chave_state: str, nome_aba: str | None = None) -> tuple[pd.DataFrame, str | None]:
+def _obter_dataframe(
+    chave_state: str, nome_aba: str | None = None
+) -> tuple[pd.DataFrame, str | None]:
     dados = st.session_state.get(chave_state)
     if dados is None:
         return pd.DataFrame(), None
@@ -774,9 +767,7 @@ def _frames_carregados() -> dict[str, pd.DataFrame]:
         if isinstance(dados, pd.DataFrame):
             frames[fonte] = dados
         elif isinstance(dados, dict):
-            partes = [
-                frame for frame in dados.values() if isinstance(frame, pd.DataFrame)
-            ]
+            partes = [frame for frame in dados.values() if isinstance(frame, pd.DataFrame)]
             if partes:
                 frames[fonte] = pd.concat(partes, ignore_index=True, sort=False)
     return frames
@@ -794,21 +785,15 @@ def _renderizar_status_fontes() -> None:
     frames = _frames_carregados()
     cols = st.columns(len(stats))
     for col, stf in zip(cols, stats.values()):
-        estado_frescor, frescor = avaliar_frescor(
-            stf.ultimo_sucesso, stf.ok
-        )
-        estado_consistencia, consistencia = avaliar_consistencia(
-            frames.get(stf.nome)
-        )
+        estado_frescor, frescor = avaliar_frescor(stf.ultimo_sucesso, stf.ok)
+        estado_consistencia, consistencia = avaliar_consistencia(frames.get(stf.nome))
         icones = {"ok": "🟢", "alerta": "🟡", "critico": "🔴"}
         with col:
             with st.container(border=True):
                 st.markdown(f"**{stf.nome}**")
                 st.caption(f"{_fmt_int(stf.linhas)} linhas na última sincronização")
                 st.markdown(f"{icones[estado_frescor]} **Frescor:** {frescor}")
-                st.markdown(
-                    f"{icones[estado_consistencia]} **Consistência:** {consistencia}"
-                )
+                st.markdown(f"{icones[estado_consistencia]} **Consistência:** {consistencia}")
                 if stf.erro:
                     st.caption(_erro_curto(stf.erro, 300))
     st.caption(
@@ -879,8 +864,7 @@ def _detalhes_falha() -> None:
 
 def _painel_dados(intervalo_seg: int) -> None:
     tem_dados_em_sessao = any(
-        st.session_state.get(k) is not None
-        for k in ("dados_prod", "dados_cons", "dados_ativos")
+        st.session_state.get(k) is not None for k in ("dados_prod", "dados_cons", "dados_ativos")
     )
     col_status, col_btn = _colunas([3, 1], "center")
     with col_btn:
@@ -989,7 +973,9 @@ def _painel_dados(intervalo_seg: int) -> None:
         render_section_header("📊", "Base de Produção", "Primeiros 50 registros")
         if aviso_prod:
             render_insight(aviso_prod, "alerta")
-        _preview_e_download(df_prod, "producao", "download_producao", "Aba de Produção vazia ou não encontrada.")
+        _preview_e_download(
+            df_prod, "producao", "download_producao", "Aba de Produção vazia ou não encontrada."
+        )
     with tab_c:
         render_section_header("📋", "Base Consultiva Detalhada", "Processado")
         _preview_e_download(df_cons, "consultivo", "download_consultivo", "Base consultiva vazia.")

@@ -7,6 +7,7 @@ from components.componentes import render_page_sidebar_theme_selector
 
 render_page_sidebar_theme_selector()
 
+
 # --- CONFIGURAÇÃO DO BANCO DE DADOS ---
 def conectar_banco():
     """Cria a conexão e a tabela de usuários caso ela não exista."""
@@ -64,6 +65,7 @@ if "logado" not in st.session_state:
     st.session_state.logado = False
 if "usuario" not in st.session_state:
     st.session_state.usuario = None
+
 
 # A tabela é criada sob demanda na primeira tentativa de login/cadastro.
 # --- INTERFACE GRÁFICA ---

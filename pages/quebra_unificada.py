@@ -39,18 +39,17 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from components.componentes import (
+    aplicar_estilo as _aplicar_estilo_global,
+)
+from components.componentes import (
     render_hero_migracao,
     render_hero_novos_domicilios,
     render_hero_pme,
     render_insight,
     render_kpi,
     render_kpi_sm,
-    render_page_sidebar_theme_selector,
     render_section_header,
     render_table_html,
-)
-from components.componentes import (
-    aplicar_estilo as _aplicar_estilo_global,
 )
 from components.criterios import classificar_tipo_servico, render_debug_criterios
 
@@ -69,9 +68,7 @@ except ImportError:
         from quebra import Config, Motor, Utils  # type: ignore
 
 # ── Tipos Locais para Robustez Estática ───────────────────────────────
-TemaKPIType = Literal[
-    "azul", "verde", "vermelho", "laranja", "cinza", "roxo", "amarelo", "escuro"
-]
+TemaKPIType = Literal["azul", "verde", "vermelho", "laranja", "cinza", "roxo", "amarelo", "escuro"]
 TipoInsightType = Literal["ok", "info", "alerta", "critico", "acao"]
 
 _COL_REGIAO: str = str(getattr(Config, "COL_REGIAO", "REGIÃO"))
@@ -96,10 +93,7 @@ def _obter_folga_sla(df: pd.DataFrame, sla_meta: float) -> dict[str, Any]:
         }
 
     df_ne = df[
-        df["Status Contrato"]
-        .astype(str)
-        .str.upper()
-        .isin(["NÃO EXECUTADA", "NAO EXECUTADA"])
+        df["Status Contrato"].astype(str).str.upper().isin(["NÃO EXECUTADA", "NAO EXECUTADA"])
     ]
     df_pend = df[
         df["Status Contrato"]
@@ -109,15 +103,9 @@ def _obter_folga_sla(df: pd.DataFrame, sla_meta: float) -> dict[str, Any]:
     ]
 
     if "TOTAL DE TAREFAS" in df.columns:
-        naoexec = float(
-            pd.to_numeric(df_ne["TOTAL DE TAREFAS"], errors="coerce").fillna(1).sum()
-        )
-        pend = float(
-            pd.to_numeric(df_pend["TOTAL DE TAREFAS"], errors="coerce").fillna(1).sum()
-        )
-        alocado = float(
-            pd.to_numeric(df["TOTAL DE TAREFAS"], errors="coerce").fillna(1).sum()
-        )
+        naoexec = float(pd.to_numeric(df_ne["TOTAL DE TAREFAS"], errors="coerce").fillna(1).sum())
+        pend = float(pd.to_numeric(df_pend["TOTAL DE TAREFAS"], errors="coerce").fillna(1).sum())
+        alocado = float(pd.to_numeric(df["TOTAL DE TAREFAS"], errors="coerce").fillna(1).sum())
     else:
         naoexec, pend, alocado = float(len(df_ne)), float(len(df_pend)), float(len(df))
 
@@ -156,18 +144,12 @@ def _obter_resumo_segmento(df: pd.DataFrame, probabilidade: float) -> dict[str, 
         executadas = int(
             pd.to_numeric(df_exec["TOTAL DE TAREFAS"], errors="coerce").fillna(1).sum()
         )
-        nao_exec = int(
-            pd.to_numeric(df_ne["TOTAL DE TAREFAS"], errors="coerce").fillna(1).sum()
-        )
-        pendentes = int(
-            pd.to_numeric(df_pend["TOTAL DE TAREFAS"], errors="coerce").fillna(1).sum()
-        )
+        nao_exec = int(pd.to_numeric(df_ne["TOTAL DE TAREFAS"], errors="coerce").fillna(1).sum())
+        pendentes = int(pd.to_numeric(df_pend["TOTAL DE TAREFAS"], errors="coerce").fillna(1).sum())
     else:
         executadas = int((s_status == "EXECUTADA").sum())
         nao_exec = int(s_status.isin(["NÃO EXECUTADA", "NAO EXECUTADA"]).sum())
-        pendentes = int(
-            s_status.isin(["PENDENTE", "EM ABERTO", "ABERTO", "EM ROTA"]).sum()
-        )
+        pendentes = int(s_status.isin(["PENDENTE", "EM ABERTO", "ABERTO", "EM ROTA"]).sum())
 
     considerado = executadas + nao_exec
     alocado = considerado + pendentes
@@ -188,9 +170,7 @@ def _obter_resumo_segmento(df: pd.DataFrame, probabilidade: float) -> dict[str, 
 
 
 # ── Streamlit Config ─────────────────────────────────────────────────
-st.set_page_config(
-    page_title="Análise de Quebra | TOTALE", page_icon="📉", layout="wide"
-)
+st.set_page_config(page_title="Análise de Quebra | TOTALE", page_icon="📉", layout="wide")
 _aplicar_estilo_global()
 
 if "df_memoria" not in st.session_state:
@@ -297,9 +277,7 @@ def _hash_df(df: pd.DataFrame) -> str:
         return str(len(df))
 
 
-def _causa_raiz_segmento(
-    df: pd.DataFrame, segmento: str, top_n: int = 8
-) -> pd.DataFrame:
+def _causa_raiz_segmento(df: pd.DataFrame, segmento: str, top_n: int = 8) -> pd.DataFrame:
     if df is None or df.empty:
         return pd.DataFrame()
     if segmento and segmento != "Todos os Segmentos" and "TIPO_SERVICO" in df.columns:
@@ -491,9 +469,7 @@ class _PDFExecutivoBase:
     ) -> Table:
         def _interna() -> Table:
             if df is None or df.empty:
-                t = Table(
-                    [["Sem dados disponíveis"]], colWidths=[cls.LARGURA_UTIL * cm]
-                )
+                t = Table([["Sem dados disponíveis"]], colWidths=[cls.LARGURA_UTIL * cm])
                 t.setStyle(
                     TableStyle(
                         [
@@ -568,9 +544,7 @@ class _PDFExecutivoBase:
                 col_widths = [w * fator for w in col_widths]
 
             if not col_widths or sum(col_widths) == 0:
-                col_widths = [cls.LARGURA_UTIL * cm / max(1, len(base.columns))] * len(
-                    base.columns
-                )
+                col_widths = [cls.LARGURA_UTIL * cm / max(1, len(base.columns))] * len(base.columns)
 
             tab = Table(dados, colWidths=col_widths, repeatRows=1)
             style = [
@@ -603,11 +577,7 @@ class _PDFExecutivoBase:
                         "BACKGROUND",
                         (0, i),
                         (-1, i),
-                        (
-                            colors.white
-                            if i % 2 == 1
-                            else colors.HexColor(cls.COR_LINHA_ALT)
-                        ),
+                        (colors.white if i % 2 == 1 else colors.HexColor(cls.COR_LINHA_ALT)),
                     )
                 )
             if cor_col_quebra and cor_col_quebra in base.columns:
@@ -647,9 +617,7 @@ class _PDFExecutivoBase:
             tab.setStyle(TableStyle(style))
             return tab
 
-        wrapper = Table(
-            [[_interna()]], colWidths=[cls.LARGURA_UTIL * cm], hAlign="CENTER"
-        )
+        wrapper = Table([[_interna()]], colWidths=[cls.LARGURA_UTIL * cm], hAlign="CENTER")
         wrapper.setStyle(
             TableStyle(
                 [
@@ -861,9 +829,7 @@ class PDFExecutivoComparativo(_PDFExecutivoBase):
                     "vs Meta": proj["fechamento_proj"] - sla_meta,
                 }
             )
-        el.append(
-            cls._tab(pd.DataFrame(cen), cor_col_quebra="Fechamento", sla_meta=sla_meta)
-        )
+        el.append(cls._tab(pd.DataFrame(cen), cor_col_quebra="Fechamento", sla_meta=sla_meta))
         el.append(Spacer(1, 0.5 * cm))
         el.append(Paragraph("3 ─ Técnicos Críticos (Geral)", s["X_Secao"]))
         df_tec = Motor.tecnicos_criticos(
@@ -926,9 +892,7 @@ SEGMENTOS_CONFIG: dict[str, Any] = {
         "pdf_class": PDFExecutivoMigracao,
         "hero_fn": render_hero_migracao,
         "hero_kwargs": {"badge": "MIGRAÇÃO DE DADOS", "icone": "🔄"},
-        "acoes": [
-            ("🔴 ALTA", "Verificar estoque de equipamentos (ONT/ONU).", "alerta")
-        ],
+        "acoes": [("🔴 ALTA", "Verificar estoque de equipamentos (ONT/ONU).", "alerta")],
     },
     "PME": {
         "icone": "🏢",
@@ -1182,13 +1146,7 @@ def _achar_coluna(df: pd.DataFrame, cands: list[str]) -> str | None:
 def _build_df_pendentes(df_seg: pd.DataFrame) -> pd.DataFrame:
     cols_saida = list(_MAPA_PENDENTES.keys())
     if "Status Contrato" in df_seg.columns:
-        mask = (
-            df_seg["Status Contrato"]
-            .astype(str)
-            .str.strip()
-            .str.upper()
-            .isin(STATUS_PENDENTE)
-        )
+        mask = df_seg["Status Contrato"].astype(str).str.strip().str.upper().isin(STATUS_PENDENTE)
     else:
         mask = pd.Series(True, index=df_seg.index)
     df_p = df_seg[mask].copy()
@@ -1240,9 +1198,7 @@ def _calcular_quebra_expurgada(
 # RENDERIZAÇÃO DE SEÇÕES E SUB-ABAS (STREAMLIT ENGINE)
 # =====================================================================
 def _token_parece_icone(token: str) -> bool:
-    return any(
-        0x2300 <= ord(c) <= 0x2BFF or 0x1F000 <= ord(c) <= 0x1FAFF for c in token
-    )
+    return any(0x2300 <= ord(c) <= 0x2BFF or 0x1F000 <= ord(c) <= 0x1FAFF for c in token)
 
 
 def render_section(titulo: str) -> None:
@@ -1296,9 +1252,7 @@ def _sub_visao_geral(
             showlegend=True,
             legend=dict(orientation="h"),
         )
-        st.plotly_chart(
-            fig_pie, use_container_width=True, config={"displayModeBar": False}
-        )
+        st.plotly_chart(fig_pie, use_container_width=True, config={"displayModeBar": False})
     with col_gauge:
         cor_bar = "#EF4444" if m_seg["quebra_atual"] > sla_meta else "#10B981"
         limite_eixo = max(50.0, sla_meta * 100 * 1.6, m_seg["quebra_atual"] * 100 * 1.2)
@@ -1343,9 +1297,7 @@ def _sub_visao_geral(
     with c_cen:
         cols = st.columns(3)
         for (nome, cd), col in zip(cen.items(), cols):
-            cor_p: TemaKPIType = (
-                "vermelho" if cd["fechamento_proj"] > sla_meta else "verde"
-            )
+            cor_p: TemaKPIType = "vermelho" if cd["fechamento_proj"] > sla_meta else "verde"
             render_kpi_sm(
                 col,
                 nome,
@@ -1369,9 +1321,7 @@ def _sub_visao_geral(
                     else False
                 )
 
-                trend = (
-                    df_tmp.groupby("SEMANA")["IS_NE"].mean().reset_index(name="QUEBRA")
-                )
+                trend = df_tmp.groupby("SEMANA")["IS_NE"].mean().reset_index(name="QUEBRA")
 
                 fig_line = px.line(trend, x="SEMANA", y="QUEBRA", markers=True)
                 fig_line.add_hline(y=sla_meta, line_dash="dash", line_color="#DC2626")
@@ -1456,15 +1406,11 @@ def _sub_causa_raiz(segmento: str, df_seg: pd.DataFrame) -> None:
     render_table_html(
         df_c,
         fmt={"Volume": "{:,.0f}", "% do Total": "{:.2%}", "Acumulado": "{:.2%}"},
-        colunas_num=[
-            c for c in ["Volume", "% do Total", "Acumulado"] if c in df_c.columns
-        ],
+        colunas_num=[c for c in ["Volume", "% do Total", "Acumulado"] if c in df_c.columns],
         height=380,
     )
     st.markdown("<br>")
-    conf = SEGMENTOS_CONFIG.get(
-        segmento, {"cor_primaria": "#0F172A", "cor_secundaria": "#475569"}
-    )
+    conf = SEGMENTOS_CONFIG.get(segmento, {"cor_primaria": "#0F172A", "cor_secundaria": "#475569"})
     fig = go.Figure()
     fig.add_trace(
         go.Bar(
@@ -1543,9 +1489,7 @@ def _sub_causa_raiz(segmento: str, df_seg: pd.DataFrame) -> None:
                 color_continuous_scale="Reds",
             )
             fig_reg.update_layout(yaxis_tickformat=".1%", height=320)
-            st.plotly_chart(
-                fig_reg, use_container_width=True, config={"displayModeBar": False}
-            )
+            st.plotly_chart(fig_reg, use_container_width=True, config={"displayModeBar": False})
         except Exception:
             pass
 
@@ -1585,9 +1529,7 @@ def _sub_tecnicos(
     )
     if {"TÉCNICO", "Fechamento Base"}.issubset(df_tec.columns):
         df_plot = df_tec.head(10).sort_values("Fechamento Base")
-        cores = [
-            "#EF4444" if v > sla_meta else "#10B981" for v in df_plot["Fechamento Base"]
-        ]
+        cores = ["#EF4444" if v > sla_meta else "#10B981" for v in df_plot["Fechamento Base"]]
         fig = go.Figure(
             go.Bar(
                 y=df_plot["TÉCNICO"],
@@ -1612,9 +1554,7 @@ def _sub_tecnicos(
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
-def _sub_plano_acao(
-    segmento: str, df_seg: pd.DataFrame, p_base: float, sla_meta: float
-) -> None:
+def _sub_plano_acao(segmento: str, df_seg: pd.DataFrame, p_base: float, sla_meta: float) -> None:
     render_section(f"🎯 Plano de Ação — {segmento}")
     folga = _obter_folga_sla(df_seg, sla_meta)
     cen = _obter_resumo_segmento(df_seg, p_base)
@@ -1707,9 +1647,7 @@ def _sub_pendentes(segmento: str, df_seg: pd.DataFrame) -> None:
 
     def _opts(col: str) -> list[str]:
         return ["Todos"] + sorted(
-            str(x)
-            for x in df_pend[col].dropna().unique()
-            if str(x) not in {"N/D", "nan"}
+            str(x) for x in df_pend[col].dropna().unique() if str(x) not in {"N/D", "nan"}
         )
 
     with st.expander("🔎 Filtros rápidos"):
@@ -1749,9 +1687,7 @@ def _sub_sem_registro(segmento: str, df_seg: pd.DataFrame) -> None:
     serie = df_seg[col_baixa].fillna("").astype(str).str.strip().str.upper()
     mask_baixa = serie.isin(["SEM REGISTRO", "SEM_REGISTRO", "", "NAN", "NONE"])
     if "Status Contrato" in df_seg.columns:
-        status_serie = (
-            df_seg["Status Contrato"].fillna("").astype(str).str.strip().str.upper()
-        )
+        status_serie = df_seg["Status Contrato"].fillna("").astype(str).str.strip().str.upper()
         mask_status = ~status_serie.isin(STATUS_PENDENTE)
         mask = mask_baixa & mask_status
     else:
@@ -1884,9 +1820,7 @@ def _sub_comparativo(
             heat_rows = []
             for (tipo_ser, reg), grp in df_full.groupby(["TIPO_SERVICO", _COL_REGIAO]):
                 val = _obter_resumo_segmento(grp, p_base)["quebra_atual"]
-                heat_rows.append(
-                    {"TIPO_SERVICO": tipo_ser, _COL_REGIAO: reg, "Quebra": val}
-                )
+                heat_rows.append({"TIPO_SERVICO": tipo_ser, _COL_REGIAO: reg, "Quebra": val})
             heat = pd.DataFrame(heat_rows)
 
             fig_h = px.density_heatmap(
@@ -1898,9 +1832,7 @@ def _sub_comparativo(
                 histfunc="avg",
             )
             fig_h.update_layout(height=320)
-            st.plotly_chart(
-                fig_h, use_container_width=True, config={"displayModeBar": False}
-            )
+            st.plotly_chart(fig_h, use_container_width=True, config={"displayModeBar": False})
         except Exception:
             pass
 
@@ -1923,17 +1855,11 @@ def main() -> None:
     with st.sidebar:
         st.markdown("### 📁 Escolha a Carteira")
         opcoes = list(SEGMENTOS_CONFIG.keys()) + ["Todos os Segmentos"]
-        segmento = st.selectbox(
-            "Segmento:", opcoes, index=0, key="sel_segmento_principal"
-        )
-        conf = SEGMENTOS_CONFIG.get(
-            segmento, {"sla_default": 0.20, "p_base_default": 20}
-        )
+        segmento = st.selectbox("Segmento:", opcoes, index=0, key="sel_segmento_principal")
+        conf = SEGMENTOS_CONFIG.get(segmento, {"sla_default": 0.20, "p_base_default": 20})
         st.divider()
         st.header(f"🎯 Filtros {segmento}")
-        monitores = _opcoes_filtro(
-            df_full, "MONITOR", {"nan", "SEM MONITOR", "NÃO MAPEADO"}
-        )
+        monitores = _opcoes_filtro(df_full, "MONITOR", {"nan", "SEM MONITOR", "NÃO MAPEADO"})
         sel_mon = st.selectbox("👔 Monitor", monitores, key=f"mon_{segmento}")
         df_filt = (
             df_full
@@ -1963,9 +1889,7 @@ def main() -> None:
             )
             / 100.0
         )
-        p_pess = (
-            st.slider("Pessimista (%)", 0, 100, 50, 5, key=f"ppess_{segmento}") / 100.0
-        )
+        p_pess = st.slider("Pessimista (%)", 0, 100, 50, 5, key=f"ppess_{segmento}") / 100.0
         if not (p_ot <= p_base <= p_pess):
             st.warning("⚠️ Ajuste recomendado: Otimista ≤ Base ≤ Pessimista")
         st.divider()
@@ -1980,13 +1904,9 @@ def main() -> None:
             )
             / 100.0
         )
-        min_aloc = st.number_input(
-            "Mín. OS por técnico", 1, 500, 1, 1, key=f"minaloc_{segmento}"
-        )
+        min_aloc = st.number_input("Mín. OS por técnico", 1, 500, 1, 1, key=f"minaloc_{segmento}")
         min_aloc = float(min_aloc)
-        top_n = st.number_input(
-            "Top N técnicos", 5, 1000, 50, 5, key=f"topn_{segmento}"
-        )
+        top_n = st.number_input("Top N técnicos", 5, 1000, 50, 5, key=f"topn_{segmento}")
         top_n = int(top_n)
         st.divider()
         with st.expander("⚙️ Sistema", expanded=False):
@@ -2008,11 +1928,7 @@ def main() -> None:
         return
     _injetar_css_dinamico(str(segmento))
     regioes = (
-        [
-            str(r).strip().upper()
-            for r in df[_COL_REGIAO].dropna().unique()
-            if str(r).strip()
-        ]
+        [str(r).strip().upper() for r in df[_COL_REGIAO].dropna().unique() if str(r).strip()]
         if _COL_REGIAO in df.columns
         else ["OUTRAS"]
     )
@@ -2065,9 +1981,7 @@ def main() -> None:
         )
         with t1:
             _sub_comparativo(df, sla_meta, p_base, p_ot, p_pess)
-            _sub_visao_geral(
-                "Consolidado Geral", df_seg, m_seg, p_ot, p_base, p_pess, sla_meta
-            )
+            _sub_visao_geral("Consolidado Geral", df_seg, m_seg, p_ot, p_base, p_pess, sla_meta)
         with t2:
             _sub_causa_raiz("Todos os Segmentos", df_seg)
         with t3:
@@ -2089,15 +2003,11 @@ def main() -> None:
 
     # Fluxo por segmento único
     df_seg = (
-        df[df["TIPO_SERVICO"] == segmento].copy()
-        if "TIPO_SERVICO" in df.columns
-        else df.copy()
+        df[df["TIPO_SERVICO"] == segmento].copy() if "TIPO_SERVICO" in df.columns else df.copy()
     )
     df_seg.attrs = dict(getattr(df, "attrs", {}))
     if df_seg.empty:
-        render_insight(
-            f"Nenhum registro encontrado para o segmento **{segmento}**.", tipo="info"
-        )
+        render_insight(f"Nenhum registro encontrado para o segmento **{segmento}**.", tipo="info")
         return
     m_seg = _obter_resumo_segmento(df_seg, p_base)
     folga = _obter_folga_sla(df_seg, sla_meta)
@@ -2116,9 +2026,9 @@ def main() -> None:
         ):
             with st.spinner("Gerando PDF..."):
                 try:
-                    st.session_state[key_pdf] = SEGMENTOS_CONFIG[str(segmento)][
-                        "pdf_class"
-                    ].gerar(df_seg, sla_meta, p_ot, p_base, p_pess, min_aloc, top_n)
+                    st.session_state[key_pdf] = SEGMENTOS_CONFIG[str(segmento)]["pdf_class"].gerar(
+                        df_seg, sla_meta, p_ot, p_base, p_pess, min_aloc, top_n
+                    )
                 except Exception as e:
                     st.error(f"Falha de PDF: {e}")
     with col_dl:
@@ -2152,9 +2062,7 @@ def main() -> None:
     with sub2:
         _sub_causa_raiz(str(segmento), df_seg)
     with sub3:
-        _sub_tecnicos(
-            str(segmento), df_seg, p_ot, p_base, p_pess, min_aloc, top_n, sla_meta
-        )
+        _sub_tecnicos(str(segmento), df_seg, p_ot, p_base, p_pess, min_aloc, top_n, sla_meta)
     with sub4:
         _sub_plano_acao(str(segmento), df_seg, p_base, sla_meta)
     with sub5:

@@ -88,17 +88,13 @@ def test_frequencia_conta_dias_observados_sem_inferir_faltas() -> None:
 def test_saude_de_dados_classifica_frescor_e_duplicatas() -> None:
     agora = datetime.fromisoformat("2026-10-05T12:00:00-03:00")
     estado, _ = avaliar_frescor(agora, True, agora=agora)
-    consistencia, _ = avaliar_consistencia(
-        pd.DataFrame({"id": [1, 1], "vazio": [None, None]})
-    )
+    consistencia, _ = avaliar_consistencia(pd.DataFrame({"id": [1, 1], "vazio": [None, None]}))
 
     assert estado == "ok"
     assert consistencia == "alerta"
 
 
 def test_alertas_ordenados_por_severidade_e_incluem_erro_robo() -> None:
-    alertas = avaliar_alertas(
-        {"robo_erro": "Falha ao ler arquivo", "robo_duplicatas_removidas": 2}
-    )
+    alertas = avaliar_alertas({"robo_erro": "Falha ao ler arquivo", "robo_duplicatas_removidas": 2})
 
     assert [alerta.severidade for alerta in alertas] == ["ALTO", "BAIXO"]

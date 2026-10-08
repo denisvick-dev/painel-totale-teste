@@ -163,9 +163,7 @@ def _cabecalho_fraco(colunas: Sequence[object]) -> bool:
     if not nomes:
         return True
     ruins = sum(
-        1
-        for n in nomes
-        if not n or n.lower().startswith("unnamed") or n.lower().startswith("col_")
+        1 for n in nomes if not n or n.lower().startswith("unnamed") or n.lower().startswith("col_")
     )
     return ruins / len(nomes) >= 0.5
 
@@ -907,7 +905,14 @@ def _executar_verificacao_robo(
     st.session_state["robo_processando"] = True
     st.session_state["robo_processando_desde"] = datetime.now()
     try:
-        if tuple(selecionar_arquivos(_listar_candidatos_com_stat(pasta_monitorada, recursivo=recursivo), modo)) != assinatura:
+        if (
+            tuple(
+                selecionar_arquivos(
+                    _listar_candidatos_com_stat(pasta_monitorada, recursivo=recursivo), modo
+                )
+            )
+            != assinatura
+        ):
             st.session_state["robo_candidato_stable"] = 0
             _toast_dedup("Arquivos mudaram durante a espera. Aguardando...", icon="⚠️")
             return
@@ -927,7 +932,14 @@ def _executar_verificacao_robo(
                 st.session_state["robo_erro"] = " | ".join(resultado.erros)
             return
 
-        if tuple(selecionar_arquivos(_listar_candidatos_com_stat(pasta_monitorada, recursivo=recursivo), modo)) != assinatura:
+        if (
+            tuple(
+                selecionar_arquivos(
+                    _listar_candidatos_com_stat(pasta_monitorada, recursivo=recursivo), modo
+                )
+            )
+            != assinatura
+        ):
             st.session_state["robo_candidato_stable"] = 0
             _toast_dedup("Arquivos mudaram durante a leitura. Aguardando...", icon="⚠️")
             return
@@ -936,7 +948,9 @@ def _executar_verificacao_robo(
         st.session_state["robo_ultimo_processado_path"] = caminho_recente
         st.session_state["robo_ultimo_processado_mtime"] = selecionados[0][1]
         st.session_state["robo_processado_sig"] = assinatura
-        st.session_state["robo_arquivos_processados"] = {caminho: mtime for caminho, mtime, _ in selecionados}
+        st.session_state["robo_arquivos_processados"] = {
+            caminho: mtime for caminho, mtime, _ in selecionados
+        }
         st.session_state["robo_bases_carregadas"] = list(resultado.bases)
         st.session_state["robo_base_detectada"] = detectar_base_arquivo(caminho_recente)
         st.session_state["robo_hora_sucesso"] = datetime.now()
@@ -945,7 +959,9 @@ def _executar_verificacao_robo(
         st.session_state.pop("_robo_aguardando_lock", None)
 
         sufixo = f" · {', '.join(resultado.bases)}" if resultado.bases else ""
-        st.session_state["origem_dados"] = f"Robô Local ({len(resultado.arquivos)} arquivo(s){sufixo})"
+        st.session_state["origem_dados"] = (
+            f"Robô Local ({len(resultado.arquivos)} arquivo(s){sufixo})"
+        )
         if resultado.erros:
             st.session_state["robo_erro"] = "Parcial: " + " | ".join(resultado.erros)
         else:
@@ -1000,10 +1016,9 @@ def renderizar_robo_local(
     if (
         pasta_padrao
         and not st.session_state.get("_robo_pasta_user_set")
-        and st.session_state.get("robo_pasta_alvo")
-        in (None, "", obter_pasta_robo_padrao())
+        and st.session_state.get("robo_pasta_alvo") in (None, "", obter_pasta_robo_padrao())
     ):
-            st.session_state["robo_pasta_alvo"] = pasta_padrao
+        st.session_state["robo_pasta_alvo"] = pasta_padrao
 
     pasta_alvo = str(st.session_state["robo_pasta_alvo"])
     st.sidebar.markdown(
@@ -1032,7 +1047,9 @@ def renderizar_robo_local(
 
     if mostrar_config:
         with st.sidebar.expander("⚙️ Configurar Pasta", expanded=False):
-            pasta_input = st.text_input("Caminho do Disco:", value=pasta_alvo, key="input_pasta_robo")
+            pasta_input = st.text_input(
+                "Caminho do Disco:", value=pasta_alvo, key="input_pasta_robo"
+            )
             if pasta_input != pasta_alvo:
                 st.session_state["_robo_pasta_user_set"] = True
             st.session_state["robo_pasta_alvo"] = pasta_input
@@ -1051,7 +1068,11 @@ def renderizar_robo_local(
                 "ultimo_por_base" if modo_label == "Último de cada base" else "todos"
             )
             st.session_state["robo_recursivo"] = bool(
-                st.checkbox("Incluir subpastas", value=_estado_bool("robo_recursivo", False), key="robo_recursivo_ui")
+                st.checkbox(
+                    "Incluir subpastas",
+                    value=_estado_bool("robo_recursivo", False),
+                    key="robo_recursivo_ui",
+                )
             )
             if os.path.isdir(pasta_alvo):
                 st.success("✅ Pasta válida")
@@ -1071,7 +1092,9 @@ def renderizar_robo_local(
         stable = int(st.session_state.get("robo_candidato_stable", 0) or 0)
         aguardando_lock = st.session_state.get("_robo_aguardando_lock")
         if sig_ok:
-            st.sidebar.success(f"✅ Sincronizado às {hs}\n{len(selecionados_ui)} arquivo(s) no pipeline")
+            st.sidebar.success(
+                f"✅ Sincronizado às {hs}\n{len(selecionados_ui)} arquivo(s) no pipeline"
+            )
         elif isinstance(aguardando_lock, str) and aguardando_lock:
             st.sidebar.info(f"⏳ {aguardando_lock}")
         else:
@@ -1084,10 +1107,14 @@ def renderizar_robo_local(
         if modo == "ultimo_por_base" and extras > 0:
             st.sidebar.caption(f"{extras} arquivo(s) antigo(s) fora do pipeline.")
         if modo == "todos":
-            repetidos = {base: n for base, n in contar_arquivos_por_base(candidatos_ui).items() if n > 1}
+            repetidos = {
+                base: n for base, n in contar_arquivos_por_base(candidatos_ui).items() if n > 1
+            }
             if repetidos:
                 resumo = ", ".join(f"{base} ×{n}" for base, n in repetidos.items())
-                st.sidebar.caption(f"Vários arquivos da mesma base ({resumo}). Snapshots vão duplicar volume.")
+                st.sidebar.caption(
+                    f"Vários arquivos da mesma base ({resumo}). Snapshots vão duplicar volume."
+                )
 
         st.sidebar.markdown(
             """
@@ -1099,7 +1126,9 @@ def renderizar_robo_local(
             unsafe_allow_html=True,
         )
         processados_bruto = st.session_state.get("robo_arquivos_processados")
-        processados_map: dict[object, object] = processados_bruto if isinstance(processados_bruto, dict) else {}
+        processados_map: dict[object, object] = (
+            processados_bruto if isinstance(processados_bruto, dict) else {}
+        )
         for marcador, base in MAPA_BASES_ARQUIVO.items():
             info = por_base.get(base)
             if info is None:

@@ -1,7 +1,7 @@
 import calendar
 import datetime
 from io import BytesIO
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,6 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from plotly.graph_objects import Figure
 
-from components.metricas_executivas import resumo_frequencia
 from components.componentes import (
     Cores,
     Fontes,
@@ -24,6 +23,7 @@ from components.componentes import (
     render_section_header,
 )
 from components.css_paginas import aplicar_css_tabela_corporativa
+from components.metricas_executivas import resumo_frequencia
 
 st.set_page_config(
     page_title="Central de Performance",
@@ -35,8 +35,6 @@ aplicar_estilo()
 render_page_sidebar_theme_selector()
 
 # CSS extra só desta página (header azul + classes de meta + redução de fontes e scrollbar)
-# ── Tabela corporativa: CSS compartilhado do Design System ──
-# (a aparência de .corp-table vive em components/css_paginas.py)
 aplicar_css_tabela_corporativa(
     fonte_px=11,
     padding="5px 8px",
@@ -50,10 +48,7 @@ aplicar_css_tabela_corporativa(
 st.markdown(
     """
     <style>
-    /* --- TABELA CORPORATIVA ---
-       Base (.corp-table, cabeçalho, padding e scrollbar) vem do Design System
-       (components/css_paginas.py); abaixo ficam só as cores de meta/projeção. */
-
+    /* --- TABELA CORPORATIVA --- */
     .corp-table td.meta-alta {
         background: #1E3A8A !important; color: #FFFFFF !important;
         font-weight: 800 !important; text-align: center !important;
@@ -83,7 +78,6 @@ st.markdown(
         border-left: 3px solid #64748B !important;
         font-size: 11px !important;
     }
-    /* Zebra + hover, preservando as cores de meta/projeção */
     .corp-table tbody tr:nth-child(even) > td:not(.meta-alta):not(.meta-ok):not(.meta-prox):not(.meta-baixa):not(.proj) {
         background: #F8FAFC !important;
     }
@@ -92,7 +86,6 @@ st.markdown(
     }
     .corp-table td:first-child { font-weight: 700 !important; }
 
-    /* Header do card compactado */
     .rank-card-header {
         background: #FFFFFF;
         border-radius: 12px 12px 0 0;
@@ -102,26 +95,6 @@ st.markdown(
         display: flex;
         align-items: center;
         gap: 12px;
-    }
-
-    /* Cores para aderência */
-    .aderencia-alta {
-        background-color: #22C55E !important;
-        color: #FFFFFF !important;
-        font-weight: 800 !important;
-        text-align: center !important;
-    }
-    .aderencia-media {
-        background-color: #FACC15 !important;
-        color: #1F2937 !important;
-        font-weight: 800 !important;
-        text-align: center !important;
-    }
-    .aderencia-baixa {
-        background-color: #EF4444 !important;
-        color: #FFFFFF !important;
-        font-weight: 800 !important;
-        text-align: center !important;
     }
     </style>
     """,
@@ -133,7 +106,6 @@ st.markdown(
 # BLOCO 1: HELPERS GLOBAIS
 # ====================================================
 def _escapar_html(valor: Any) -> str:
-    """FIX: escapa texto que vem da planilha (nomes com &, <, > quebravam o HTML)."""
     return (
         str(valor)
         .replace("&", "&amp;")
@@ -144,7 +116,6 @@ def _escapar_html(valor: Any) -> str:
 
 
 def _eh_nulo(valor: Any) -> bool:
-    """FIX: pd.isna() estoura com listas/arrays; aqui só tratamos escalares."""
     if valor is None or valor is pd.NaT:
         return True
     if isinstance(valor, (list, tuple, dict, set, np.ndarray, pd.Series, pd.Index)):
@@ -165,7 +136,6 @@ def _para_float(valor: Any, default: float = 0.0) -> float:
 
 
 def _converter_numero(valor: Any) -> float:
-    """Converte número vindo como TEXTO, inclusive no padrão brasileiro."""
     if _eh_nulo(valor):
         return 0.0
     if isinstance(valor, (int, float, np.integer, np.floating)):
@@ -179,12 +149,12 @@ def _converter_numero(valor: Any) -> float:
         pass
     negativo = texto.startswith("-")
     texto = texto.lstrip("-+")
-    if "(" in texto and ")" in texto:  # (1.234,5) = negativo
+    if "(" in texto and ")" in texto:
         negativo, texto = True, texto.strip("()")
     if "," in texto and "." in texto:
-        if texto.rfind(",") > texto.rfind("."):  # 1.234,50 -> BR
+        if texto.rfind(",") > texto.rfind("."):
             texto = texto.replace(".", "").replace(",", ".")
-        else:  # 1,234.50 -> en-US
+        else:
             texto = texto.replace(",", "")
     elif "," in texto:
         texto = texto.replace(",", ".")
@@ -196,28 +166,12 @@ def _converter_numero(valor: Any) -> float:
 
 
 def _serie_numerica(serie: pd.Series) -> pd.Series:
-    """FIX: '1.234,50' em coluna de texto virava NaN -> 0 (pontos sumiam)."""
     numerica = pd.to_numeric(serie, errors="coerce")
     nao_convertidos = numerica.isna() & serie.notna()
     if nao_convertidos.any():
         numerica = numerica.copy()
         numerica.loc[nao_convertidos] = serie[nao_convertidos].map(_converter_numero)
     return numerica.fillna(0.0)
-
-
-def _estilo_aderencia(valor: float) -> str:
-    """
-    Retorna estilo CSS para célula de aderência:
-    - > 75%: Verde (alta performance)
-    - 65% a 75%: Amarelo (atenção)
-    - < 65%: Vermelho (crítico)
-    """
-    if valor > 0.75:
-        return "background-color: #22C55E; color: #FFFFFF; font-weight: 800; text-align: center;"
-    elif valor >= 0.65:
-        return "background-color: #FACC15; color: #1F2937; font-weight: 800; text-align: center;"
-    else:
-        return "background-color: #EF4444; color: #FFFFFF; font-weight: 800; text-align: center;"
 
 
 # ====================================================
@@ -364,9 +318,7 @@ class ComponenteVisual:
         top3 = ranking_df.head(3).reset_index(drop=True)
         c2, c1, c3 = st.columns([1, 1.2, 1])
 
-        def _medalha_html(
-            nome: str, pontos: float, fundo: str, borda: str, icone: str
-        ) -> str:
+        def _medalha_html(nome: str, pontos: float, fundo: str, borda: str, icone: str) -> str:
             return (
                 f'<div style="background-color:{fundo};border:2px solid {borda};'
                 f"border-radius:10px;padding:15px;text-align:center;"
@@ -565,6 +517,66 @@ class ComponenteVisual:
         if len(df) > max_rows:
             st.caption(f"Exibindo {max_rows} de {len(df)} equipes.")
 
+    @staticmethod
+    def render_tabela_html_custom(
+        df: pd.DataFrame,
+        formatacao: dict[str, Callable] | Callable | None = None,
+        height: int = 400,
+    ) -> None:
+        """Renderiza tabela corporativa genérica com formatação segura contra erros de tipo."""
+        if df.empty:
+            return
+
+        cols = list(df.columns)
+        header = "".join(f"<th>{_escapar_html(c)}</th>" for c in cols)
+
+        rows = []
+        for _, row in df.iterrows():
+            tds = []
+            for c in cols:
+                v = row[c]
+                display = ""
+                align = "left"
+
+                # Trata caso de dicionário de formatadores por coluna
+                if isinstance(formatacao, dict):
+                    if c in formatacao and callable(formatacao[c]):
+                        display = str(formatacao[c](v))
+                        align = "center"
+                    elif c in formatacao:
+                        display = _escapar_html(str(formatacao[c]))
+                        align = "center"
+                    else:
+                        display = _escapar_html(str(v) if not _eh_nulo(v) else "—")
+                        if isinstance(v, (int, float, np.integer, np.floating)):
+                            align = "center"
+                # Trata caso de uma única função de formatador
+                elif callable(formatacao):
+                    display = str(formatacao(v))
+                    align = "center"
+                # Caso padrão sem formatador
+                else:
+                    display = _escapar_html(str(v) if not _eh_nulo(v) else "—")
+                    if isinstance(v, (int, float, np.integer, np.floating)):
+                        align = "center"
+
+                tds.append(f"<td style='text-align: {align} !important;'>{display}</td>")
+            rows.append(f"<tr>{''.join(tds)}</tr>")
+
+        html = f"""
+        <div style="background:#FFFFFF;border-radius:12px;
+             border:1px solid #E2E8F0;overflow:hidden;
+             box-shadow:0 4px 12px rgba(0,0,0,0.05);margin-bottom:16px;">
+          <div class="corp-table-wrap" style="max-height:{int(height)}px; overflow-y:auto; overflow-x:auto; margin:0;">
+            <table class="corp-table" style="width:100%; border-collapse:collapse;">
+              <thead><tr>{header}</tr></thead>
+              <tbody>{"".join(rows)}</tbody>
+            </table>
+          </div>
+        </div>
+        """
+        st.markdown(html, unsafe_allow_html=True)
+
 
 # ====================================================
 # BLOCO 3: UTILITÁRIOS
@@ -669,14 +681,10 @@ class Utilitarios:
         u_np = np.datetime64(ultimo)
 
         total = int(
-            np.busday_count(
-                p_np, u_np + np.timedelta64(1, "D"), weekmask=Utilitarios.DIAS_UTEIS
-            )
+            np.busday_count(p_np, u_np + np.timedelta64(1, "D"), weekmask=Utilitarios.DIAS_UTEIS)
         )
         passados = int(
-            np.busday_count(
-                p_np, m_np + np.timedelta64(1, "D"), weekmask=Utilitarios.DIAS_UTEIS
-            )
+            np.busday_count(p_np, m_np + np.timedelta64(1, "D"), weekmask=Utilitarios.DIAS_UTEIS)
         )
         brutos = max(0, total - passados)
         seguros = max(1, brutos)
@@ -712,9 +720,7 @@ class Utilitarios:
             centro = Alignment(horizontal="center", vertical="center")
 
             cols = list(dataframe.columns)
-            col_int = [
-                i + 1 for i, c in enumerate(cols) if c.lower() in ("posição", "posicao")
-            ]
+            col_int = [i + 1 for i, c in enumerate(cols) if c.lower() in ("posição", "posicao")]
             col_dec = [
                 i + 1
                 for i, c in enumerate(cols)
@@ -804,9 +810,7 @@ class ProcessamentoDados:
 
         agregacoes: dict[str, Any] = {"Pontos": "sum"}
         if "CódAuxEquipe" in trabalho.columns:
-            trabalho = trabalho.sort_values(
-                "CódAuxEquipe", key=lambda s: s.isna(), kind="stable"
-            )
+            trabalho = trabalho.sort_values("CódAuxEquipe", key=lambda s: s.isna(), kind="stable")
             agregacoes["CódAuxEquipe"] = "first"
 
         base = (
@@ -886,12 +890,8 @@ class ProcessamentoDados:
             .agg(Qtd_Equipes=("Nome Equipe", "count"), Total_Pontos=("Pontos", "sum"))
             .reset_index(drop=True)
         )
-        sup["Total_Pontos"] = pd.to_numeric(
-            sup["Total_Pontos"], errors="coerce"
-        ).fillna(0.0)
-        sup["Qtd_Equipes"] = pd.to_numeric(sup["Qtd_Equipes"], errors="coerce").fillna(
-            1.0
-        )
+        sup["Total_Pontos"] = pd.to_numeric(sup["Total_Pontos"], errors="coerce").fillna(0.0)
+        sup["Qtd_Equipes"] = pd.to_numeric(sup["Qtd_Equipes"], errors="coerce").fillna(1.0)
         sup["Qtd_Equipes"] = sup["Qtd_Equipes"].where(sup["Qtd_Equipes"] > 0, 1.0)
 
         sup["Supervisor"] = sup["Supervisor"].fillna("(Sem supervisor)")
@@ -902,7 +902,6 @@ class ProcessamentoDados:
     def calcular_aderencia(
         ranking: pd.DataFrame, coluna_grupo: str, meta: float = 300.0
     ) -> pd.DataFrame:
-        """Calcula o percentual de equipes de um grupo (ex: Supervisor/Projeto) com Projeção >= Meta."""
         if (
             ranking.empty
             or coluna_grupo not in ranking.columns
@@ -951,9 +950,7 @@ class Graficos:
             color=x,
             color_continuous_scale="Tealgrn",
         )
-        fig.update_traces(
-            texttemplate="%{text:.1f}", textposition="outside", textfont_size=12
-        )
+        fig.update_traces(texttemplate="%{text:.1f}", textposition="outside", textfont_size=12)
         fig.update_yaxes(automargin=True)
         fig.update_xaxes(automargin=True)
         return Graficos._layout(fig)
@@ -976,9 +973,7 @@ class Graficos:
             paper_bgcolor="rgba(0,0,0,0)",
             margin=dict(l=0, r=0, t=0, b=0),
             showlegend=True,
-            legend=dict(
-                orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5
-            ),
+            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
         )
         return fig
 
@@ -1021,9 +1016,7 @@ df = pd.concat([prod, gpon], ignore_index=True)
 df = Utilitarios.normalizar_coluna_data(df)
 
 colunas_ausentes = [
-    c
-    for c in ("Nome Equipe", "Supervisor", "CódAuxEquipe", "Projeto")
-    if c not in df.columns
+    c for c in ("Nome Equipe", "Supervisor", "CódAuxEquipe", "Projeto") if c not in df.columns
 ]
 if colunas_ausentes:
     render_insight(
@@ -1039,9 +1032,7 @@ if colunas_ausentes:
 TOTAL_GERAL_PONTOS = float(df["Pontos"].sum())
 TOTAL_GERAL_OS = len(df)
 TOTAL_GERAL_EQUIPES = df["Nome Equipe"].nunique() if "Nome Equipe" in df.columns else 0
-MEDIA_GERAL_PONTOS = (
-    TOTAL_GERAL_PONTOS / TOTAL_GERAL_EQUIPES if TOTAL_GERAL_EQUIPES > 0 else 0.0
-)
+MEDIA_GERAL_PONTOS = TOTAL_GERAL_PONTOS / TOTAL_GERAL_EQUIPES if TOTAL_GERAL_EQUIPES > 0 else 0.0
 
 st.divider()
 
@@ -1087,9 +1078,7 @@ if df.empty:
 # ====================================================
 # BLOCO 8: CÁLCULOS + KPIs
 # ====================================================
-dias_brutos, dias_seguros, ultima_atualizacao, dias_passados = (
-    Utilitarios.calcular_dias_uteis(df)
-)
+dias_brutos, dias_seguros, ultima_atualizacao, dias_passados = Utilitarios.calcular_dias_uteis(df)
 
 total_equipes_filtro = df["Nome Equipe"].nunique() if "Nome Equipe" in df.columns else 0
 total_os_filtro = len(df)
@@ -1148,9 +1137,7 @@ render_kpi(
     sub=var_pontos[1],
     tema="azul",
 )
-render_kpi(
-    c3, "Equipes · Filtro", str(total_equipes_filtro), sub=var_equipes[1], tema="verde"
-)
+render_kpi(c3, "Equipes · Filtro", str(total_equipes_filtro), sub=var_equipes[1], tema="verde")
 render_kpi(
     c4,
     "Total O.S. · Filtro",
@@ -1163,7 +1150,7 @@ st.divider()
 
 
 # ====================================================
-# BLOCO 9: ABAS
+# BLOCO 9: ABAS E TABELAS CUSTOMIZADAS
 # ====================================================
 ranking = pd.DataFrame()
 ranking_dia = pd.DataFrame()
@@ -1223,9 +1210,7 @@ with aba_ranking:
     with col_dl2:
         st.download_button(
             "📄 **Exportar CSV**",
-            data=df_exibir.to_csv(index=False, decimal=",", sep=";").encode(
-                "utf-8-sig"
-            ),
+            data=df_exibir.to_csv(index=False, decimal=",", sep=";").encode("utf-8-sig"),
             file_name=nome_arq.replace(".xlsx", ".csv"),
             mime="text/csv",
             width="stretch",
@@ -1282,59 +1267,64 @@ with aba_executivo:
                 render_insight("Sem dados de supervisor no recorte atual.", tipo="info")
             else:
                 st.plotly_chart(
-                    Graficos.barras_horizontal(
-                        df_sup, "Media_por_Equipe", "Supervisor"
-                    ),
+                    Graficos.barras_horizontal(df_sup, "Media_por_Equipe", "Supervisor"),
                     width="stretch",
                     key="graf_sup",
                 )
 
-# ── ABA 3 ──────────────────────────────────────────
+# ── ABA 3 (Aderência Custom HTML) ────────────────────────────────────────
 with aba_aderencia:
     render_section_header("🎯", "Aderência de Equipes (Projeção ≥ 300 pts)")
 
     if ranking.empty:
         render_insight("Sem dados disponíveis para calcular a aderência.", tipo="info")
     else:
+
+        def formata_aderencia(val):
+            v = _para_float(val, default=0.0)
+            if v > 0.75:
+                cor_bg, cor_txt, cor_bd = "#22C55E", "#FFFFFF", "#16A34A"
+            elif v >= 0.65:
+                cor_bg, cor_txt, cor_bd = "#FACC15", "#1F2937", "#EAB308"
+            else:
+                cor_bg, cor_txt, cor_bd = "#EF4444", "#FFFFFF", "#DC2626"
+
+            pct = f"{v:.1%}".replace(".", ",")
+            return f"<div style='background:{cor_bg}; color:{cor_txt}; border:1px solid {cor_bd}; padding:4px 8px; border-radius:6px; font-weight:800; display:inline-block; min-width:60px; text-align:center;'>{pct}</div>"
+
+        fmt_aderencia = {
+            "Equipes": lambda v: f"<b>{int(_para_float(v))}</b>",
+            "Atingiram": lambda v: str(int(_para_float(v))),
+            "Aderência": formata_aderencia,
+        }
+
         col_ad_sup, col_ad_proj = st.columns(2)
 
         with col_ad_sup:
             st.markdown("#### Por Supervisor (Monitor)")
-            df_ad_sup = ProcessamentoDados.calcular_aderencia(
-                ranking, "Supervisor", meta=300.0
-            )
+            df_ad_sup = ProcessamentoDados.calcular_aderencia(ranking, "Supervisor", meta=300.0)
             if not df_ad_sup.empty:
-                # Aplicar estilo condicional na coluna Aderência
-                styler_sup = df_ad_sup.style.format({"Aderência": "{:.1%}"})
-                styler_sup = styler_sup.map(_estilo_aderencia, subset=["Aderência"])
-                st.dataframe(styler_sup, hide_index=True, use_container_width=True)
+                ComponenteVisual.render_tabela_html_custom(df_ad_sup, fmt_aderencia, height=450)
             else:
                 st.info("Sem dados de Supervisor.")
 
         with col_ad_proj:
             st.markdown("#### Por Projeto")
-            df_ad_proj = ProcessamentoDados.calcular_aderencia(
-                ranking, "Projeto", meta=300.0
-            )
+            df_ad_proj = ProcessamentoDados.calcular_aderencia(ranking, "Projeto", meta=300.0)
             if not df_ad_proj.empty:
-                # Aplicar estilo condicional na coluna Aderência
-                styler_proj = df_ad_proj.style.format({"Aderência": "{:.1%}"})
-                styler_proj = styler_proj.map(_estilo_aderencia, subset=["Aderência"])
-                st.dataframe(styler_proj, hide_index=True, use_container_width=True)
+                ComponenteVisual.render_tabela_html_custom(df_ad_proj, fmt_aderencia, height=450)
             else:
-                st.info(
-                    "Sem dados de Projeto. Verifique se a coluna 'Projeto' existe na planilha."
-                )
+                st.info("Sem dados de Projeto. Verifique se a coluna 'Projeto' existe na planilha.")
 
-        # Legenda de cores
+        # Legenda minimalista para Aderência
         st.markdown(
-            """
+            f"""
             <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;
                  padding:12px 16px;background:#F8FAFC;border-radius:8px;
                  border:1px solid #E2E8F0;font-size:0.78rem;
                  font-family:{Fontes.TEXTO};">
                 <span style="font-weight:700;color:{Cores.TEXTO_3};
-                     text-transform:uppercase;letter-spacing:0.05em;">🎨 Legenda:</span>
+                     text-transform:uppercase;letter-spacing:0.05em;">🎨 Legenda de Aderência:</span>
                 <span style="background:#22C55E;color:white;padding:3px 10px;
                      border-radius:6px;font-weight:700;">🟢 > 75% — Alta Aderência</span>
                 <span style="background:#FACC15;color:#1F2937;padding:3px 10px;
@@ -1342,9 +1332,7 @@ with aba_aderencia:
                 <span style="background:#EF4444;color:white;padding:3px 10px;
                      border-radius:6px;font-weight:700;">🔴 < 65% — Crítico</span>
             </div>
-            """.replace("{Fontes.TEXTO}", Fontes.TEXTO).replace(
-                "{Cores.TEXTO_3}", Cores.TEXTO_3
-            ),
+            """,
             unsafe_allow_html=True,
         )
 
@@ -1379,8 +1367,7 @@ with aba_evolucao:
                 key="graf_linha",
             )
             st.caption(
-                "Evolução de pontos acumulados das Top 5 equipes atuais "
-                "(ordenada por data)."
+                "Evolução de pontos acumulados das Top 5 equipes atuais (ordenada por data)."
             )
     else:
         render_insight(
@@ -1389,7 +1376,7 @@ with aba_evolucao:
             tipo="info",
         )
 
-# ── ABA 5 ──────────────────────────────────────────
+# ── ABA 5 (Frequência Custom HTML) ──────────────────────────────────────────
 with aba_frequencia:
     render_section_header(
         "🗓️",
@@ -1398,6 +1385,7 @@ with aba_frequencia:
     )
     col_data_frequencia = Utilitarios.encontrar_coluna_data(df)
     frequencia = resumo_frequencia(df, data_col=col_data_frequencia)
+
     if frequencia.empty:
         render_insight(
             "Não há equipe e data válidas para calcular frequência de produção.",
@@ -1405,14 +1393,14 @@ with aba_frequencia:
         )
     else:
         c_eq, c_dias, c_periodo = st.columns(3)
+        max_dias = int(frequencia["Dias com produção"].max()) if not frequencia.empty else 1
+
         c_eq.metric(
             "Equipes com produção",
             f"{frequencia['Equipe'].nunique():,}".replace(",", "."),
         )
-        c_dias.metric(
-            "Maior frequência observada",
-            f"{int(frequencia['Dias com produção'].max())} dias",
-        )
+        c_dias.metric("Maior frequência observada", f"{max_dias} dias")
+
         data_min = pd.to_datetime(df[col_data_frequencia], errors="coerce").min()
         data_max = pd.to_datetime(df[col_data_frequencia], errors="coerce").max()
         c_periodo.metric(
@@ -1423,12 +1411,37 @@ with aba_frequencia:
                 else "Indisponível"
             ),
         )
-        st.dataframe(
-            frequencia,
-            hide_index=True,
-            width="stretch",
-            alt="Dias de produção observados por equipe",
-        )
+
+        # Formatação Visual da Barra de Progresso de Frequência
+        def formata_dias(val):
+            v = _para_float(val, default=0.0)
+            pct = (v / max_dias) * 100 if max_dias > 0 else 0
+            grad = (
+                "linear-gradient(90deg, #3B82F6, #1D4ED8)"
+                if pct > 50
+                else "linear-gradient(90deg, #F59E0B, #D97706)"
+            )
+            if pct <= 25:
+                grad = "linear-gradient(90deg, #EF4444, #B91C1C)"
+
+            return f"""
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="font-weight:800; min-width:24px; color:#1E293B;">{int(v)}</span>
+                <div style="flex:1; height:10px; background:#E2E8F0; border-radius:5px; overflow:hidden;">
+                    <div style="width:{pct}%; height:100%; background:{grad}; border-radius:5px;"></div>
+                </div>
+            </div>
+            """
+
+        fmt_freq = {
+            "Equipe": lambda v: (
+                f"<span style='font-weight:600; color:#0F172A;'>{_escapar_html(v)}</span>"
+            ),
+            "Dias com produção": formata_dias,
+        }
+
+        ComponenteVisual.render_tabela_html_custom(frequencia, fmt_freq, height=500)
+
     st.caption(
         "Este indicador conta apenas datas com produção registrada. Não identifica faltas: "
         "para isso é necessária uma escala ou fonte explícita de presença."

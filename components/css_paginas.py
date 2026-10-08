@@ -31,7 +31,9 @@ COR_BARRA_SCROLLBAR_HOVER = "#94A3B8"
 def _bloco(seletor: str, declaracoes: str) -> str:
     """Formata um bloco CSS simples, com indentação legível."""
     linhas = [f"    {seletor} {{"]
-    linhas += [f"        {linha.strip()}" for linha in declaracoes.strip().splitlines() if linha.strip()]
+    linhas += [
+        f"        {linha.strip()}" for linha in declaracoes.strip().splitlines() if linha.strip()
+    ]
     linhas.append("    }")
     return "\n".join(linhas)
 
@@ -71,7 +73,7 @@ def css_tabela_corporativa(
             ".corp-table",
             f"""
             width: 100% !important;
-            {('border-collapse: collapse !important;' if colapsar_bordas else '')}
+            {("border-collapse: collapse !important;" if colapsar_bordas else "")}
             font-size: {fonte_px}px !important;
             """,
         ),

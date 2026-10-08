@@ -46,9 +46,7 @@ logger = logging.getLogger(__name__)
 # ═════════════════════════════════════════════════════════════════════
 # TIPOS
 # ═════════════════════════════════════════════════════════════════════
-TemaKPI = Literal[
-    "azul", "verde", "vermelho", "laranja", "cinza", "roxo", "amarelo", "escuro"
-]
+TemaKPI = Literal["azul", "verde", "vermelho", "laranja", "cinza", "roxo", "amarelo", "escuro"]
 TipoInsight = Literal["ok", "info", "alerta", "critico", "acao"]
 
 
@@ -169,8 +167,7 @@ class Config:
     SLA_MIGRACAO_MAXIMA: Final[float] = 0.25
 
     URL_LISTA_ATIVOS: Final[str] = (
-        "https://docs.google.com/spreadsheets/d/"
-        "1LQKDcLshC6XSXLBVWaEYSpxrro6uydyU9pwDLc38pEg/edit"
+        "https://docs.google.com/spreadsheets/d/1LQKDcLshC6XSXLBVWaEYSpxrro6uydyU9pwDLc38pEg/edit"
     )
     SHEET_ID_ATIVOS: Final[str] = "1LQKDcLshC6XSXLBVWaEYSpxrro6uydyU9pwDLc38pEg"
     WORKSHEET_ATIVOS: Final[str] = "lista_ativos"
@@ -474,9 +471,7 @@ class DF:
         return resultado
 
     @staticmethod
-    def buscar_coluna(
-        df: pd.DataFrame | None, palavras: tuple[str, ...] | list[str]
-    ) -> str | None:
+    def buscar_coluna(df: pd.DataFrame | None, palavras: tuple[str, ...] | list[str]) -> str | None:
         if df is None:
             return None
         mapa = {normalizar_coluna(c): str(c) for c in df.columns}
@@ -583,9 +578,7 @@ class ClassificadorStatus:
             return "Não Executada"
         if "EXECUT" in texto or "CONCLUID" in texto:
             return "Executada"
-        if any(
-            t in texto for t in ("PEND", "EM ROTA", "INICIADO", "AGENDADO", "ABERTO")
-        ):
+        if any(t in texto for t in ("PEND", "EM ROTA", "INICIADO", "AGENDADO", "ABERTO")):
             return "Pendente"
         return None
 
@@ -836,9 +829,7 @@ class DataLoader:
         try:
             m = importlib.import_module("streamlit_gsheets")
             conn = st.connection("gsheets", type=m.GSheetsConnection)
-            raw = conn.read(
-                spreadsheet=Config.URL_LISTA_ATIVOS, worksheet=Config.WORKSHEET_ATIVOS
-            )
+            raw = conn.read(spreadsheet=Config.URL_LISTA_ATIVOS, worksheet=Config.WORKSHEET_ATIVOS)
             if isinstance(raw, pd.DataFrame) and not raw.empty:
                 return DataLoader.processar_lista_ativos(raw)
         except Exception as e:
@@ -915,9 +906,7 @@ class DataLoader:
                 resultado["MONITOR"].fillna("").astype(str).str.strip().str.upper()
             )
 
-        return resultado.drop_duplicates(subset=["LOGIN"], keep="last").reset_index(
-            drop=True
-        )
+        return resultado.drop_duplicates(subset=["LOGIN"], keep="last").reset_index(drop=True)
 
     @staticmethod
     def classificar_regiao(valor: Any) -> str:
@@ -965,9 +954,7 @@ class DataLoader:
             ("HABILIDADE DE TRABALHO", "HABILIDADE", "HABILIDADES", "SKILL", "SKILLS"),
         )
         if col:
-            mask = (
-                df[col].fillna("").astype(str).str.upper().str.contains("PON", na=False)
-            )
+            mask = df[col].fillna("").astype(str).str.upper().str.contains("PON", na=False)
             df["FLAG_GPON"] = np.where(mask, "Sim", "Não")
         else:
             df["FLAG_GPON"] = "Não"
@@ -981,9 +968,7 @@ class DataLoader:
         Merge DIRETO e RESILIENTE entre 'LOGIN DO TÉCNICO' (da O.S.) e 'LOGIN' (da lista_ativos).
         Converte o Login da O.S. no NOME DO TÉCNICO e NOME DO MONITOR correspondentes.
         """
-        col_mon_os = DF.buscar_coluna(
-            base, ("MONITOR", "GESTOR", "SUPERVISOR", "COORDENADOR")
-        )
+        col_mon_os = DF.buscar_coluna(base, ("MONITOR", "GESTOR", "SUPERVISOR", "COORDENADOR"))
         col_tec_os = DF.buscar_coluna(
             base, ("TÉCNICO", "TECNICO", "NOME TÉCNICO", "NOME TECNICO", "COLABORADOR")
         )
@@ -1024,11 +1009,7 @@ class DataLoader:
         )
 
         # 2. Preparar chaves da O.S.
-        os_login = (
-            DF.obter_serie(base, col_login)
-            if col_login
-            else pd.Series("", index=base.index)
-        )
+        os_login = DF.obter_serie(base, col_login) if col_login else pd.Series("", index=base.index)
         base_work = base.copy()
         base_work["_JOIN_KEY"] = os_login.map(normalizar_login)
         base_work["_JOIN_CLEAN"] = base_work["_JOIN_KEY"].str.lstrip("0")
@@ -1039,18 +1020,14 @@ class DataLoader:
 
         # 3. Merge 1: Exato pelo LOGIN
         m1 = base_work.merge(
-            at_key[["_JOIN_KEY", "TÉCNICO", "MONITOR", "BASE"]].rename(
-                columns=cols_rename
-            ),
+            at_key[["_JOIN_KEY", "TÉCNICO", "MONITOR", "BASE"]].rename(columns=cols_rename),
             on="_JOIN_KEY",
             how="left",
         )
 
         # 4. Merge 2: Fallback sem zeros à esquerda (ex: 001234 -> 1234)
         m2 = base_work.merge(
-            at_clean[["_JOIN_CLEAN", "TÉCNICO", "MONITOR", "BASE"]].rename(
-                columns=cols_rename
-            ),
+            at_clean[["_JOIN_CLEAN", "TÉCNICO", "MONITOR", "BASE"]].rename(columns=cols_rename),
             on="_JOIN_CLEAN",
             how="left",
         )
@@ -1088,12 +1065,8 @@ class DataLoader:
 
         # Atribuição Garantida mantendo o índice original da base
         res = base.copy()
-        res["TÉCNICO"] = DF.limpar_texto(
-            pd.Series(t_final, index=res.index), "NÃO MAPEADO"
-        )
-        res["MONITOR"] = DF.limpar_texto(
-            pd.Series(m_final, index=res.index), "SEM MONITOR"
-        )
+        res["TÉCNICO"] = DF.limpar_texto(pd.Series(t_final, index=res.index), "NÃO MAPEADO")
+        res["MONITOR"] = DF.limpar_texto(pd.Series(m_final, index=res.index), "SEM MONITOR")
         if any(b_final != ""):
             res["_B"] = pd.Series(b_final, index=res.index)
 
@@ -1101,9 +1074,7 @@ class DataLoader:
 
     @staticmethod
     def _definir_regiao(base: pd.DataFrame) -> pd.Series:
-        col_cidade = DF.buscar_coluna(
-            base, ("CIDADE", "LOCALIDADE", "MUNICÍPIO", "MUNICIPIO")
-        )
+        col_cidade = DF.buscar_coluna(base, ("CIDADE", "LOCALIDADE", "MUNICÍPIO", "MUNICIPIO"))
         if col_cidade:
             return DF.obter_serie(base, col_cidade).map(DataLoader.classificar_regiao)
         if "_B" in base.columns:
@@ -1132,17 +1103,11 @@ class DataLoader:
         col_tipo_origem = DF.buscar_coluna(base, Config.COLUNAS_TIPO_SERVICO)
         valores_tipo_origem: dict[str, int] = {}
         if col_tipo_origem:
-            serie = (
-                DF.obter_serie(base, col_tipo_origem).fillna("").astype(str).str.strip()
-            )
-            valores_tipo_origem = {
-                str(k): int(v) for k, v in serie.value_counts().head(20).items()
-            }
+            serie = DF.obter_serie(base, col_tipo_origem).fillna("").astype(str).str.strip()
+            valores_tipo_origem = {str(k): int(v) for k, v in serie.value_counts().head(20).items()}
 
         base["STATUS CONTRATO"] = ClassificadorStatus.classificar(base)
-        status_up = (
-            base["STATUS CONTRATO"].fillna("").astype(str).str.upper().str.strip()
-        )
+        status_up = base["STATUS CONTRATO"].fillna("").astype(str).str.upper().str.strip()
         mask_remover = status_up.isin({"CANCELADO", "SUSPENSO"})
         removidos_status = int(mask_remover.sum())
         base = base.loc[~mask_remover].copy()
@@ -1162,9 +1127,7 @@ class DataLoader:
         removidos_contrato = 0
         if col_contrato:
             contratos = DF.obter_serie(base, col_contrato).map(normalizar_texto)
-            mask_inv = contratos.isin(
-                {"", "NAN", "NONE", "NULL", "N/A", "NA", "-", "0"}
-            )
+            mask_inv = contratos.isin({"", "NAN", "NONE", "NULL", "N/A", "NA", "-", "0"})
             removidos_contrato = int(mask_inv.sum())
             base = base.loc[~mask_inv].copy()
         if base.empty:
@@ -1176,11 +1139,7 @@ class DataLoader:
         if col_total:
             n = DF.obter_serie(base, col_total).map(converter_numero)
             base["TOTAL DE TAREFAS"] = (
-                pd.to_numeric(n, errors="coerce")
-                .fillna(1)
-                .clip(lower=0)
-                .round()
-                .astype(int)
+                pd.to_numeric(n, errors="coerce").fillna(1).clip(lower=0).round().astype(int)
             )
         else:
             base["TOTAL DE TAREFAS"] = 1
@@ -1214,17 +1173,13 @@ class DataLoader:
         base = DataLoader._mesclar_ativos(base, ativos, col_login)
 
         base["REGIÃO"] = DataLoader._definir_regiao(base)
-        base["TIPO_SERVICO"] = DataLoader.gerar_tipo_servico(base).map(
-            padronizar_tipo_servico
-        )
+        base["TIPO_SERVICO"] = DataLoader.gerar_tipo_servico(base).map(padronizar_tipo_servico)
         base["Status Contrato"] = base["STATUS CONTRATO"]
 
         aux = [
             c
             for c in base.columns
-            if c.startswith("_LOGIN_")
-            or c.startswith("_ATIVO")
-            or c in ("_T", "_M", "_B")
+            if c.startswith("_LOGIN_") or c.startswith("_ATIVO") or c in ("_T", "_M", "_B")
         ]
         base = base.drop(columns=aux, errors="ignore").reset_index(drop=True)
 
@@ -1273,15 +1228,11 @@ class Motor:
             return pd.DataFrame()
 
         t = df.copy()
-        t["MONITOR"] = (
-            t["MONITOR"].fillna("SEM MONITOR").astype(str).str.strip().str.upper()
-        )
+        t["MONITOR"] = t["MONITOR"].fillna("SEM MONITOR").astype(str).str.strip().str.upper()
         t["TIPO_SERVICO"] = t["TIPO_SERVICO"].apply(padronizar_tipo_servico)
         t["Status Contrato"] = t["Status Contrato"].fillna("").astype(str).str.strip()
         t["TOTAL DE TAREFAS"] = (
-            pd.to_numeric(t["TOTAL DE TAREFAS"], errors="coerce")
-            .fillna(0)
-            .clip(lower=0)
+            pd.to_numeric(t["TOTAL DE TAREFAS"], errors="coerce").fillna(0).clip(lower=0)
         )
 
         validos = t.loc[t["Status Contrato"].isin(Config.STATUS_ORDEM)].copy()
@@ -1303,27 +1254,18 @@ class Motor:
             .reset_index()
         )
         ag["DENOMINADOR"] = ag["executados"] + ag["nao_executados"]
-        ag["PERCENTUAL"] = div_segura(
-            ag["nao_executados"], ag["DENOMINADOR"], padrao=np.nan
-        )
+        ag["PERCENTUAL"] = div_segura(ag["nao_executados"], ag["DENOMINADOR"], padrao=np.nan)
 
-        monitores = pd.Index(
-            sorted(validos["MONITOR"].dropna().unique()), name="MONITOR"
+        monitores = pd.Index(sorted(validos["MONITOR"].dropna().unique()), name="MONITOR")
+        pivot = ag.pivot(index="MONITOR", columns="TIPO_SERVICO", values="PERCENTUAL").reindex(
+            monitores
         )
-        pivot = ag.pivot(
-            index="MONITOR", columns="TIPO_SERVICO", values="PERCENTUAL"
-        ).reindex(monitores)
         for tipo in Config.ORDEM_TIPOS:
             if tipo not in pivot.columns:
                 pivot[tipo] = np.nan
         pivot = pivot.loc[:, list(Config.ORDEM_TIPOS)]
 
-        totais = (
-            validos.groupby("MONITOR")[["_EXEC", "_NEX"]]
-            .sum()
-            .reindex(monitores)
-            .fillna(0)
-        )
+        totais = validos.groupby("MONITOR")[["_EXEC", "_NEX"]].sum().reindex(monitores).fillna(0)
         denom = totais["_EXEC"] + totais["_NEX"]
         pivot["Quebra Geral"] = div_segura(totais["_NEX"], denom, padrao=np.nan)
         pivot["Total Tasks"] = (
@@ -1363,9 +1305,7 @@ class Motor:
     def _pivot_status(df: pd.DataFrame, grupo: str) -> pd.DataFrame:
         t = df.copy()
         t["TOTAL DE TAREFAS"] = (
-            pd.to_numeric(t["TOTAL DE TAREFAS"], errors="coerce")
-            .fillna(0)
-            .clip(lower=0)
+            pd.to_numeric(t["TOTAL DE TAREFAS"], errors="coerce").fillna(0).clip(lower=0)
         )
         pivot = pd.pivot_table(
             t,
@@ -1431,15 +1371,11 @@ class Motor:
         )
         if recorte.empty:
             return pd.DataFrame()
-        return Motor.tabela_cenarios(
-            recorte, "TÉCNICO", p_ot, p_base, p_pess, min_aloc
-        ).head(top_n)
+        return Motor.tabela_cenarios(recorte, "TÉCNICO", p_ot, p_base, p_pess, min_aloc).head(top_n)
 
     @staticmethod
     def causa_raiz(df: pd.DataFrame, coluna_baixa: str, top_n: int = 8) -> pd.DataFrame:
-        if not {"Status Contrato", "TOTAL DE TAREFAS", coluna_baixa}.issubset(
-            df.columns
-        ):
+        if not {"Status Contrato", "TOTAL DE TAREFAS", coluna_baixa}.issubset(df.columns):
             return pd.DataFrame()
         r = df.loc[df["Status Contrato"].eq("Não Executada")].copy()
         if r.empty:
@@ -1453,9 +1389,7 @@ class Motor:
             .replace("", "SEM REGISTRO")
         )
         r["TOTAL DE TAREFAS"] = (
-            pd.to_numeric(r["TOTAL DE TAREFAS"], errors="coerce")
-            .fillna(0)
-            .clip(lower=0)
+            pd.to_numeric(r["TOTAL DE TAREFAS"], errors="coerce").fillna(0).clip(lower=0)
         )
 
         total = float(r["TOTAL DE TAREFAS"].sum())
@@ -1480,9 +1414,7 @@ class Motor:
                 t[col] = pad
         if "TOTAL DE TAREFAS" in t.columns:
             t["TOTAL DE TAREFAS"] = (
-                pd.to_numeric(t["TOTAL DE TAREFAS"], errors="coerce")
-                .fillna(0)
-                .clip(lower=0)
+                pd.to_numeric(t["TOTAL DE TAREFAS"], errors="coerce").fillna(0).clip(lower=0)
             )
         else:
             t["TOTAL DE TAREFAS"] = 0
@@ -1492,9 +1424,9 @@ class Motor:
             return pd.DataFrame()
 
         ag = (
-            fila.groupby(
-                ["MONITOR", "TÉCNICO", "TIPO_SERVICO", "Status Contrato"], dropna=False
-            )["TOTAL DE TAREFAS"]
+            fila.groupby(["MONITOR", "TÉCNICO", "TIPO_SERVICO", "Status Contrato"], dropna=False)[
+                "TOTAL DE TAREFAS"
+            ]
             .sum()
             .reset_index()
         )
@@ -1583,9 +1515,7 @@ class Motor:
         for c in ("Executada", "Não Executada", "Pendente", "Considerado", "Alocado"):
             r[c] = r[c].fillna(0).round().astype(int)
 
-        return r.sort_values("Projeção Fechamento", ascending=False).reset_index(
-            drop=True
-        )
+        return r.sort_values("Projeção Fechamento", ascending=False).reset_index(drop=True)
 
     @staticmethod
     def resumo_gpon(df: pd.DataFrame) -> dict[str, Any]:
@@ -1663,9 +1593,7 @@ def render_insight(texto: str, tipo: TipoInsight = "info") -> None:
         st.info(texto)
 
 
-def render_kpi_sm(
-    col: Any, label: str, value: str, sub: str = "", tema: TemaKPI = "azul"
-) -> None:
+def render_kpi_sm(col: Any, label: str, value: str, sub: str = "", tema: TemaKPI = "azul") -> None:
     if tema not in _TEMAS_KPI:
         if COMPONENTES.kpi_sm:
             COMPONENTES.kpi_sm(col, label, value, sub, tema)
@@ -1676,13 +1604,13 @@ def render_kpi_sm(
     e = _TEMAS_KPI[tema]
     col.markdown(
         f"""
-        <div style="background:{e['fundo']};border-left:3px solid {e['borda']};border-radius:6px;
+        <div style="background:{e["fundo"]};border-left:3px solid {e["borda"]};border-radius:6px;
                     padding:12px 16px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-            <div style="font-family:{Fontes.TEXTO};font-size:10px;color:{e['titulo']};
+            <div style="font-family:{Fontes.TEXTO};font-size:10px;color:{e["titulo"]};
                         text-transform:uppercase;letter-spacing:1px;font-weight:700;">{html_safe(label)}</div>
-            <div style="font-family:{Fontes.TITULO};font-size:20px;color:{e['texto']};
+            <div style="font-family:{Fontes.TITULO};font-size:20px;color:{e["texto"]};
                         font-weight:800;line-height:1.2;margin-top:4px;">{html_safe(value)}</div>
-            <div style="font-family:{Fontes.TEXTO};font-size:11px;color:{e['titulo']};margin-top:2px;">{html_safe(sub)}</div>
+            <div style="font-family:{Fontes.TEXTO};font-size:11px;color:{e["titulo"]};margin-top:2px;">{html_safe(sub)}</div>
         </div>
     """,
         unsafe_allow_html=True,
@@ -1750,9 +1678,7 @@ _METAS_COLUNA_MATRIZ: Final[dict[str, str]] = {
 }
 
 
-def render_matriz_executiva(
-    df: pd.DataFrame, meta_geral: float = Config.SLA_QUEBRA_MAXIMA
-) -> None:
+def render_matriz_executiva(df: pd.DataFrame, meta_geral: float = Config.SLA_QUEBRA_MAXIMA) -> None:
     if df.empty:
         st.info("Sem dados na Matriz Executiva.")
         return
@@ -1785,18 +1711,14 @@ def render_matriz_executiva(
                         )
                     else:
                         cls = "badge-meta-ok" if n <= metas[cu] else "badge-meta-nok"
-                        linhas.append(
-                            f"<td><span class='{cls}'>{fmt_pct_br(n)}</span></td>"
-                        )
+                        linhas.append(f"<td><span class='{cls}'>{fmt_pct_br(n)}</span></td>")
                 except (TypeError, ValueError):
                     linhas.append(f"<td>{html_safe(v)}</td>")
             elif cu in {"TOTAL TASKS", "TOTAL_TASKS"}:
                 linhas.append(f"<td><strong>{fmt_int_br(v)}</strong></td>")
             else:
                 conteudo = (
-                    html_safe(v)
-                    if not is_missing(v)
-                    else "<span style='color:#94A3B8;'>—</span>"
+                    html_safe(v) if not is_missing(v) else "<span style='color:#94A3B8;'>—</span>"
                 )
                 linhas.append(f"<td>{conteudo}</td>")
         linhas.append("</tr>")
@@ -1974,12 +1896,12 @@ def render_card_gpon(df: pd.DataFrame) -> None:
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <div>
                     <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.6px;opacity:0.9;">📡 FLAG_GPON</div>
-                    <div style="font-size:24px;font-weight:800;margin-top:4px;">{r['sim']:,}</div>
-                    <div style="font-size:11px;opacity:0.85;margin-top:2px;">{r['percentual']:.1f}% com GPON habilitado</div>
+                    <div style="font-size:24px;font-weight:800;margin-top:4px;">{r["sim"]:,}</div>
+                    <div style="font-size:11px;opacity:0.85;margin-top:2px;">{r["percentual"]:.1f}% com GPON habilitado</div>
                 </div>
                 <div style="text-align:right;">
                     <div style="font-size:11px;opacity:0.85;">Total</div>
-                    <div style="font-size:18px;font-weight:700;">{r['total']:,}</div>
+                    <div style="font-size:18px;font-weight:700;">{r["total"]:,}</div>
                 </div>
             </div>
         </div>
@@ -2010,10 +1932,7 @@ def view_resumo_executivo(df: pd.DataFrame, meta_sla: float) -> None:
             "como Novos Domicílios, PME ou Migração."
         )
         if isinstance(originais, dict) and originais:
-            st.caption(
-                "Valores originais encontrados: "
-                + ", ".join(list(originais.keys())[:10])
-            )
+            st.caption("Valores originais encontrados: " + ", ".join(list(originais.keys())[:10]))
 
     if "FLAG_GPON" in df.columns:
         render_card_gpon(df)
@@ -2105,9 +2024,7 @@ def view_analise_detalhada(
             render_kpi_sm(k1, "Dentro da Meta", str(dentro), _pct(dentro), "verde")
             render_kpi_sm(k2, "Atenção", str(atencao), _pct(atencao), "amarelo")
             render_kpi_sm(k3, "Crítico", str(critico), _pct(critico), "vermelho")
-            render_kpi_sm(
-                k4, "Conversão Média", f"{conv_med:.1%}", "Para atingir meta", "azul"
-            )
+            render_kpi_sm(k4, "Conversão Média", f"{conv_med:.1%}", "Para atingir meta", "azul")
 
     with tab3:
         render_section_header("🏆", "Técnicos Mais Críticos")
@@ -2149,9 +2066,7 @@ def view_auditoria(df: pd.DataFrame) -> None:
     k3.metric("Removidos por Status", fmt_int_br(rem_status))
     k4.metric("Contratos Inválidos", fmt_int_br(rem_contrato))
 
-    st.caption(
-        f"Arquivo de origem: {df.attrs.get('arquivo_origem', 'Não identificado')}"
-    )
+    st.caption(f"Arquivo de origem: {df.attrs.get('arquivo_origem', 'Não identificado')}")
     st.caption(
         f"Coluna de tipo de serviço: {df.attrs.get('tipo_servico_coluna', 'Não identificada')}"
     )
@@ -2264,18 +2179,14 @@ def _sidebar_ativos(nonce: int) -> None:
                     raw = DataLoader.ler_arquivo(b, upload.name)
                     proc = DataLoader.processar_lista_ativos(raw)
                     if proc.empty:
-                        raise ValueError(
-                            "A base de ativos não possui coluna LOGIN válida."
-                        )
+                        raise ValueError("A base de ativos não possui coluna LOGIN válida.")
                     st.session_state["df_gs_manual"] = proc
                     st.session_state["arquivo_ativos_processado"] = hid
                     st.toast(f"✅ {len(proc)} ativos carregados.", icon="👥")
             except Exception as erro:
                 st.error(f"Erro ao processar base de ativos: {erro}")
 
-        if st.button(
-            "🔄 Reiniciar Aplicação", use_container_width=True, type="secondary"
-        ):
+        if st.button("🔄 Reiniciar Aplicação", use_container_width=True, type="secondary"):
             limpar_sessao(incluir_ativos=True)
             st.cache_data.clear()
             st.rerun()
@@ -2293,12 +2204,8 @@ def _sidebar_filtros() -> tuple[float, float, float, float]:
     )
     p_ot = st.sidebar.slider("Prob. Otimista de Quebra (%)", 0, 100, 15, step=5) / 100
     p_base = st.sidebar.slider("Prob. Base de Quebra (%)", 0, 100, 30, step=5) / 100
-    p_pess = (
-        st.sidebar.slider("Prob. Pessimista de Quebra (%)", 0, 100, 50, step=5) / 100
-    )
-    min_aloc = float(
-        st.sidebar.number_input("Mínimo de Alocações", min_value=1, value=5)
-    )
+    p_pess = st.sidebar.slider("Prob. Pessimista de Quebra (%)", 0, 100, 50, step=5) / 100
+    min_aloc = float(st.sidebar.number_input("Mínimo de Alocações", min_value=1, value=5))
 
     if not (p_ot <= p_base <= p_pess):
         st.sidebar.warning("Atenção: Otimista ≤ Base ≤ Pessimista é o esperado.")
@@ -2319,9 +2226,7 @@ def _sidebar_robo(df_ativos: pd.DataFrame) -> None:
                 df_gs_arg if df_gs_arg is not None else df_ativos,
             ),
             gsheets_fn=lambda: df_ativos,
-            pasta_padrao=st.session_state.get(
-                "robo_pasta_alvo", str(Path.home() / "Downloads")
-            ),
+            pasta_padrao=st.session_state.get("robo_pasta_alvo", str(Path.home() / "Downloads")),
             ciclos_estabilidade=1,
             mostrar_toggle=True,
             mostrar_config=True,

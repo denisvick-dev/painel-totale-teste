@@ -67,8 +67,7 @@ if "_reset_counter" not in st.session_state:
 # 2. CONFIGURAÇÕES GLOBAIS
 # ====================================================
 URL_GSHEETS = (
-    "https://docs.google.com/spreadsheets/d/"
-    "1LQKDcLshC6XSXLBVWaEYSpxrro6uydyU9pwDLc38pEg/edit"
+    "https://docs.google.com/spreadsheets/d/1LQKDcLshC6XSXLBVWaEYSpxrro6uydyU9pwDLc38pEg/edit"
 )
 
 CONTRATO_VALORES_VAZIOS = {"", "NAN", "NONE", "N/A", "NA", "-", "0", "NULL", "<NA>"}
@@ -180,9 +179,7 @@ RENOMEAR_COLUNAS: dict[str, str] = {
 # ====================================================
 _RE_PRODUTO_INTERNET = re.compile(r"\b(BL|BANDA\s*LARGA)\b", re.IGNORECASE)
 
-_RE_Mbps_Gbps = re.compile(
-    r"(\d+(?:[.,]\d+)?)\s*(GIGA|GB|G|MEGA|MB|M)\b", re.IGNORECASE
-)
+_RE_Mbps_Gbps = re.compile(r"(\d+(?:[.,]\d+)?)\s*(GIGA|GB|G|MEGA|MB|M)\b", re.IGNORECASE)
 
 _RE_BL = re.compile(r"\bBL\s*(\d+(?:[.,]\d+)?)\s*(M|MEGA|G|GIGA)?\b", re.IGNORECASE)
 
@@ -258,9 +255,7 @@ def atribuir_velocidade_por_contrato(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop(columns=["VELOCIDADE_BANDA"], errors="ignore")
     df = df.merge(vel_por_contrato, on="CONTRATO", how="left")
     df["VELOCIDADE_BANDA"] = df["VELOCIDADE_BANDA"].fillna("")
-    return df.drop(
-        columns=["_VEL_LABEL", "_VEL_MBPS", "_PRIORIDADE_VEL"], errors="ignore"
-    )
+    return df.drop(columns=["_VEL_LABEL", "_VEL_MBPS", "_PRIORIDADE_VEL"], errors="ignore")
 
 
 # ====================================================
@@ -480,9 +475,7 @@ def render_dataframe_local(
     ]
     for c in [colunas_para_renomear.get(c, c) for c in colunas_int_originais]:
         if c in df_display.columns:
-            df_display[c] = (
-                pd.to_numeric(df_display[c], errors="coerce").fillna(0).astype(int)
-            )
+            df_display[c] = pd.to_numeric(df_display[c], errors="coerce").fillna(0).astype(int)
 
     styler = df_display.style
     if fmt:
@@ -567,15 +560,13 @@ def buscar_google_sheets() -> pd.DataFrame:
         )
         df = df.dropna(subset=["Login"])
         df["Login"] = (
-            df["Login"]
-            .astype(str)
-            .str.replace(r"\.0$", "", regex=True)
-            .str.strip()
-            .str.upper()
+            df["Login"].astype(str).str.replace(r"\.0$", "", regex=True).str.strip().str.upper()
         )
         return df
     except Exception:
-        logger.warning("Google Sheets indisponível; ações ficam sem dados cadastrais.", exc_info=True)
+        logger.warning(
+            "Google Sheets indisponível; ações ficam sem dados cadastrais.", exc_info=True
+        )
         return pd.DataFrame(columns=["Login", "Técnico", "Monitor", "Base"])
 
 
@@ -585,14 +576,10 @@ def ler_arquivo(file_bytes: bytes, filename: str) -> pd.DataFrame:
     try:
         if filename.lower().endswith(".csv"):
             try:
-                return pd.read_csv(
-                    bio, sep=None, engine="python", encoding="utf-8-sig", dtype=str
-                )
+                return pd.read_csv(bio, sep=None, engine="python", encoding="utf-8-sig", dtype=str)
             except UnicodeDecodeError:
                 bio.seek(0)
-                return pd.read_csv(
-                    bio, sep=None, engine="python", encoding="latin1", dtype=str
-                )
+                return pd.read_csv(bio, sep=None, engine="python", encoding="latin1", dtype=str)
         return pd.read_excel(bio, engine="openpyxl", dtype=str)
     except Exception as e:
         st.error(f"Erro ao ler arquivo: {e}")
@@ -636,16 +623,9 @@ def processar_base(df_bruto: pd.DataFrame, df_ativos: pd.DataFrame) -> pd.DataFr
         else:
             df[padrao] = np.nan
 
-    contrato = (
-        df["CONTRATO"]
-        .astype("string")
-        .str.replace("\u00a0", " ", regex=False)
-        .str.strip()
-    )
+    contrato = df["CONTRATO"].astype("string").str.replace("\u00a0", " ", regex=False).str.strip()
     mask_vazio = (
-        contrato.isna()
-        | contrato.eq("")
-        | contrato.str.upper().isin(CONTRATO_VALORES_VAZIOS)
+        contrato.isna() | contrato.eq("") | contrato.str.upper().isin(CONTRATO_VALORES_VAZIOS)
     )
     removidos = int(mask_vazio.sum())
     df = df.loc[~mask_vazio].copy()
@@ -655,16 +635,10 @@ def processar_base(df_bruto: pd.DataFrame, df_ativos: pd.DataFrame) -> pd.DataFr
         return pd.DataFrame()
 
     df["LOGIN_TECNICO"] = (
-        df["LOGIN_TECNICO"]
-        .astype(str)
-        .str.replace(r"\.0$", "", regex=True)
-        .str.strip()
-        .str.upper()
+        df["LOGIN_TECNICO"].astype(str).str.replace(r"\.0$", "", regex=True).str.strip().str.upper()
     )
     df["TOTAL_TAREFAS"] = (
-        pd.to_numeric(
-            df["TOTAL_TAREFAS"].astype(str).str.replace(",", "."), errors="coerce"
-        )
+        pd.to_numeric(df["TOTAL_TAREFAS"].astype(str).str.replace(",", "."), errors="coerce")
         .fillna(1)
         .astype(int)
     )
@@ -674,17 +648,13 @@ def processar_base(df_bruto: pd.DataFrame, df_ativos: pd.DataFrame) -> pd.DataFr
 
     if isinstance(df_ativos, pd.DataFrame) and not df_ativos.empty:
         df = df.drop(
-            columns=[
-                c for c in ["Técnico", "Monitor", "Base"] if c.upper() in df.columns
-            ],
+            columns=[c for c in ["Técnico", "Monitor", "Base"] if c.upper() in df.columns],
             errors="ignore",
         )
         df = df.merge(df_ativos, left_on="LOGIN_TECNICO", right_on="Login", how="left")
         df = df.rename(columns={"Técnico": "NOME_OFICIAL"})
 
-    df["NOME_OFICIAL"] = df.get("NOME_OFICIAL", df["LOGIN_TECNICO"]).fillna(
-        df["LOGIN_TECNICO"]
-    )
+    df["NOME_OFICIAL"] = df.get("NOME_OFICIAL", df["LOGIN_TECNICO"]).fillna(df["LOGIN_TECNICO"])
     df["Monitor"] = df.get("Monitor", pd.Series(dtype=str)).fillna("SEM MONITOR")
 
     hab = df["HABILIDADE"].astype(str).str.upper()
@@ -697,9 +667,7 @@ def processar_base(df_bruto: pd.DataFrame, df_ativos: pd.DataFrame) -> pd.DataFr
 
     df["Check_GPON"] = hab.str.contains(r"PON\(1/100\)", regex=True, na=False)
     df["Check_ND"] = tipo.str.contains("ADESAO", na=False)
-    df["Check_Migracao"] = (tipo.str.strip() == "24 - MUDANCA DE PACOTE") & df[
-        "Check_GPON"
-    ]
+    df["Check_Migracao"] = (tipo.str.strip() == "24 - MUDANCA DE PACOTE") & df["Check_GPON"]
     df["Check_PME"] = df["Check_ND"] & hab.str.contains("PME", na=False)
     df["Check_Streaming"] = hab.str.contains("TV VAS(1/100)", na=False)
     df["Check_Ponto_Ultra"] = hab.str.contains("NETLAR", na=False)
@@ -722,11 +690,7 @@ def processar_base(df_bruto: pd.DataFrame, df_ativos: pd.DataFrame) -> pd.DataFr
         .astype(str)
         .str.strip()
         .str.upper()
-        .apply(
-            lambda v: (
-                unicodedata.normalize("NFKD", v).encode("ASCII", "ignore").decode()
-            )
-        )
+        .apply(lambda v: unicodedata.normalize("NFKD", v).encode("ASCII", "ignore").decode())
     )
     df["REGIÃO"] = np.select(
         [
@@ -794,10 +758,7 @@ def calcular_tabela_rota_turno(
         return pd.DataFrame()
 
     df_work = df_work[
-        ~df_work["Monitor"]
-        .astype(str)
-        .str.upper()
-        .isin({"NAN", "SEM MONITOR", "NÃO MAPEADO", ""})
+        ~df_work["Monitor"].astype(str).str.upper().isin({"NAN", "SEM MONITOR", "NÃO MAPEADO", ""})
     ].copy()
     if df_work.empty:
         return pd.DataFrame()
@@ -846,11 +807,7 @@ def calcular_tabela_rota_turno(
                         "ND": int(df_out["ND"].sum()),
                         "Migração": int(df_out["Migração"].sum()),
                         "Equipe": total_eq_escalados,
-                        "Média": (
-                            total_os_g / total_eq_escalados
-                            if total_eq_escalados
-                            else 0.0
-                        ),
+                        "Média": (total_os_g / total_eq_escalados if total_eq_escalados else 0.0),
                     },
                     {
                         "Monitor": "Total Geral | Montados",
@@ -860,9 +817,7 @@ def calcular_tabela_rota_turno(
                         "ND": int(df_out["ND"].sum()),
                         "Migração": int(df_out["Migração"].sum()),
                         "Equipe": total_eq_montados,
-                        "Média": (
-                            total_os_g / total_eq_montados if total_eq_montados else 0.0
-                        ),
+                        "Média": (total_os_g / total_eq_montados if total_eq_montados else 0.0),
                     },
                 ]
             ),
@@ -926,9 +881,7 @@ def render_bloco_rota_turno(df_master: pd.DataFrame, total_montados: int) -> Non
 
     data_hoje = datetime.now().strftime("%d/%m/%Y")
     total_efetivo = (
-        total_montados
-        if total_montados > 0
-        else int(df_master["LOGIN_TECNICO"].nunique())
+        total_montados if total_montados > 0 else int(df_master["LOGIN_TECNICO"].nunique())
     )
     for turno, label in [
         (None, f"Rota Inicial — {data_hoje}"),
@@ -1043,13 +996,7 @@ def detectar_municipios_presentes(df: pd.DataFrame) -> list[str]:
         .astype(str)
         .str.strip()
         .str.upper()
-        .apply(
-            lambda v: (
-                unicodedata.normalize("NFKD", v)
-                .encode("ASCII", errors="ignore")
-                .decode()
-            )
-        )
+        .apply(lambda v: unicodedata.normalize("NFKD", v).encode("ASCII", errors="ignore").decode())
         .unique()
     )
 
@@ -1109,9 +1056,7 @@ def detectar_municipios_presentes(df: pd.DataFrame) -> list[str]:
     return sorted(municipios_encontrados)
 
 
-def filtrar_geometria_por_municipios(
-    df_geo: pd.DataFrame, municipios: list[str]
-) -> pd.DataFrame:
+def filtrar_geometria_por_municipios(df_geo: pd.DataFrame, municipios: list[str]) -> pd.DataFrame:
     """
     Filtra as geometrias apenas para os municípios detectados.
     """
@@ -1120,10 +1065,7 @@ def filtrar_geometria_por_municipios(
 
     # Normaliza nomes dos municípios para filtro
     municipios_norm = [
-        unicodedata.normalize("NFKD", m)
-        .encode("ASCII", errors="ignore")
-        .decode()
-        .title()
+        unicodedata.normalize("NFKD", m).encode("ASCII", errors="ignore").decode().title()
         for m in municipios
     ]
 
@@ -1225,16 +1167,10 @@ def criar_mapa_folium(
     if df_geo is not None and not df_geo.empty:
 
         def style_function(feature: dict) -> dict:  # type: ignore
-            properties = (
-                feature.get("properties", {}) if isinstance(feature, dict) else {}
-            )
-            name_muni = (
-                properties.get("name_muni", "") if isinstance(properties, dict) else ""
-            )
+            properties = feature.get("properties", {}) if isinstance(feature, dict) else {}
+            name_muni = properties.get("name_muni", "") if isinstance(properties, dict) else ""
 
-            cores = cores_regiao.get(
-                name_muni, {"fill": "#F1F5F9", "stroke": "#94A3B8"}
-            )
+            cores = cores_regiao.get(name_muni, {"fill": "#F1F5F9", "stroke": "#94A3B8"})
 
             return {
                 "fillColor": cores["fill"],
@@ -1324,9 +1260,7 @@ def main() -> None:
             if "sim_equipe" in st.session_state:
                 del st.session_state["sim_equipe"]
             st.session_state["total_montados_manual"] = 0
-            st.session_state["_reset_counter"] = (
-                int(st.session_state.get("_reset_counter", 0)) + 1
-            )
+            st.session_state["_reset_counter"] = int(st.session_state.get("_reset_counter", 0)) + 1
             st.rerun()
         st.divider()
 
@@ -1373,9 +1307,7 @@ def main() -> None:
         st.session_state["total_montados_manual"] = total_montados_input
 
         if total_montados_input > 0:
-            st.caption(
-                f"✅ Usando **{total_montados_input}** técnicos montados (manual)"
-            )
+            st.caption(f"✅ Usando **{total_montados_input}** técnicos montados (manual)")
         else:
             auto_count = int(df_master["LOGIN_TECNICO"].nunique())
             st.caption(f"🔄 Usando **{auto_count}** técnicos (automático da base)")
@@ -1433,14 +1365,9 @@ def main() -> None:
                     return np.nan
                 try:
                     if "Gbps" in label:
-                        return (
-                            float(label.replace("Gbps", "").replace(",", ".").strip())
-                            * 1000
-                        )
+                        return float(label.replace("Gbps", "").replace(",", ".").strip()) * 1000
                     if "Mbps" in label:
-                        return float(
-                            label.replace("Mbps", "").replace(",", ".").strip()
-                        )
+                        return float(label.replace("Mbps", "").replace(",", ".").strip())
                 except ValueError:
                     pass
                 return np.nan
@@ -1454,9 +1381,7 @@ def main() -> None:
         return
 
     # ── Resultado da base ────────────────────────────
-    regioes = (
-        sorted(df_master["REGIÃO"].unique()) if "REGIÃO" in df_master.columns else []
-    )
+    regioes = sorted(df_master["REGIÃO"].unique()) if "REGIÃO" in df_master.columns else []
     render_resultado_base(regioes, len(df_master))
 
     # ── KPIs Principais ────────────────────────────
@@ -1509,9 +1434,7 @@ def main() -> None:
     g1, g2 = st.columns([1, 1.2])
 
     with g1:
-        df_per = (
-            df_master.groupby("PERIODO_TRATADO")["TOTAL_TAREFAS"].sum().reset_index()
-        )
+        df_per = df_master.groupby("PERIODO_TRATADO")["TOTAL_TAREFAS"].sum().reset_index()
         fig_per = px.bar(
             df_per,
             x="PERIODO_TRATADO",
@@ -1661,15 +1584,11 @@ def main() -> None:
                     mapa = criar_mapa_folium(df_geo, df_pontos, municipios_detectados)
                     st_folium(mapa, width=1200, height=600, returned_objects=[])
                 else:
-                    render_insight(
-                        "Não foi possível carregar as bordas.", tipo="alerta"
-                    )
+                    render_insight("Não foi possível carregar as bordas.", tipo="alerta")
 
         else:  # Gráfico
             if "CIDADE" in df_master.columns:
-                cidades_count = (
-                    df_master["CIDADE"].fillna("Não informado").value_counts().head(15)
-                )
+                cidades_count = df_master["CIDADE"].fillna("Não informado").value_counts().head(15)
                 fig = px.bar(
                     x=cidades_count.values,
                     y=cidades_count.index,
@@ -1738,9 +1657,7 @@ def main() -> None:
                     break
 
         if not colunas_encontradas:
-            render_insight(
-                "Nenhuma das colunas esperadas foi encontrada na base.", tipo="alerta"
-            )
+            render_insight("Nenhuma das colunas esperadas foi encontrada na base.", tipo="alerta")
         else:
             df_contratos = (
                 df_master[list(colunas_encontradas.keys())]
@@ -1806,9 +1723,7 @@ def main() -> None:
     # ABA — EQUALIZAÇÃO
     # ============================================================
     with aba_equalizacao:
-        render_section_header(
-            "⚖️", "Diagnóstico de Equalização por Distribuição de O.S."
-        )
+        render_section_header("⚖️", "Diagnóstico de Equalização por Distribuição de O.S.")
 
         df_eq_work = df_master[
             ~df_master["Monitor"]
@@ -1911,9 +1826,9 @@ def main() -> None:
                 (df_eq_mon["Equipe"] * os_por_tecnico_ideal).round(0).astype(int)
             )
 
-            df_eq_mon["Balanço (O.S.)"] = (
-                df_eq_mon["OS_Atual"] - df_eq_mon["OS Ideal"]
-            ).astype(int)
+            df_eq_mon["Balanço (O.S.)"] = (df_eq_mon["OS_Atual"] - df_eq_mon["OS Ideal"]).astype(
+                int
+            )
 
             df_eq_mon["Média Atual"] = (
                 df_eq_mon["OS_Atual"] / df_eq_mon["Equipe"].replace(0, np.nan)
@@ -1921,11 +1836,7 @@ def main() -> None:
 
             df_eq_mon["Desvio %"] = np.where(
                 os_por_tecnico_ideal > 0,
-                (
-                    (df_eq_mon["Média Atual"] - os_por_tecnico_ideal)
-                    / os_por_tecnico_ideal
-                )
-                * 100,
+                ((df_eq_mon["Média Atual"] - os_por_tecnico_ideal) / os_por_tecnico_ideal) * 100,
                 0.0,
             )
 
@@ -1938,9 +1849,9 @@ def main() -> None:
 
             df_eq_mon["Status"] = df_eq_mon["Desvio %"].apply(classificar_status)
 
-            df_eq_mon = df_eq_mon.sort_values(
-                "Balanço (O.S.)", ascending=False
-            ).reset_index(drop=True)
+            df_eq_mon = df_eq_mon.sort_values("Balanço (O.S.)", ascending=False).reset_index(
+                drop=True
+            )
 
             # ============================================================
             # 5. TABELA CONSOLIDADA
@@ -2140,9 +2051,7 @@ def main() -> None:
                 ):
                     for mon in monitores_atuais:
                         st.session_state["sim_os"][mon] = int(
-                            df_eq_mon.loc[df_eq_mon["Monitor"] == mon, "OS_Atual"].iloc[
-                                0
-                            ]
+                            df_eq_mon.loc[df_eq_mon["Monitor"] == mon, "OS_Atual"].iloc[0]
                         )
                     st.rerun()
 
@@ -2153,17 +2062,13 @@ def main() -> None:
                 ):
                     for mon in monitores_atuais:
                         st.session_state["sim_os"][mon] = int(
-                            df_eq_mon.loc[df_eq_mon["Monitor"] == mon, "OS Ideal"].iloc[
-                                0
-                            ]
+                            df_eq_mon.loc[df_eq_mon["Monitor"] == mon, "OS Ideal"].iloc[0]
                         )
                     st.rerun()
 
             cols_sim = st.columns(min(len(monitores_atuais), 4))
             for i, mon in enumerate(monitores_atuais):
-                equipe_mon = int(
-                    df_eq_mon.loc[df_eq_mon["Monitor"] == mon, "Equipe"].iloc[0]
-                )
+                equipe_mon = int(df_eq_mon.loc[df_eq_mon["Monitor"] == mon, "Equipe"].iloc[0])
                 with cols_sim[i % len(cols_sim)]:
                     valor_input = st.number_input(
                         f"📦 {mon} ({equipe_mon} téc.)",
@@ -2183,11 +2088,7 @@ def main() -> None:
 
             df_sim["Desvio Sim %"] = np.where(
                 os_por_tecnico_ideal > 0,
-                (
-                    (df_sim["Média Simulada"] - os_por_tecnico_ideal)
-                    / os_por_tecnico_ideal
-                )
-                * 100,
+                ((df_sim["Média Simulada"] - os_por_tecnico_ideal) / os_por_tecnico_ideal) * 100,
                 0.0,
             )
             df_sim["Status Sim"] = df_sim["Desvio Sim %"].apply(classificar_status)
