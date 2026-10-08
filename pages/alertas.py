@@ -15,9 +15,7 @@ from components.componentes import (
 def _render_alerta(alerta: Alerta) -> None:
     icones = {"CRÍTICO": "🔴", "ALTO": "🟠", "MÉDIO": "🟡", "BAIXO": "🔵"}
     with st.container(border=True):
-        st.markdown(
-            f"{icones[alerta.severidade]} **{alerta.severidade} · {alerta.titulo}**"
-        )
+        st.markdown(f"{icones[alerta.severidade]} **{alerta.severidade} · {alerta.titulo}**")
         st.caption(f"Origem: {alerta.origem}")
         st.text(alerta.detalhe)
 
@@ -32,9 +30,7 @@ aplicar_estilo()
 render_page_sidebar_theme_selector()
 
 st.title("Alertas automáticos")
-st.caption(
-    "Sinais calculados a partir do estado atual das fontes sincronizadas e do robô local."
-)
+st.caption("Sinais calculados a partir do estado atual das fontes sincronizadas e do robô local.")
 alertas = avaliar_alertas(dict(st.session_state))
 
 criticos = sum(alerta.severidade == "CRÍTICO" for alerta in alertas)

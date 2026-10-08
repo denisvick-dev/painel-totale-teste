@@ -44,8 +44,7 @@ def avaliar_consistencia(df: pd.DataFrame | None) -> tuple[EstadoSaude, str]:
     vazias = [
         coluna
         for coluna in df.columns
-        if df[coluna].isna().all()
-        or df[coluna].astype("string").str.strip().eq("").all()
+        if df[coluna].isna().all() or df[coluna].astype("string").str.strip().eq("").all()
     ]
     duplicadas = int(df.duplicated().sum())
     if duplicadas or vazias:

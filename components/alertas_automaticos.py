@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
@@ -82,7 +82,7 @@ def avaliar_alertas(
                         "ALTO",
                         "Processamento lento",
                         "Robô local",
-                        f"Ativo há {duracao/60:.0f} min.",
+                        f"Ativo há {duracao / 60:.0f} min.",
                     )
                 )
 
@@ -146,9 +146,7 @@ def avaliar_alertas(
                     # O erro "unhashable type: list" costuma ocorrer AQUI dentro se houver colunas com listas
                     nivel_c, resumo_c = avaliar_consistencia(df_fonte)
                     if nivel_c != "ok":
-                        sev_c: Severidade = (
-                            "ALTO" if str(nivel_c).lower() == "critico" else "MÉDIO"
-                        )
+                        sev_c: Severidade = "ALTO" if str(nivel_c).lower() == "critico" else "MÉDIO"
                         alertas.append(
                             Alerta(
                                 sev_c,
@@ -183,6 +181,4 @@ def avaliar_alertas(
     # Ordenação Segura
     pesos: dict[str, int] = {"CRÍTICO": 0, "ALTO": 1, "MÉDIO": 2, "BAIXO": 3}
 
-    return sorted(
-        alertas, key=lambda a: (pesos.get(str(a.severidade).upper(), 99), a.titulo)
-    )
+    return sorted(alertas, key=lambda a: (pesos.get(str(a.severidade).upper(), 99), a.titulo))

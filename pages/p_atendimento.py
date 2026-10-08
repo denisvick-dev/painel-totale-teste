@@ -454,9 +454,7 @@ def carregar_lista_ativos() -> pd.DataFrame:
 
     # Método 1: Google Visualization API (GViz CSV - Não exige gid e previne erro 400)
     try:
-        url_gviz = (
-            f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv"
-        )
+        url_gviz = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv"
         df = pd.read_csv(url_gviz)
     except Exception:
         df = None
@@ -465,18 +463,14 @@ def carregar_lista_ativos() -> pd.DataFrame:
     if df is None or df.empty:
         try:
             conn = st.connection("gsheets", type=GSheetsConnection)
-            df = conn.read(
-                spreadsheet=f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
-            )
+            df = conn.read(spreadsheet=f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit")
         except Exception:
             df = None
 
     # Método 3: Export direto sem gid fixo
     if df is None or df.empty:
         try:
-            url_export = (
-                f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
-            )
+            url_export = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
             df = pd.read_csv(url_export)
         except Exception as e:
             st.warning(f"⚠️ Não foi possível conectar com Google Sheets: {e}")
@@ -498,11 +492,7 @@ def carregar_lista_ativos() -> pd.DataFrame:
         df = df[cols_encontradas].copy()
 
         df["Login"] = (
-            df["Login"]
-            .astype(str)
-            .str.replace(r"\.0$", "", regex=True)
-            .str.strip()
-            .str.upper()
+            df["Login"].astype(str).str.replace(r"\.0$", "", regex=True).str.strip().str.upper()
         )
 
         df = df.drop_duplicates(subset=["Login"], keep="last")
@@ -534,11 +524,7 @@ def aplicar_merge_ativos(
     df = df.copy()
 
     df["_LOGIN_KEY"] = (
-        df[col_login]
-        .astype(str)
-        .str.replace(r"\.0$", "", regex=True)
-        .str.strip()
-        .str.upper()
+        df[col_login].astype(str).str.replace(r"\.0$", "", regex=True).str.strip().str.upper()
     )
 
     for c in ["Técnico", "Monitor", "Base"]:
@@ -660,9 +646,7 @@ def limpar_base(
 
     if col_status_atividade and col_status_atividade in df_clean.columns:
         status_norm = df_clean[col_status_atividade].fillna("").astype(str).str.upper()
-        mask_suspenso = status_norm.str.contains(
-            r"SUSPEN|BLOQUEAD|INATIV", regex=True, na=False
-        )
+        mask_suspenso = status_norm.str.contains(r"SUSPEN|BLOQUEAD|INATIV", regex=True, na=False)
         diag["suspensos"] = int(mask_suspenso.sum())
         df_clean = df_clean.loc[~mask_suspenso].copy()
 
@@ -802,9 +786,7 @@ def calcular_ranking_monitores(
         s = seg % 60
         return f"{h:02d}:{m:02d}:{s:02d}"
 
-    df_mon["Média do Primeiro Atend."] = df_mon["Media_Segundos"].apply(
-        segundos_para_hora
-    )
+    df_mon["Média do Primeiro Atend."] = df_mon["Media_Segundos"].apply(segundos_para_hora)
     df_mon["Mais Cedo"] = df_mon["Primeiro"].apply(segundos_para_hora)
     df_mon["Mais Tarde"] = df_mon["Ultimo"].apply(segundos_para_hora)
 
@@ -842,9 +824,7 @@ def rank_medal(rank: int) -> str:
     return f"#{rank}"
 
 
-def formatar_ranking_para_exibicao(
-    df: pd.DataFrame, col_rank: str = "Rank"
-) -> pd.DataFrame:
+def formatar_ranking_para_exibicao(df: pd.DataFrame, col_rank: str = "Rank") -> pd.DataFrame:
     if df.empty:
         return df
     df = df.copy()
@@ -968,9 +948,7 @@ def main() -> None:
     try:
         df_raw = carregar_arquivo(arq.getvalue(), arq.name)
     except Exception as e:
-        render_insight(
-            f"❌ <b>Erro ao ler arquivo:</b> <code>{e}</code>", tipo="critico"
-        )
+        render_insight(f"❌ <b>Erro ao ler arquivo:</b> <code>{e}</code>", tipo="critico")
         return
 
     if df_raw.empty:
@@ -978,18 +956,12 @@ def main() -> None:
         return
 
     # Detecção de colunas
-    col_contrato = buscar_coluna(
-        df_raw, ["CONTRATO", "NUM CONTRATO", "NUMERO", "N CONTRATO"]
-    )
+    col_contrato = buscar_coluna(df_raw, ["CONTRATO", "NUM CONTRATO", "NUMERO", "N CONTRATO"])
     col_status = buscar_coluna(
         df_raw, ["STATUS DA O.S", "STATUS OS", "STATUS", "SITUACAO", "SITUAÇÃO"]
     )
-    col_status_atividade = buscar_coluna(
-        df_raw, ["STATUS DA ATIVIDADE", "STATUS ATIVIDADE"]
-    )
-    col_cliente = buscar_coluna(
-        df_raw, ["CLIENTE", "NOME", "RAZAO SOCIAL", "RAZÃO SOCIAL"]
-    )
+    col_status_atividade = buscar_coluna(df_raw, ["STATUS DA ATIVIDADE", "STATUS ATIVIDADE"])
+    col_cliente = buscar_coluna(df_raw, ["CLIENTE", "NOME", "RAZAO SOCIAL", "RAZÃO SOCIAL"])
     col_tipo = buscar_coluna(df_raw, ["TIPO", "SERVICO", "SERVIÇO"])
     col_regiao = buscar_coluna(df_raw, ["REGIAO", "REGIÃO", "CIDADE", "UF", "ESTADO"])
     col_login = buscar_coluna(
@@ -1015,9 +987,7 @@ def main() -> None:
     col_tecnico = (
         "Técnico"
         if "Técnico" in df.columns
-        else buscar_coluna(
-            df_raw, ["TECNICO", "TÉCNICO", "PROFISSIONAL", "NOME EQUIPE"]
-        )
+        else buscar_coluna(df_raw, ["TECNICO", "TÉCNICO", "PROFISSIONAL", "NOME EQUIPE"])
     )
     col_monitor = "Monitor" if "Monitor" in df.columns else None
     col_base_final = "Base" if "Base" in df.columns else col_regiao
@@ -1028,9 +998,7 @@ def main() -> None:
         st.caption(f"📄 **Arquivo:** `{arq.name}`")
 
     if df.empty:
-        render_insight(
-            "⚠️ Após limpeza, não restou nenhum registro válido.", tipo="critico"
-        )
+        render_insight("⚠️ Após limpeza, não restou nenhum registro válido.", tipo="critico")
         return
 
     if col_status:
@@ -1050,9 +1018,7 @@ def main() -> None:
     render_section("📈", "Panorama Geral", "KPIs")
 
     c1, c2, c3, c4 = st.columns(4)
-    render_kpi(
-        c1, "Base Válida", fmt_int(total), sub="após limpeza", cor="#059669", icone="🚗"
-    )
+    render_kpi(c1, "Base Válida", fmt_int(total), sub="após limpeza", cor="#059669", icone="🚗")
     render_kpi(
         c2,
         "Pendentes",
@@ -1114,11 +1080,7 @@ def main() -> None:
     render_section(
         "🏆",
         "Ranking de Técnicos — Primeiro Horário de Saída",
-        (
-            f"{len(df_primeiro_horario)} técnicos"
-            if not df_primeiro_horario.empty
-            else "sem dados"
-        ),
+        (f"{len(df_primeiro_horario)} técnicos" if not df_primeiro_horario.empty else "sem dados"),
     )
 
     if df_primeiro_horario.empty:
@@ -1176,9 +1138,7 @@ def main() -> None:
         st.markdown("")
 
         df_exibir_tec = formatar_ranking_para_exibicao(df_primeiro_horario)
-        df_exibir_tec = df_exibir_tec.rename(
-            columns={"Hora Início": "Primeiro Horário"}
-        )
+        df_exibir_tec = df_exibir_tec.rename(columns={"Hora Início": "Primeiro Horário"})
 
         colunas_desejadas = [
             "Rank",
@@ -1193,9 +1153,7 @@ def main() -> None:
         df_exibir_tec = df_exibir_tec[colunas_exibir]
 
         styled_tec = df_exibir_tec.style
-        style_func = getattr(styled_tec, "map", None) or getattr(
-            styled_tec, "applymap", None
-        )
+        style_func = getattr(styled_tec, "map", None) or getattr(styled_tec, "applymap", None)
         if style_func is not None:
             styled_tec = style_func(aplicar_cor_horario, subset=["Primeiro Horário"])
 
@@ -1229,9 +1187,9 @@ def main() -> None:
                 use_container_width=True,
             )
         with col_dl2:
-            csv_t = df_exibir_tec.to_csv(
-                index=False, sep=";", encoding="utf-8-sig"
-            ).encode("utf-8-sig")
+            csv_t = df_exibir_tec.to_csv(index=False, sep=";", encoding="utf-8-sig").encode(
+                "utf-8-sig"
+            )
             st.download_button(
                 "📄 **Baixar CSV**",
                 data=csv_t,
@@ -1315,12 +1273,8 @@ def main() -> None:
                         width="small",
                         help="Média do horário do primeiro atendimento dos técnicos",
                     ),
-                    "Mais Cedo": st.column_config.TextColumn(
-                        "Mais Cedo", width="small"
-                    ),
-                    "Mais Tarde": st.column_config.TextColumn(
-                        "Mais Tarde", width="small"
-                    ),
+                    "Mais Cedo": st.column_config.TextColumn("Mais Cedo", width="small"),
+                    "Mais Tarde": st.column_config.TextColumn("Mais Tarde", width="small"),
                     "Qtd. Técnicos": st.column_config.NumberColumn(
                         "Técnicos", width="small", format="%d"
                     ),
@@ -1341,9 +1295,9 @@ def main() -> None:
                     use_container_width=True,
                 )
             with col_dm2:
-                csv_m = df_exibir_mon.to_csv(
-                    index=False, sep=";", encoding="utf-8-sig"
-                ).encode("utf-8-sig")
+                csv_m = df_exibir_mon.to_csv(index=False, sep=";", encoding="utf-8-sig").encode(
+                    "utf-8-sig"
+                )
                 st.download_button(
                     "📄 **Baixar CSV**",
                     data=csv_m,
@@ -1355,9 +1309,7 @@ def main() -> None:
     # ─────────────────────────────────────────────────
     # FILTROS + TABELA DE PENDENTES
     # ─────────────────────────────────────────────────
-    render_section(
-        "🚗", "Contratos Pendentes para Rota", f"{fmt_int(pendentes)} pendentes"
-    )
+    render_section("🚗", "Contratos Pendentes para Rota", f"{fmt_int(pendentes)} pendentes")
 
     df_filtrado = df_pend.copy()
 
@@ -1416,9 +1368,7 @@ def main() -> None:
     if busca:
         mask_busca = pd.Series(False, index=df_filtrado.index)
         for col in df_filtrado.columns:
-            mask_busca |= (
-                df_filtrado[col].astype(str).str.contains(busca, case=False, na=False)
-            )
+            mask_busca |= df_filtrado[col].astype(str).str.contains(busca, case=False, na=False)
         df_filtrado = df_filtrado[mask_busca]
 
     # Resultado
@@ -1475,9 +1425,7 @@ def main() -> None:
         )
 
     with col_exp2:
-        csv = df_exibir.to_csv(index=False, sep=";", encoding="utf-8-sig").encode(
-            "utf-8-sig"
-        )
+        csv = df_exibir.to_csv(index=False, sep=";", encoding="utf-8-sig").encode("utf-8-sig")
         st.download_button(
             "📄 **Baixar CSV**",
             data=csv,

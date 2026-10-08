@@ -262,9 +262,7 @@ def classificar_tipo_servico(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]
     termo_mig_norm = _norm_str(TERMO_MIGRACAO_OS)
     termo_pon_norm = _norm_str(TERMO_GPON_HABILIDADE)
 
-    flag_migracao_tipo = serie_tipo_os_1.str.contains(
-        termo_mig_norm, na=False, regex=False
-    )
+    flag_migracao_tipo = serie_tipo_os_1.str.contains(termo_mig_norm, na=False, regex=False)
     flag_hab_pon = serie_habilidade.str.contains(termo_pon_norm, na=False, regex=False)
     flag_migracao = flag_migracao_tipo & flag_hab_pon
 
@@ -293,12 +291,7 @@ def classificar_tipo_servico(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]
 def _serie_total_tarefas(df: pd.DataFrame) -> pd.Series:
     if "TOTAL DE TAREFAS" not in df.columns:
         return pd.Series(1, index=df.index, dtype="float64")
-    return (
-        pd.to_numeric(df["TOTAL DE TAREFAS"], errors="coerce")
-        .fillna(1)
-        .round()
-        .clip(lower=0)
-    )
+    return pd.to_numeric(df["TOTAL DE TAREFAS"], errors="coerce").fillna(1).round().clip(lower=0)
 
 
 def extrair_metricas_criterios(df: pd.DataFrame) -> dict[str, int]:
@@ -532,8 +525,7 @@ def detectar_cols_tipo(df: pd.DataFrame) -> list[str]:
     return [
         str(c)
         for c in df.columns
-        if "TIPO" in str(c).upper()
-        and ("OS" in str(c).upper() or "O S" in str(c).upper())
+        if "TIPO" in str(c).upper() and ("OS" in str(c).upper() or "O S" in str(c).upper())
     ]
 
 

@@ -47,8 +47,8 @@ def test_sem_use_container_width() -> None:
                 ofensas.append(f"{caminho.relative_to(RAIZ)}:{no.lineno}")
 
     assert not ofensas, (
-        "use_container_width foi depreciado; use width=\"stretch\" "
-        "(ou width=\"content\" para False):\n  " + "\n  ".join(ofensas)
+        'use_container_width foi depreciado; use width="stretch" '
+        '(ou width="content" para False):\n  ' + "\n  ".join(ofensas)
     )
 
 
@@ -66,8 +66,7 @@ def test_piso_de_versao_no_requirements() -> None:
         'width="stretch" e quebrariam com TypeError.'
     )
     assert tuple(int(p) for p in match.groups()) >= PISO_STREAMLIT, (
-        f"Piso {match.group(0)} abaixo do necessário "
-        f"({'.'.join(map(str, PISO_STREAMLIT))})."
+        f"Piso {match.group(0)} abaixo do necessário ({'.'.join(map(str, PISO_STREAMLIT))})."
     )
 
 

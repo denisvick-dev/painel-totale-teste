@@ -219,12 +219,8 @@ MAPA_PERFORMANCE: dict[str, str | None] = {
 }
 
 TipoInsightType = Literal["ok", "info", "alerta", "critico", "acao"]
-TemaKPIType = Literal[
-    "azul", "verde", "vermelho", "laranja", "cinza", "roxo", "gradiente"
-]
-TipoProgressBarType = Literal[
-    "azul", "laranja", "verde", "vermelho", "roxo", "gradiente"
-]
+TemaKPIType = Literal["azul", "verde", "vermelho", "laranja", "cinza", "roxo", "gradiente"]
+TipoProgressBarType = Literal["azul", "laranja", "verde", "vermelho", "roxo", "gradiente"]
 TipoTrendType = Literal["up", "down", "neutral", "none"]
 
 TEMAS_STATUS: dict[str, TemaKPIType] = {
@@ -258,12 +254,8 @@ def normalizar_chave(serie: pd.Series) -> pd.Series:
     return serie.astype(str).str.strip().str.upper()
 
 
-def encontrar_coluna_flexivel(
-    df: pd.DataFrame, nomes_candidatos: list[str]
-) -> str | None:
-    cols_map: dict[str, str] = {
-        remover_acentos_e_padronizar(c): str(c) for c in df.columns
-    }
+def encontrar_coluna_flexivel(df: pd.DataFrame, nomes_candidatos: list[str]) -> str | None:
+    cols_map: dict[str, str] = {remover_acentos_e_padronizar(c): str(c) for c in df.columns}
     for candidato in nomes_candidatos:
         cand_norm = remover_acentos_e_padronizar(candidato)
         if cand_norm in cols_map:
@@ -338,9 +330,7 @@ def fmt_int(valor: Any) -> str:
 def parse_data_texto(texto: Any) -> pd.Timestamp | None:
     if texto is None or (isinstance(texto, float) and np.isnan(texto)):
         return None
-    parsed = pd.to_datetime(
-        str(texto).replace(" às ", " "), dayfirst=True, errors="coerce"
-    )
+    parsed = pd.to_datetime(str(texto).replace(" às ", " "), dayfirst=True, errors="coerce")
     if pd.isna(parsed):
         return None
     return pd.Timestamp(parsed)
@@ -366,8 +356,7 @@ def _coluna_e_data(nome_coluna: str) -> bool:
         return True
     c_norm = remover_acentos_e_padronizar(nome_coluna)
     return any(
-        k in c_norm
-        for k in ["created", "fechamento", "execucao", "abertura", "notificacao"]
+        k in c_norm for k in ["created", "fechamento", "execucao", "abertura", "notificacao"]
     )
 
 
@@ -394,8 +383,7 @@ def _serie_para_datetime(serie: pd.Series) -> pd.Series:
 
 def _formatar_data_maxima(max_dt: Any) -> str:
     if hasattr(max_dt, "hour") and (
-        int(getattr(max_dt, "hour", 0) or 0) != 0
-        or int(getattr(max_dt, "minute", 0) or 0) != 0
+        int(getattr(max_dt, "hour", 0) or 0) != 0 or int(getattr(max_dt, "minute", 0) or 0) != 0
     ):
         return max_dt.strftime("%d/%m/%Y às %H:%M")
     if hasattr(max_dt, "strftime"):
@@ -446,9 +434,7 @@ def anexar_data(df: pd.DataFrame, aba: str | None = None) -> pd.DataFrame:
     return out
 
 
-def extrair_data_maxima_aba(
-    df: pd.DataFrame | None, aba: str | None = None
-) -> str | None:
+def extrair_data_maxima_aba(df: pd.DataFrame | None, aba: str | None = None) -> str | None:
     """Maior data válida da base. No TEC1 a referência é DAT_NOTA, não o relógio."""
     if df is None or df.empty:
         return None
@@ -494,13 +480,7 @@ def normalizar_periodo(valor: Any, padrao_ini: Any, padrao_fim: Any) -> tuple[An
 
 
 def aplicar_periodo(df: pd.DataFrame, inicio: Any, fim: Any) -> pd.DataFrame:
-    if (
-        df is None
-        or df.empty
-        or "_DATA" not in df.columns
-        or inicio is None
-        or fim is None
-    ):
+    if df is None or df.empty or "_DATA" not in df.columns or inicio is None or fim is None:
         return df
     if int(df["_DATA"].notna().sum()) == 0:
         return df
@@ -550,11 +530,7 @@ def gerar_regras_cores(
         regras_realizado: dict[str, str] = {}
         for _, row in df_data.iterrows():
             val_real = row[col_realizado]
-            meta_val = (
-                row[col_meta]
-                if (col_meta and col_meta in df_data.columns)
-                else meta_padrao
-            )
+            meta_val = row[col_meta] if (col_meta and col_meta in df_data.columns) else meta_padrao
             try:
                 if pd.isna(val_real):
                     continue
@@ -628,25 +604,18 @@ def resolver_chave_excel(sheet_name: str, df_sheet: pd.DataFrame) -> str | None:
 
     for aba_config, col_esperada in SHEET_LOGIN_MAPPING.items():
         if remover_acentos_e_padronizar(aba_config) == sheet_name_norm:
-            col_encontrada = encontrar_coluna_flexivel(
-                df_sheet, [col_esperada, aba_config]
-            )
+            col_encontrada = encontrar_coluna_flexivel(df_sheet, [col_esperada, aba_config])
             if col_encontrada:
                 return col_encontrada
 
-    todas_cols: list[str] = list(SHEET_LOGIN_MAPPING.values()) + list(
-        SHEET_LOGIN_MAPPING.keys()
-    )
+    todas_cols: list[str] = list(SHEET_LOGIN_MAPPING.values()) + list(SHEET_LOGIN_MAPPING.keys())
     col_encontrada = encontrar_coluna_flexivel(df_sheet, todas_cols)
     if col_encontrada:
         return col_encontrada
 
     for col in df_sheet.columns:
         c_norm = remover_acentos_e_padronizar(col)
-        if any(
-            termo in c_norm
-            for termo in ["login", "codtec", "cdtec", "matricula", "tecnico"]
-        ):
+        if any(termo in c_norm for termo in ["login", "codtec", "cdtec", "matricula", "tecnico"]):
             return str(col)
     return None
 
@@ -679,29 +648,13 @@ def merge_aba(
     merged = pd.merge(left, right, on="_KEY", how=how, suffixes=("", "_ativos"))
 
     renomear: dict[str, str] = {}
-    if (
-        col_tec_ativos
-        and col_tec_ativos in merged.columns
-        and col_tec_ativos != "Tecnico"
-    ):
+    if col_tec_ativos and col_tec_ativos in merged.columns and col_tec_ativos != "Tecnico":
         renomear[col_tec_ativos] = "Tecnico"
-    if (
-        col_mon_ativos
-        and col_mon_ativos in merged.columns
-        and col_mon_ativos != "Monitor"
-    ):
+    if col_mon_ativos and col_mon_ativos in merged.columns and col_mon_ativos != "Monitor":
         renomear[col_mon_ativos] = "Monitor"
-    if (
-        col_base_ativos
-        and col_base_ativos in merged.columns
-        and col_base_ativos != "Base"
-    ):
+    if col_base_ativos and col_base_ativos in merged.columns and col_base_ativos != "Base":
         renomear[col_base_ativos] = "Base"
-    if (
-        col_sit_ativos
-        and col_sit_ativos in merged.columns
-        and col_sit_ativos != "Situacao"
-    ):
+    if col_sit_ativos and col_sit_ativos in merged.columns and col_sit_ativos != "Situacao":
         renomear[col_sit_ativos] = "Situacao"
     if renomear:
         merged = merged.rename(columns=renomear)
@@ -750,9 +703,7 @@ def merge_todas_abas(
     return resultados
 
 
-def dataframe_indicador(
-    resultados: dict[str, dict[str, Any]], chave: str
-) -> pd.DataFrame | None:
+def dataframe_indicador(resultados: dict[str, dict[str, Any]], chave: str) -> pd.DataFrame | None:
     if chave == "OS_Digital":
         return resultados.get("Geoloc_Os", {}).get("df")
     return resultados.get(chave, {}).get("df")
@@ -828,9 +779,7 @@ def calcular_aderencia_criterio(
         coluna = col_avaliada
 
     qtd_num = int((serie_score == 1.0).sum())
-    qtd_den = (
-        int(serie_score.notna().sum()) if tipo == "dual_column_ratio" else len(df)
-    )
+    qtd_den = int(serie_score.notna().sum()) if tipo == "dual_column_ratio" else len(df)
     pct = (qtd_num / qtd_den * 100.0) if qtd_den > 0 else 0.0
     return (
         coluna,
@@ -863,12 +812,7 @@ def agregar_grupo(
     com_situacao: bool = False,
     com_monitor: bool = False,
 ) -> pd.DataFrame:
-    if (
-        df is None
-        or df.empty
-        or "_SCORE" not in df.columns
-        or col_grupo not in df.columns
-    ):
+    if df is None or df.empty or "_SCORE" not in df.columns or col_grupo not in df.columns:
         return pd.DataFrame()
 
     tmp = df.copy()
@@ -891,12 +835,8 @@ def agregar_grupo(
         out = out.merge(mon, on="_GRUPO", how="left")
 
     out = out.rename(columns={"_GRUPO": col_grupo})
-    out["Atingidos"] = (
-        pd.to_numeric(out["Atingidos"], errors="coerce").fillna(0).astype(int)
-    )
-    out["Total_OS"] = (
-        pd.to_numeric(out["Total_OS"], errors="coerce").fillna(0).astype(int)
-    )
+    out["Atingidos"] = pd.to_numeric(out["Atingidos"], errors="coerce").fillna(0).astype(int)
+    out["Total_OS"] = pd.to_numeric(out["Total_OS"], errors="coerce").fillna(0).astype(int)
     out = out[out["Total_OS"] > 0].copy()
     if out.empty:
         return out
@@ -910,12 +850,7 @@ def agregar_grupo(
 
 def serie_diaria(df: pd.DataFrame) -> pd.DataFrame:
     vazio = pd.DataFrame(columns=["Data", "Realizado", "Total", "Atingidos"])
-    if (
-        df is None
-        or df.empty
-        or "_DATA" not in df.columns
-        or "_SCORE" not in df.columns
-    ):
+    if df is None or df.empty or "_DATA" not in df.columns or "_SCORE" not in df.columns:
         return vazio
     valid = df[df["_DATA"].notna() & df["_SCORE"].notna()].copy()
     if valid.empty:
@@ -940,12 +875,7 @@ def comparativo_7d(df: pd.DataFrame) -> dict[str, Any]:
         "ini": None,
         "fim": None,
     }
-    if (
-        df is None
-        or df.empty
-        or "_DATA" not in df.columns
-        or "_SCORE" not in df.columns
-    ):
+    if df is None or df.empty or "_DATA" not in df.columns or "_SCORE" not in df.columns:
         return vazio
     datas = df["_DATA"].dropna()
     if datas.empty:
@@ -998,11 +928,7 @@ def concentracao_nao_conformes(
     fora = df[df["_SCORE"] == 0]
     if fora.empty:
         return vazio
-    por = (
-        fora.groupby(fora[col_tec].map(rotulo_categoria))
-        .size()
-        .sort_values(ascending=False)
-    )
+    por = fora.groupby(fora[col_tec].map(rotulo_categoria)).size().sort_values(ascending=False)
     por = por[por.index != SEM_VINCULO]
     if por.empty:
         return {"qtd": len(fora), "top": 0, "n": 0, "pct_top": 0.0, "nomes": []}
@@ -1283,20 +1209,13 @@ def texto_insight_executivo(
         margem = [d for d in fora if d["Status"] == "PENDENTE"]
         partes: list[str] = []
         if criticos:
-            nomes = ", ".join(
-                nome_curto(d.get("_chave"), d.get("Indicador")) for d in criticos
-            )
+            nomes = ", ".join(nome_curto(d.get("_chave"), d.get("Indicador")) for d in criticos)
             partes.append(f"{len(criticos)} fora do objetivo ({nomes})")
         if margem:
-            nomes = ", ".join(
-                nome_curto(d.get("_chave"), d.get("Indicador")) for d in margem
-            )
-            partes.append(
-                f"{len(margem)} na margem crítica, até 5 p.p. abaixo ({nomes})"
-            )
+            nomes = ", ".join(nome_curto(d.get("_chave"), d.get("Indicador")) for d in margem)
+            partes.append(f"{len(margem)} na margem crítica, até 5 p.p. abaixo ({nomes})")
         texto = (
-            f"{' e '.join(partes)}. "
-            f"Maior gap: {pior['Indicador']} ({fmt_pp(pior['Desvio (%)'])})."
+            f"{' e '.join(partes)}. Maior gap: {pior['Indicador']} ({fmt_pp(pior['Desvio (%)'])})."
         )
         tipo = "critico" if criticos else "alerta"
 
@@ -1382,11 +1301,7 @@ def renderizar_visao_executiva_geral(resultados: dict[str, dict[str, Any]]) -> N
     for chave in ORDEM_INDICADORES:
         df_chave = dataframe_indicador(resultados, chave)
         if df_chave is not None and not df_chave.empty:
-            frames.append(
-                df_chave
-                if "_DATA" in df_chave.columns
-                else anexar_data(df_chave, chave)
-            )
+            frames.append(df_chave if "_DATA" in df_chave.columns else anexar_data(df_chave, chave))
 
     bases: set[str] = set()
     for df_tmp in frames:
@@ -1525,20 +1440,14 @@ def renderizar_visao_executiva_geral(resultados: dict[str, dict[str, Any]]) -> N
         df_fisica = info_fisica.get("df")
         if df_fisica is None or df_fisica.empty:
             continue
-        df_fisica = aplicar_periodo(
-            aplicar_filtro_base(df_fisica, sel_base), ini_sel, fim_sel
-        )
+        df_fisica = aplicar_periodo(aplicar_filtro_base(df_fisica, sel_base), ini_sel, fim_sel)
         vinc_fisica = resumo_vinculo(df_fisica)
         vinculo_total += vinc_fisica["total"]
         vinculo_sem += vinc_fisica["sem"]
     vinculo = {
         "total": vinculo_total,
         "sem": vinculo_sem,
-        "pct": (
-            ((vinculo_total - vinculo_sem) / vinculo_total * 100.0)
-            if vinculo_total
-            else 0.0
-        ),
+        "pct": (((vinculo_total - vinculo_sem) / vinculo_total * 100.0) if vinculo_total else 0.0),
     }
 
     texto, tipo_insight = texto_insight_executivo(dados, vinculo)
@@ -1587,9 +1496,7 @@ def renderizar_visao_executiva_geral(resultados: dict[str, dict[str, Any]]) -> N
         "Data final da base",
         data_final,
         sub=(
-            "Há 0 dias"
-            if atraso == 0
-            else (f"Há {atraso} dias" if atraso is not None else "Fonte")
+            "Há 0 dias" if atraso == 0 else (f"Há {atraso} dias" if atraso is not None else "Fonte")
         ),
         tema=tema_fonte,
         delta="em dia" if atraso is not None and atraso <= 1 else "atrasada",
@@ -1642,9 +1549,7 @@ def renderizar_visao_executiva_geral(resultados: dict[str, dict[str, Any]]) -> N
         pct = bruto.pivot_table(
             index="Base", columns="Indicador", values="Realizado", aggfunc="mean"
         )
-        ordem_cols = [
-            NOMES_CURTOS[k] for k in ORDEM_INDICADORES if NOMES_CURTOS[k] in pct.columns
-        ]
+        ordem_cols = [NOMES_CURTOS[k] for k in ORDEM_INDICADORES if NOMES_CURTOS[k] in pct.columns]
         pct = pct.reindex(columns=ordem_cols)
         metas_col = {NOMES_CURTOS[k]: METAS_POR_ABA[k] for k in ORDEM_INDICADORES}
         gap = pct.copy()
@@ -1671,16 +1576,12 @@ def renderizar_visao_executiva_geral(resultados: dict[str, dict[str, Any]]) -> N
             display,
             titulo="🏢 Onde agir — aderência por base",
             colunas=["Base"] + ordem_cols,
-            alinhamentos={
-                c: ("left" if c == "Base" else "right") for c in ["Base"] + ordem_cols
-            },
+            alinhamentos={c: ("left" if c == "Base" else "right") for c in ["Base"] + ordem_cols},
             color_rules=color_rules,
             height=360,
             mostrar_data=False,
         )
-        st.caption(
-            "Bases ordenadas pelo pior desvio médio. Percentual do período selecionado."
-        )
+        st.caption("Bases ordenadas pelo pior desvio médio. Percentual do período selecionado.")
 
         if volume_partes:
             with st.expander("Ver volume por base (denominador)"):
@@ -1688,18 +1589,12 @@ def renderizar_visao_executiva_geral(resultados: dict[str, dict[str, Any]]) -> N
                 vol_p = vol.pivot_table(
                     index="Base", columns="Indicador", values="Total_OS", aggfunc="sum"
                 )
-                vol_p = (
-                    vol_p.reindex(columns=ordem_cols)
-                    .fillna(0)
-                    .astype(int)
-                    .reset_index()
-                )
+                vol_p = vol_p.reindex(columns=ordem_cols).fillna(0).astype(int).reset_index()
                 render_table_html(
                     vol_p,
                     colunas=["Base"] + ordem_cols,
                     alinhamentos={
-                        c: ("left" if c == "Base" else "right")
-                        for c in ["Base"] + ordem_cols
+                        c: ("left" if c == "Base" else "right") for c in ["Base"] + ordem_cols
                     },
                     fmt={c: "{:,}" for c in ordem_cols},
                     mostrar_data=False,
@@ -1724,9 +1619,7 @@ def renderizar_visao_executiva_geral(resultados: dict[str, dict[str, Any]]) -> N
             continue
         try:
             regras_7d[texto_7d] = (
-                "sucesso"
-                if float(row["7 dias (%)"]) >= float(row["Meta (%)"])
-                else "alerta"
+                "sucesso" if float(row["7 dias (%)"]) >= float(row["Meta (%)"]) else "alerta"
             )
         except (TypeError, ValueError):
             logger.debug("Valor inválido ignorado na consolidação.", exc_info=True)
@@ -1784,11 +1677,7 @@ def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
     for chave in ORDEM_INDICADORES:
         df_chave = dataframe_indicador(resultados, chave)
         if df_chave is not None and not df_chave.empty:
-            frames.append(
-                df_chave
-                if "_DATA" in df_chave.columns
-                else anexar_data(df_chave, chave)
-            )
+            frames.append(df_chave if "_DATA" in df_chave.columns else anexar_data(df_chave, chave))
 
     bases: set[str] = set()
     monitores: set[str] = set()
@@ -1801,9 +1690,7 @@ def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
         if "Monitor" in df_tmp.columns:
             monitores.update(df_tmp["Monitor"].map(rotulo_categoria).unique().tolist())
         if "Tecnico" in df_tmp.columns:
-            tecnicos_disponiveis.update(
-                df_tmp["Tecnico"].map(rotulo_categoria).unique().tolist()
-            )
+            tecnicos_disponiveis.update(df_tmp["Tecnico"].map(rotulo_categoria).unique().tolist())
 
         ini, fim = limites_periodo(df_tmp)
         if ini and (dmin is None or ini < dmin):
@@ -1815,9 +1702,7 @@ def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
     c1, c2, c3, c4 = st.columns([1, 1, 1, 1.2])
     with c1:
         bases_lista = ["Todas"] + sorted(b for b in bases if b != SEM_VINCULO)
-        sel_base = st.selectbox(
-            "🏢 Base (Lotação)", bases_lista, key="tec_view_base_filter"
-        )
+        sel_base = st.selectbox("🏢 Base (Lotação)", bases_lista, key="tec_view_base_filter")
 
     ini_sel, fim_sel = dmin, dmax
     if dmin and dmax:
@@ -1856,9 +1741,7 @@ def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
             work_f = df_tmp.copy()
             if "Monitor" in work_f.columns and "Tecnico" in work_f.columns:
                 sub = work_f[work_f["Monitor"].map(rotulo_categoria) == sel_monitor]
-                tecs_do_monitor.update(
-                    sub["Tecnico"].map(rotulo_categoria).unique().tolist()
-                )
+                tecs_do_monitor.update(sub["Tecnico"].map(rotulo_categoria).unique().tolist())
         filtrados_por_estrutura = filtrados_por_estrutura.intersection(tecs_do_monitor)
 
     lista_tecnicos = sorted([t for t in filtrados_por_estrutura if t != SEM_VINCULO])
@@ -1901,9 +1784,7 @@ def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
             work = work[work["Monitor"].map(rotulo_categoria) == sel_monitor].copy()
 
         if "Tecnico" in work.columns and not work.empty:
-            por_tecnico = agregar_grupo(
-                work, "Tecnico", meta, com_situacao=True, com_monitor=True
-            )
+            por_tecnico = agregar_grupo(work, "Tecnico", meta, com_situacao=True, com_monitor=True)
             if not por_tecnico.empty:
                 parte = por_tecnico[
                     [
@@ -1923,9 +1804,7 @@ def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
 
                 # Drill-down do técnico selecionado: capturar cadastro e erros
                 if sel_tecnico != "Todos":
-                    sub_foco = work[
-                        work["Tecnico"].map(rotulo_categoria) == sel_tecnico
-                    ].copy()
+                    sub_foco = work[work["Tecnico"].map(rotulo_categoria) == sel_tecnico].copy()
                     if not sub_foco.empty:
                         # Pega o cadastro mais atualizado dele
                         if "Monitor" in sub_foco.columns:
@@ -1984,22 +1863,14 @@ def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
                 ativos_filtro[[col_tec_ativos, col_mon_ativos]].drop_duplicates().copy()
             )
             todos_tecs_ativos.columns = ["Tecnico", "Monitor"]
-            todos_tecs_ativos["Tecnico"] = todos_tecs_ativos["Tecnico"].map(
-                rotulo_categoria
-            )
-            todos_tecs_ativos["Monitor"] = todos_tecs_ativos["Monitor"].map(
-                rotulo_categoria
-            )
-            todos_tecs_ativos = todos_tecs_ativos[
-                todos_tecs_ativos["Tecnico"] != SEM_VINCULO
-            ]
+            todos_tecs_ativos["Tecnico"] = todos_tecs_ativos["Tecnico"].map(rotulo_categoria)
+            todos_tecs_ativos["Monitor"] = todos_tecs_ativos["Monitor"].map(rotulo_categoria)
+            todos_tecs_ativos = todos_tecs_ativos[todos_tecs_ativos["Tecnico"] != SEM_VINCULO]
         else:
             todos_tecs_ativos = pd.DataFrame(columns=["Tecnico", "Monitor"])
 
         # Outer Join para garantir que TODOS os técnicos do cadastro apareçam, mesmo com aderências vazias (—)
-        pivot_tec_completo = pd.merge(
-            todos_tecs_ativos, pivot_tec, on="Tecnico", how="outer"
-        )
+        pivot_tec_completo = pd.merge(todos_tecs_ativos, pivot_tec, on="Tecnico", how="outer")
 
         # Autocompletar possíveis monitores faltantes no dataframe merged
         if "Monitor" in pivot_tec_completo.columns:
@@ -2041,9 +1912,9 @@ def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
 
         # Ordenar os técnicos de forma inteligente baseada no pior desempenho médio geral
         pivot_tec_completo["Média_Geral"] = pivot_tec_completo[ordem_cols].mean(axis=1)
-        pivot_tec_completo = pivot_tec_completo.sort_values(
-            by="Média_Geral", ascending=True
-        ).drop(columns=["Média_Geral"])
+        pivot_tec_completo = pivot_tec_completo.sort_values(by="Média_Geral", ascending=True).drop(
+            columns=["Média_Geral"]
+        )
 
         # Montar a exibição em HTML do design system
         display_tec = pd.DataFrame(
@@ -2086,15 +1957,12 @@ def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
             vol_tec = df_consolidado_tecnicos.pivot_table(
                 index="Tecnico", columns="Indicador", values="Total_OS", aggfunc="sum"
             )
-            vol_tec = (
-                vol_tec.reindex(columns=ordem_cols).fillna(0).astype(int).reset_index()
-            )
+            vol_tec = vol_tec.reindex(columns=ordem_cols).fillna(0).astype(int).reset_index()
             render_table_html(
                 vol_tec,
                 colunas=["Tecnico"] + ordem_cols,
                 alinhamentos={
-                    c: ("left" if c == "Tecnico" else "right")
-                    for c in ["Tecnico"] + ordem_cols
+                    c: ("left" if c == "Tecnico" else "right") for c in ["Tecnico"] + ordem_cols
                 },
                 fmt={c: "{:,}" for c in ordem_cols},
                 mostrar_data=False,
@@ -2102,9 +1970,7 @@ def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
 
     # --- CASO 2: DRILL-DOWN INDIVIDUAL (UM TÉCNICO SELECIONADO) ---
     else:
-        df_focado = df_consolidado_tecnicos[
-            df_consolidado_tecnicos["Tecnico"] == sel_tecnico
-        ]
+        df_focado = df_consolidado_tecnicos[df_consolidado_tecnicos["Tecnico"] == sel_tecnico]
         if df_focado.empty:
             render_empty_state(
                 tipo="dados",
@@ -2163,16 +2029,14 @@ def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
 
         if lista_erros_individuais:
             df_erros_consol = pd.concat(lista_erros_individuais, ignore_index=True)
-            colunas_limpas = [
-                c for c in df_erros_consol.columns if c not in COLUNAS_AUXILIARES
-            ]
+            colunas_limpas = [c for c in df_erros_consol.columns if c not in COLUNAS_AUXILIARES]
             df_erros_visualizar = df_erros_consol[colunas_limpas].copy()
 
             st.dataframe(df_erros_visualizar, width="stretch")
 
-            csv_data = df_erros_visualizar.to_csv(
-                index=False, sep=";", decimal=","
-            ).encode("utf-8-sig")
+            csv_data = df_erros_visualizar.to_csv(index=False, sep=";", decimal=",").encode(
+                "utf-8-sig"
+            )
             st.download_button(
                 label=f"⬇️ Exportar Ocorrências de {sel_tecnico}",
                 data=csv_data,
@@ -2189,17 +2053,13 @@ def renderizar_visao_tecnicos(resultados: dict[str, dict[str, Any]]) -> None:
 
 
 # --- PAINEL DO INDICADOR ---
-def renderizar_painel_executivo_aba(
-    df_indicador: pd.DataFrame | None, nome_kpi: str
-) -> None:
+def renderizar_painel_executivo_aba(df_indicador: pd.DataFrame | None, nome_kpi: str) -> None:
     nome_amigavel = NOMES_AMIGAVEIS.get(nome_kpi, nome_kpi)
     icone = NOMES_ICONES.get(nome_kpi, "📋")
     meta_kpi = float(METAS_POR_ABA.get(nome_kpi, 95.0))
     data_final = extrair_data_maxima_aba(df_indicador, nome_kpi) or DATA_SISTEMA_STR
     complemento = (
-        " (data final da base)"
-        if remover_acentos_e_padronizar(nome_kpi) == "tec1"
-        else ""
+        " (data final da base)" if remover_acentos_e_padronizar(nome_kpi) == "tec1" else ""
     )
 
     render_section_header(
@@ -2219,9 +2079,7 @@ def renderizar_painel_executivo_aba(
         return
 
     base_df = (
-        df_indicador
-        if "_DATA" in df_indicador.columns
-        else anexar_data(df_indicador, nome_kpi)
+        df_indicador if "_DATA" in df_indicador.columns else anexar_data(df_indicador, nome_kpi)
     )
     dmin, dmax = limites_periodo(base_df)
 
@@ -2347,16 +2205,12 @@ def renderizar_painel_executivo_aba(
         tema=tema_barra_status(status),
     )
 
-    df_base_agg = (
-        agregar_grupo(work, col_base, meta_kpi, col_tec) if col_base else pd.DataFrame()
-    )
+    df_base_agg = agregar_grupo(work, col_base, meta_kpi, col_tec) if col_base else pd.DataFrame()
     pior_base = None
     if not df_base_agg.empty:
         com_volume = df_base_agg[df_base_agg["Total_OS"] >= 10]
         fonte = com_volume if not com_volume.empty else df_base_agg
-        pior_base = fonte.sort_values(
-            ["Realizado", "Total_OS"], ascending=[True, False]
-        ).iloc[0]
+        pior_base = fonte.sort_values(["Realizado", "Total_OS"], ascending=[True, False]).iloc[0]
     concentracao = concentracao_nao_conformes(work, col_tec)
     texto, tipo_insight = texto_insight_indicador(
         nome_amigavel, pct, meta_kpi, janela, pior_base, concentracao, vinculo, total
@@ -2459,9 +2313,7 @@ def renderizar_painel_executivo_aba(
         )
 
     if col_mon and "_SCORE" in work.columns:
-        df_mon = filtrar_status(
-            agregar_grupo(work, col_mon, meta_kpi, col_tec=col_tec), sel_perf
-        )
+        df_mon = filtrar_status(agregar_grupo(work, col_mon, meta_kpi, col_tec=col_tec), sel_perf)
         render_ranking_tabela(
             df_mon,
             col_nome=col_mon,
@@ -2474,11 +2326,7 @@ def renderizar_painel_executivo_aba(
         e1, e2, e3 = st.columns(3)
         with e1:
             download_csv(
-                (
-                    work[work["_SCORE"] == 0]
-                    if "_SCORE" in work.columns
-                    else work.iloc[0:0]
-                ),
+                (work[work["_SCORE"] == 0] if "_SCORE" in work.columns else work.iloc[0:0]),
                 "⬇️ Fora do padrão",
                 f"{nome_kpi}_fora_do_padrao.csv",
                 key=f"dl_fora_{nome_kpi}",
@@ -2513,18 +2361,12 @@ if not excel_sheets or df_ativos is None:
     )
     st.stop()
 
-col_login_ativos = encontrar_coluna_flexivel(
-    df_ativos, ["Login", "LOGIN", "Cd_Login", "LOGIN_TEC"]
-)
+col_login_ativos = encontrar_coluna_flexivel(df_ativos, ["Login", "LOGIN", "Cd_Login", "LOGIN_TEC"])
 col_tec_ativos = encontrar_coluna_flexivel(
     df_ativos, ["Tecnico", "Técnico", "TECNICO", "Nome_Tecnico"]
 )
-col_mon_ativos = encontrar_coluna_flexivel(
-    df_ativos, ["Monitor", "MONITOR", "Nome_Monitor"]
-)
-col_base_ativos = encontrar_coluna_flexivel(
-    df_ativos, ["Base", "BASE", "Filial", "Unidade"]
-)
+col_mon_ativos = encontrar_coluna_flexivel(df_ativos, ["Monitor", "MONITOR", "Nome_Monitor"])
+col_base_ativos = encontrar_coluna_flexivel(df_ativos, ["Base", "BASE", "Filial", "Unidade"])
 col_sit_ativos = encontrar_coluna_flexivel(
     df_ativos, ["Situação", "Situacao", "SITUACAO", "Status_Tecnico"]
 )
@@ -2563,9 +2405,7 @@ for res_k, res_v in resultados.items():
 
 data_max_global_str = maior_texto_data(datas_fonte, DATA_SISTEMA_STR)
 data_min_global_str = menor_texto_data(datas_inicio, "—")
-pct_vinculo = (
-    ((vinculo_total - vinculo_sem) / vinculo_total * 100.0) if vinculo_total else 0.0
-)
+pct_vinculo = ((vinculo_total - vinculo_sem) / vinculo_total * 100.0) if vinculo_total else 0.0
 atraso_global = atraso_em_dias(data_max_global_str)
 
 with st.sidebar:
@@ -2600,9 +2440,7 @@ with st.sidebar:
     render_sidebar_divider(estilo="linha", label="Metas")
     for aba_name_side in ORDEM_INDICADORES:
         meta_val_side = METAS_POR_ABA[aba_name_side]
-        st.markdown(
-            f"- **{NOMES_AMIGAVEIS.get(aba_name_side, aba_name_side)}**: {meta_val_side}%"
-        )
+        st.markdown(f"- **{NOMES_AMIGAVEIS.get(aba_name_side, aba_name_side)}**: {meta_val_side}%")
 
     with st.expander("Como cada indicador é calculado"):
         for aba_name_side in ORDEM_INDICADORES:
@@ -2611,9 +2449,7 @@ with st.sidebar:
 
     render_sidebar_footer_info(empresa="TOTALE Tecnologia", versao=VERSAO)
 
-abas_erro: list[str] = [
-    aba for aba, info in resultados.items() if info.get("df") is None
-]
+abas_erro: list[str] = [aba for aba, info in resultados.items() if info.get("df") is None]
 if abas_erro:
     for aba_err in abas_erro:
         render_insight(
@@ -2653,7 +2489,5 @@ with tabs[1]:
     renderizar_visao_tecnicos(resultados)
 
 for idx, (chave_kpi, df_kpi) in enumerate(abas_exibicao):
-    with tabs[
-        idx + 2
-    ]:  # Deslocado em +2 para respeitar a nova aba gerencial de Técnicos
+    with tabs[idx + 2]:  # Deslocado em +2 para respeitar a nova aba gerencial de Técnicos
         renderizar_painel_executivo_aba(df_kpi, chave_kpi)

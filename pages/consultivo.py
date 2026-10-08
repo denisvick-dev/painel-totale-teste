@@ -35,10 +35,10 @@ render_page_sidebar_theme_selector()
 # (a aparência de .corp-table vive em components/css_paginas.py)
 aplicar_css_tabela_corporativa(
     fonte_px=10.5,
-    padding='4px 6px',
-    altura_linha='1.25',
-    raio_scrollbar='4px',
-    cabecalho_extra='border-right: 1px solid rgba(255,255,255,0.12) !important; padding: 6px 6px !important;',
+    padding="4px 6px",
+    altura_linha="1.25",
+    raio_scrollbar="4px",
+    cabecalho_extra="border-right: 1px solid rgba(255,255,255,0.12) !important; padding: 6px 6px !important;",
 )
 
 st.markdown(
@@ -102,7 +102,9 @@ st.markdown(
 
 
 class Configuracoes:
-    url_ativos = "https://docs.google.com/spreadsheets/d/1LQKDcLshC6XSXLBVWaEYSpxrro6uydyU9pwDLc38pEg/edit"
+    url_ativos = (
+        "https://docs.google.com/spreadsheets/d/1LQKDcLshC6XSXLBVWaEYSpxrro6uydyU9pwDLc38pEg/edit"
+    )
     meta_diaria_consultivos = 7
 
 
@@ -132,19 +134,11 @@ class Calculos:
         prox_mes = inicio_mes.replace(day=28) + pd.Timedelta(days=4)
         fim_mes = prox_mes - pd.Timedelta(days=prox_mes.day)
 
-        dias_uteis_total = len(
-            [d for d in pd.date_range(inicio_mes, fim_mes) if d.dayofweek < 6]
-        )
-        dias_decorridos = len(
-            [d for d in pd.date_range(inicio_mes, hoje) if d.dayofweek < 6]
-        )
+        dias_uteis_total = len([d for d in pd.date_range(inicio_mes, fim_mes) if d.dayofweek < 6])
+        dias_decorridos = len([d for d in pd.date_range(inicio_mes, hoje) if d.dayofweek < 6])
         faltantes = dias_uteis_total - dias_decorridos
 
-        fator = (
-            dias_uteis_total / dias_decorridos
-            if dias_decorridos > 0 and faltantes > 0
-            else 1.0
-        )
+        fator = dias_uteis_total / dias_decorridos if dias_decorridos > 0 and faltantes > 0 else 1.0
         return fator, faltantes
 
 
@@ -183,9 +177,7 @@ def preparar_ranking(
     res = res.rename(columns=renomeios).fillna(0)
 
     # Ordena
-    col_sort = (
-        "Total Consultivos" if "Total Consultivos" in res.columns else "Total Produtos"
-    )
+    col_sort = "Total Consultivos" if "Total Consultivos" in res.columns else "Total Produtos"
     if col_sort in res.columns:
         res = res.sort_values(col_sort, ascending=False)
     res.insert(0, "Posição", range(1, len(res) + 1))
@@ -215,9 +207,7 @@ def preparar_ranking(
     return res[nova_ordem]
 
 
-def preparar_resumo_diario_monitor(
-    df: pd.DataFrame, data_referencia: pd.Timestamp
-) -> pd.DataFrame:
+def preparar_resumo_diario_monitor(df: pd.DataFrame, data_referencia: pd.Timestamp) -> pd.DataFrame:
     """Agrega os consultivos do dia e preserva monitores sem movimentação."""
     monitores = pd.DataFrame(
         df[["Base", "Monitor"]]
@@ -226,9 +216,7 @@ def preparar_resumo_diario_monitor(
         .drop_duplicates()
         .sort_values(["Base", "Monitor"])
     )
-    mascara_dia = df["DATA"].notna() & df["DATA"].dt.normalize().eq(
-        data_referencia.normalize()
-    )
+    mascara_dia = df["DATA"].notna() & df["DATA"].dt.normalize().eq(data_referencia.normalize())
     resumo = (
         df.loc[mascara_dia]
         .groupby(["Base", "Monitor"], dropna=False)["Qtde. Cons."]
@@ -238,9 +226,7 @@ def preparar_resumo_diario_monitor(
     )
     resumo = monitores.merge(resumo, on=["Base", "Monitor"], how="left")
     resumo["Total Consultivos"] = resumo["Total Consultivos"].fillna(0).astype(int)
-    return resumo.sort_values("Total Consultivos", ascending=False).reset_index(
-        drop=True
-    )
+    return resumo.sort_values("Total Consultivos", ascending=False).reset_index(drop=True)
 
 
 def calcular_meta_acumulada_monitor(
@@ -293,8 +279,7 @@ def render_tabela_cons(
         if (
             "Total" in col
             or "Proj" in col
-            or col
-            in ("Mesh", "TV Box", "Virtua", "Posição", "Meta Diária", "Falta para Meta")
+            or col in ("Mesh", "TV Box", "Virtua", "Posição", "Meta Diária", "Falta para Meta")
         ):
             try:
                 return f"{float(val):,.0f}".replace(",", ".")
@@ -308,8 +293,7 @@ def render_tabela_cons(
         if (
             "Total" in col
             or "Proj" in col
-            or col
-            in ("Mesh", "TV Box", "Virtua", "Posição", "Meta Diária", "Falta para Meta")
+            or col in ("Mesh", "TV Box", "Virtua", "Posição", "Meta Diária", "Falta para Meta")
         ):
             classes.append("num")
 
@@ -345,12 +329,7 @@ def render_tabela_cons(
         tds: list[str] = []
         for c in cols:
             v = row[c]
-            display = (
-                _fmt(v, c)
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-            )
+            display = _fmt(v, c).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             cls = _cls(v, c)
             attr = f' class="{cls}"' if cls else ""
             tds.append(f"<td{attr}>{display}</td>")
@@ -382,10 +361,7 @@ render_hero_totale_2(
 
 st.divider()
 
-if (
-    "dados_cons" not in st.session_state
-    or "Consultivo" not in st.session_state["dados_cons"]
-):
+if "dados_cons" not in st.session_state or "Consultivo" not in st.session_state["dados_cons"]:
     render_insight("Carregue os dados na aba principal primeiro.", "alerta")
     st.stop()
 
@@ -411,9 +387,7 @@ try:
     df["LOGIN NETSALES"] = df.get("LOGIN NETSALES", "").astype(str).str.strip()
     df = df.drop(columns=["Monitor", "Base"], errors="ignore")
     # Outer merge
-    df = pd.merge(
-        df, df_ativos, left_on="LOGIN NETSALES", right_on="Login", how="outer"
-    )
+    df = pd.merge(df, df_ativos, left_on="LOGIN NETSALES", right_on="Login", how="outer")
 except Exception as e:
     st.error(f"Erro ao carregar hierarquia: {e}")
 
@@ -422,10 +396,7 @@ df["LOGIN NETSALES"] = df["LOGIN NETSALES"].fillna(df["Login"]).fillna("SEM LOGI
 if "VENDEDOR" not in df.columns:
     df["VENDEDOR"] = np.nan
 df["VENDEDOR"] = (
-    df["VENDEDOR"]
-    .fillna(df["Técnico"])
-    .fillna(df["LOGIN NETSALES"])
-    .fillna("Nome Não Cadastrado")
+    df["VENDEDOR"].fillna(df["Técnico"]).fillna(df["LOGIN NETSALES"]).fillna("Nome Não Cadastrado")
 )
 df["Monitor"] = df["Monitor"].fillna("Não Identificado")
 df["Base"] = df["Base"].fillna("Não Identificada")
@@ -557,18 +528,14 @@ if "DATA" in df.columns and df["DATA"].notna().any():
 
         df = df.loc[mascara_periodo].copy()
 
-        st.sidebar.caption(
-            f"📆 {data_ini.strftime('%d/%m/%Y')} → {data_fim.strftime('%d/%m/%Y')}"
-        )
+        st.sidebar.caption(f"📆 {data_ini.strftime('%d/%m/%Y')} → {data_fim.strftime('%d/%m/%Y')}")
         st.sidebar.caption(f"📊 {len(df):,.0f} registros".replace(",", "."))
 
         if preset == "Mês atual" and (data_referencia.year, data_referencia.month) != (
             hoje.year,
             hoje.month,
         ):
-            st.sidebar.info(
-                "Não há dados no mês corrente. Exibindo último mês disponível."
-            )
+            st.sidebar.info("Não há dados no mês corrente. Exibindo último mês disponível.")
     else:
         st.sidebar.warning("⚠️ Selecione a data inicial e a data final.")
 else:
@@ -577,9 +544,7 @@ else:
 st.sidebar.divider()
 
 # ── FILTROS DE HIERARQUIA ──
-base_sel = st.sidebar.selectbox(
-    "Base:", ["Todas"] + sorted(df["Base"].dropna().unique().tolist())
-)
+base_sel = st.sidebar.selectbox("Base:", ["Todas"] + sorted(df["Base"].dropna().unique().tolist()))
 monitor_opts = ["Todos"] + sorted(
     df[df["Base"] == base_sel]["Monitor"].dropna().unique().tolist()
     if base_sel != "Todas"
@@ -613,9 +578,7 @@ fator_proj, falt_dias = Calculos.fator_projecao(df)
 # Linha 1 de KPIs
 c1, c2, c3, c4 = st.columns(4)
 render_kpi(c1, "Total Equipes", f"{eq_total:,.0f}".replace(",", "."), tema="azul")
-render_kpi(
-    c2, "Equipes Produtivas", f"{eq_produtivas:,.0f}".replace(",", "."), tema="verde"
-)
+render_kpi(c2, "Equipes Produtivas", f"{eq_produtivas:,.0f}".replace(",", "."), tema="verde")
 render_kpi(
     c3,
     "Técnicos Zerados",
@@ -681,9 +644,7 @@ with col_tog:
     st.write("")
     detalhar_tec = st.toggle("Detalhar por Técnico")
 
-grupo = (
-    ["LOGIN NETSALES", "VENDEDOR", "Monitor", "Base"] if detalhar_tec else ["Monitor"]
-)
+grupo = ["LOGIN NETSALES", "VENDEDOR", "Monitor", "Base"] if detalhar_tec else ["Monitor"]
 df_exibir = preparar_ranking(df, grupo, fator_proj)
 
 # Destaque: técnico → 30 produtos | monitor → 350

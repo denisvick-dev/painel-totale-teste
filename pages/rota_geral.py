@@ -232,7 +232,10 @@ class DataProcessor:
                 if len(df.columns) > 1:
                     return df
             except Exception:
-                logger.debug("Tentativa de leitura CSV falhou; tentando próximo separador/encoding.", exc_info=True)
+                logger.debug(
+                    "Tentativa de leitura CSV falhou; tentando próximo separador/encoding.",
+                    exc_info=True,
+                )
                 continue
         raise ValueError("Não foi possível identificar o formato/encoding do CSV.")
 
@@ -345,9 +348,7 @@ class DataProcessor:
             total[col] = int(df[col].sum())
 
         total["Média OS"] = round(soma_os / soma_rotas, 2) if soma_rotas > 0 else 0.0
-        total["Média Montados"] = (
-            round(soma_os / soma_montados, 2) if soma_montados > 0 else 0.0
-        )
+        total["Média Montados"] = round(soma_os / soma_montados, 2) if soma_montados > 0 else 0.0
         return pd.concat([df, pd.DataFrame([total])], ignore_index=True)
 
 
@@ -382,9 +383,7 @@ class Visualization:
         return buffer.getvalue()
 
     @staticmethod
-    def _classe_celula(
-        valor: float, coluna: str, df_bases: pd.DataFrame | None = None
-    ) -> str:
+    def _classe_celula(valor: float, coluna: str, df_bases: pd.DataFrame | None = None) -> str:
         if coluna == "Média OS":
             return "cel-media-os"
         if coluna == "Média Montados":
@@ -428,20 +427,13 @@ class Visualization:
             for c in cols:
                 val = row[c]
                 if c == "BASE":
-                    texto = (
-                        str(val)
-                        .replace("&", "&amp;")
-                        .replace("<", "&lt;")
-                        .replace(">", "&gt;")
-                    )
+                    texto = str(val).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                     celulas.append(f'<td class="col-base">{texto}</td>')
                     continue
 
                 v = Utils.to_float(val)
                 texto = (
-                    Utils.fmt_float(v)
-                    if c in ("Média OS", "Média Montados")
-                    else Utils.fmt_int(v)
+                    Utils.fmt_float(v) if c in ("Média OS", "Média Montados") else Utils.fmt_int(v)
                 )
 
                 if eh_total:
@@ -512,9 +504,7 @@ class Visualization:
             )
         )
         fig.update_layout(barmode="group")
-        return Visualization._layout_corp(
-            fig, "Média de OS por Rota × por Montado", height=380
-        )
+        return Visualization._layout_corp(fig, "Média de OS por Rota × por Montado", height=380)
 
     @staticmethod
     def grafico_participacao(df_bases: pd.DataFrame) -> go.Figure:
@@ -591,9 +581,7 @@ class Visualization:
                 autorange="reversed",
             ),
         )
-        return Visualization._layout_corp(
-            fig, "Intensidade relativa por indicador", height=340
-        )
+        return Visualization._layout_corp(fig, "Intensidade relativa por indicador", height=340)
 
     @staticmethod
     def gerar_insights(
@@ -633,9 +621,7 @@ class Visualization:
         total_mont = Utils.to_float(total.get("Montados"))
         if total_mont > 0:
             aprov = total_os / total_mont
-            tipo: TipoInsight = (
-                "ok" if aprov >= 8 else "alerta" if aprov >= 5 else "critico"
-            )
+            tipo: TipoInsight = "ok" if aprov >= 8 else "alerta" if aprov >= 5 else "critico"
             insights.append(
                 (
                     f"🎯 Aproveitamento geral: **{Utils.fmt_float(aprov)}** OS por montado ({Utils.fmt_int(total_mont)} montados no total).",
@@ -671,16 +657,12 @@ class UI:
         for k in list(st.session_state.keys()):
             if str(k).startswith(("up_", "mont_", "btn_")):
                 del st.session_state[k]
-        st.session_state["_reset_counter"] = (
-            int(st.session_state.get("_reset_counter", 0)) + 1
-        )
+        st.session_state["_reset_counter"] = int(st.session_state.get("_reset_counter", 0)) + 1
         st.rerun()
 
     @staticmethod
     def validar_colunas(nome_base: str, df: pd.DataFrame) -> None:
-        faltantes = [
-            c for c in Config.COLUNAS_ESPERADAS if Utils.localizar_coluna(df, c) is None
-        ]
+        faltantes = [c for c in Config.COLUNAS_ESPERADAS if Utils.localizar_coluna(df, c) is None]
         if faltantes:
             render_insight(
                 f"**{nome_base}**: colunas não encontradas: "
@@ -1064,8 +1046,7 @@ class UI:
 
         with st.spinner("Processando as bases..."):
             bases_dfs = {
-                nome: DataProcessor.carregar_arquivo(arq)
-                for nome, arq in arquivos.items()
+                nome: DataProcessor.carregar_arquivo(arq) for nome, arq in arquivos.items()
             }
             if any(df is None for df in bases_dfs.values()):
                 st.stop()
@@ -1085,9 +1066,7 @@ class UI:
             df_final = DataProcessor.adicionar_linha_total(df_bases)
 
         render_insight("Bases processadas com sucesso.", "ok")
-        total: dict[str, Any] = {
-            str(k): v for k, v in df_final.iloc[-1].to_dict().items()
-        }
+        total: dict[str, Any] = {str(k): v for k, v in df_final.iloc[-1].to_dict().items()}
 
         UI._mostrar_kpis_gerais(total)
         UI._mostrar_kpis_por_base(df_bases)

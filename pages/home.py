@@ -28,13 +28,6 @@ import pandas as pd
 import streamlit as st
 
 from components.alertas_automaticos import avaliar_alertas
-from components.metricas_executivas import (
-    comparar_periodos,
-    encontrar_coluna,
-    serie_atingimento_meta,
-    serie_diaria,
-    serie_quebra_diaria,
-)
 from components.componentes import (
     Cores,
     formatar_numero_br,
@@ -45,6 +38,13 @@ from components.componentes import (
     render_page_sidebar_theme_selector,
     render_section_header,
     render_spacer,
+)
+from components.metricas_executivas import (
+    comparar_periodos,
+    encontrar_coluna,
+    serie_atingimento_meta,
+    serie_diaria,
+    serie_quebra_diaria,
 )
 
 logger = logging.getLogger(__name__)
@@ -89,17 +89,9 @@ def _coletar_dataframes(valor: Any) -> list[pd.DataFrame]:
     if isinstance(valor, pd.DataFrame):
         return [valor]
     if isinstance(valor, Mapping):
-        return [
-            frame
-            for conteudo in valor.values()
-            for frame in _coletar_dataframes(conteudo)
-        ]
+        return [frame for conteudo in valor.values() for frame in _coletar_dataframes(conteudo)]
     if isinstance(valor, (list, tuple)):
-        return [
-            frame
-            for conteudo in valor
-            for frame in _coletar_dataframes(conteudo)
-        ]
+        return [frame for conteudo in valor for frame in _coletar_dataframes(conteudo)]
     return []
 
 
@@ -345,12 +337,8 @@ def _resumir_fontes(status_fontes: Any) -> list[dict[str, Any]]:
                 "nome": str(nome),
                 "ok": ok,
                 "linhas": quantidade_linhas,
-                "ultimo_sucesso": _formatar_data_hora(
-                    ultimo_sucesso, com_segundos=False
-                ),
-                "ultima_tentativa": _formatar_data_hora(
-                    ultima_tentativa, com_segundos=False
-                ),
+                "ultimo_sucesso": _formatar_data_hora(ultimo_sucesso, com_segundos=False),
+                "ultima_tentativa": _formatar_data_hora(ultima_tentativa, com_segundos=False),
                 "tem_sucesso_anterior": ultimo_sucesso is not None,
                 "erro": texto_erro,
             }
@@ -389,13 +377,9 @@ def _obter_metricas_base() -> dict[str, Any]:
         "fontes_com_falha": [fonte["nome"] for fonte in fontes if not fonte["ok"]],
         "status_carga": status_carga,
         "ultima_atualizacao": _formatar_data_hora(ultima_atualizacao),
-        "ultima_atualizacao_curta": _formatar_data_hora(
-            ultima_atualizacao, com_segundos=False
-        ),
+        "ultima_atualizacao_curta": _formatar_data_hora(ultima_atualizacao, com_segundos=False),
         "ultima_tentativa": _formatar_data_hora(ultima_tentativa),
-        "ultima_tentativa_curta": _formatar_data_hora(
-            ultima_tentativa, com_segundos=False
-        ),
+        "ultima_tentativa_curta": _formatar_data_hora(ultima_tentativa, com_segundos=False),
     }
 
 
@@ -483,11 +467,7 @@ def render_kpi_strip(info_base: dict[str, Any]) -> None:
         )
 
     with col2:
-        registros = (
-            formatar_numero_br(info_base["total_linhas"])
-            if info_base["carregado"]
-            else "—"
-        )
+        registros = formatar_numero_br(info_base["total_linhas"]) if info_base["carregado"] else "—"
         render_kpi(
             col2,
             label="REGISTROS DE PRODUÇÃO",
@@ -560,14 +540,10 @@ def render_fontes_dados(info_base: dict[str, Any]) -> None:
             with st.container(border=True):
                 st.markdown(f"**{fonte['nome']}**")
                 if fonte["ok"]:
-                    st.success(
-                        f"Atualizada • {formatar_numero_br(fonte['linhas'])} linhas"
-                    )
+                    st.success(f"Atualizada • {formatar_numero_br(fonte['linhas'])} linhas")
                     st.caption(f"Último sucesso: {fonte['ultimo_sucesso']}")
                 elif fonte["tem_sucesso_anterior"]:
-                    st.warning(
-                        "Atualização falhou; os dados da carga anterior foram preservados."
-                    )
+                    st.warning("Atualização falhou; os dados da carga anterior foram preservados.")
                     st.caption(
                         f"Carga preservada: {formatar_numero_br(fonte['linhas'])} linhas • "
                         f"último sucesso em {fonte['ultimo_sucesso']}"
@@ -713,9 +689,7 @@ def render_cockpit_executivo() -> None:
             frame for frame in dados_prod.values() if isinstance(frame, pd.DataFrame)
         )
     producao = (
-        pd.concat(frames_prod, ignore_index=True, sort=False)
-        if frames_prod
-        else pd.DataFrame()
+        pd.concat(frames_prod, ignore_index=True, sort=False) if frames_prod else pd.DataFrame()
     )
     df_robo = st.session_state.get("df_memoria")
     operacional = df_robo if isinstance(df_robo, pd.DataFrame) else pd.DataFrame()
@@ -730,9 +704,7 @@ def render_cockpit_executivo() -> None:
             "DATA AGENDAMENTO",
         ),
     )
-    coluna_volume = encontrar_coluna(
-        operacional, ("TOTAL DE TAREFAS", "QUANTIDADE", "QTD OS")
-    )
+    coluna_volume = encontrar_coluna(operacional, ("TOTAL DE TAREFAS", "QUANTIDADE", "QTD OS"))
     fonte_volume = operacional
     if coluna_data_operacional is None:
         fonte_volume = producao
@@ -867,7 +839,10 @@ def render_modulos_principais() -> None:
                 width="stretch",
             )
         except Exception:
-            logger.debug("page_link indisponível para pages/qtde_os.py; cartão segue sem atalho.", exc_info=True)
+            logger.debug(
+                "page_link indisponível para pages/qtde_os.py; cartão segue sem atalho.",
+                exc_info=True,
+            )
 
     # Módulo 2: Indicadores & Metas
     with c2:
@@ -901,7 +876,10 @@ def render_modulos_principais() -> None:
                 width="stretch",
             )
         except Exception:
-            logger.debug("page_link indisponível para pages/dashboard_meta.py; cartão segue sem atalho.", exc_info=True)
+            logger.debug(
+                "page_link indisponível para pages/dashboard_meta.py; cartão segue sem atalho.",
+                exc_info=True,
+            )
 
     # Módulo 3: Ativos & Governança
     with c3:
@@ -935,7 +913,10 @@ def render_modulos_principais() -> None:
                 width="stretch",
             )
         except Exception:
-            logger.debug("page_link indisponível para pages/gestao_ativos.py; cartão segue sem atalho.", exc_info=True)
+            logger.debug(
+                "page_link indisponível para pages/gestao_ativos.py; cartão segue sem atalho.",
+                exc_info=True,
+            )
 
     render_spacer(14)
 

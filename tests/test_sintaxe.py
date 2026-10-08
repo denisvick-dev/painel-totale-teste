@@ -55,16 +55,12 @@ def test_sem_marcadores_de_conflito() -> None:
     for caminho in sorted(RAIZ.rglob("*.py")):
         if any(parte in IGNORADOS for parte in caminho.relative_to(RAIZ).parts):
             continue
-        for numero, linha in enumerate(
-            caminho.read_text(encoding="utf-8").splitlines(), start=1
-        ):
+        for numero, linha in enumerate(caminho.read_text(encoding="utf-8").splitlines(), start=1):
             if padrao.match(linha):
-                problemas.append(
-                    f"{caminho.relative_to(RAIZ)}:{numero}: {linha.strip()}"
-                )
+                problemas.append(f"{caminho.relative_to(RAIZ)}:{numero}: {linha.strip()}")
 
-    assert not problemas, (
-        "Marcadores de conflito de merge encontrados:\n  " + "\n  ".join(problemas)
+    assert not problemas, "Marcadores de conflito de merge encontrados:\n  " + "\n  ".join(
+        problemas
     )
 
 
@@ -102,9 +98,7 @@ def test_icone_do_app_existe() -> None:
             break
 
     assert caminho_icone, "ConfiguracoesSistema precisa declarar ICON_PATH."
-    assert (RAIZ / caminho_icone).is_file(), (
-        f"O ícone configurado não existe: {caminho_icone}"
-    )
+    assert (RAIZ / caminho_icone).is_file(), f"O ícone configurado não existe: {caminho_icone}"
 
 
 def test_exemplo_de_secrets_e_seguro_e_valido() -> None:

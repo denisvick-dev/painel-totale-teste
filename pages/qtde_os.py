@@ -52,9 +52,9 @@ render_page_sidebar_theme_selector()
 # (a aparência de .corp-table vive em components/css_paginas.py)
 aplicar_css_tabela_corporativa(
     fonte_px=11,
-    padding='5px 8px',
-    altura_linha='1.2',
-    raio_scrollbar='10px',
+    padding="5px 8px",
+    altura_linha="1.2",
+    raio_scrollbar="10px",
     colapsar_bordas=False,
 )
 
@@ -226,12 +226,7 @@ def render_tabela_os(
         tds: list[str] = []
         for c in cols:
             v = row[c]
-            display = (
-                _fmt(v, c)
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-            )
+            display = _fmt(v, c).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             cls = _cls(v, c)
             attr = f' class="{cls}"' if cls else ""
             tds.append(f"<td{attr}>{display}</td>")
@@ -284,9 +279,7 @@ class InfoCalendario:
         if TEM_HOLIDAYS:
             feriados_br = holidays.BR(years=ano)
             # Converte os feriados do mês/ano para o formato datetime64 do numpy
-            lista_feriados = [
-                np.datetime64(data) for data in feriados_br if data.month == mes
-            ]
+            lista_feriados = [np.datetime64(data) for data in feriados_br if data.month == mes]
             feriados_usados = True
 
         total = int(
@@ -338,9 +331,7 @@ class ProcessadorDados:
 
     def _preparar(self) -> None:
         if self.COL_DATA in self.df.columns:
-            self.df[self.COL_DATA] = pd.to_datetime(
-                self.df[self.COL_DATA], errors="coerce"
-            )
+            self.df[self.COL_DATA] = pd.to_datetime(self.df[self.COL_DATA], errors="coerce")
 
     @property
     def total_geral(self) -> int:
@@ -378,19 +369,10 @@ class ProcessadorDados:
         return ["Todos"] + sorted(self.df[coluna].dropna().astype(str).unique())
 
     def media_diaria(self, grupo: str) -> pd.Series:
-        if (
-            self.COL_DATA not in self.df.columns
-            or grupo not in self.df.columns
-            or self.df.empty
-        ):
+        if self.COL_DATA not in self.df.columns or grupo not in self.df.columns or self.df.empty:
             return pd.Series(dtype=float)
 
-        return (
-            self.df.groupby([grupo, self.COL_DATA])[self.COL_OS]
-            .count()
-            .groupby(grupo)
-            .mean()
-        )
+        return self.df.groupby([grupo, self.COL_DATA])[self.COL_OS].count().groupby(grupo).mean()
 
     def tabela_supervisor(self, dias_faltantes: int) -> pd.DataFrame:
         if self.COL_SUPERVISOR not in self.df.columns or self.df.empty:
@@ -408,9 +390,7 @@ class ProcessadorDados:
             .fillna(0.0)
             .astype(float)
         )
-        qtde["Qtde. de O.S."] = pd.to_numeric(
-            qtde["Qtde. de O.S."], errors="coerce"
-        ).fillna(0.0)
+        qtde["Qtde. de O.S."] = pd.to_numeric(qtde["Qtde. de O.S."], errors="coerce").fillna(0.0)
 
         qtde["Faixa"] = qtde["Qtde. de O.S."].map(definir_faixa_supervisor)
         qtde["Meta | 2500"] = qtde["Qtde. de O.S."] - 2500
@@ -418,9 +398,7 @@ class ProcessadorDados:
         qtde["Meta | 3500"] = qtde["Qtde. de O.S."] - 3500
 
         qtde["Projeção"] = (
-            (qtde["Qtde. de O.S."] + media.mul(float(dias_faltantes)))
-            .round(0)
-            .astype(int)
+            (qtde["Qtde. de O.S."] + media.mul(float(dias_faltantes))).round(0).astype(int)
         )
         # Classifica a Faixa baseada na Projeção Final
         qtde["Faixa Projetada"] = qtde["Projeção"].map(definir_faixa_supervisor)
@@ -442,9 +420,7 @@ class ProcessadorDados:
             return pd.DataFrame()
 
         qtde = (
-            self.df.groupby(self.COL_PROJETO)[self.COL_OS]
-            .count()
-            .reset_index(name="Qtde. de O.S.")
+            self.df.groupby(self.COL_PROJETO)[self.COL_OS].count().reset_index(name="Qtde. de O.S.")
         )
 
         media = (
@@ -453,9 +429,7 @@ class ProcessadorDados:
             .fillna(0.0)
             .astype(float)
         )
-        qtde["Qtde. de O.S."] = pd.to_numeric(
-            qtde["Qtde. de O.S."], errors="coerce"
-        ).fillna(0.0)
+        qtde["Qtde. de O.S."] = pd.to_numeric(qtde["Qtde. de O.S."], errors="coerce").fillna(0.0)
 
         qtde["Faixa"] = qtde["Qtde. de O.S."].map(definir_faixa_projeto)
         qtde["Meta | 9000"] = qtde["Qtde. de O.S."] - 9000
@@ -463,9 +437,7 @@ class ProcessadorDados:
         qtde["Meta | 11000"] = qtde["Qtde. de O.S."] - 11000
 
         qtde["Projeção"] = (
-            (qtde["Qtde. de O.S."] + media.mul(float(dias_faltantes)))
-            .round(0)
-            .astype(int)
+            (qtde["Qtde. de O.S."] + media.mul(float(dias_faltantes))).round(0).astype(int)
         )
         # Classifica a Faixa baseada na Projeção Final
         qtde["Faixa Projetada"] = qtde["Projeção"].map(definir_faixa_projeto)
@@ -521,14 +493,10 @@ class Componentes:
     def kpis(proc: ProcessadorDados, dias_faltantes: int) -> None:
         c1, c2, c3, c4, c5 = st.columns(5)
         if ProcessadorDados.COL_DATA in proc.df.columns and not proc.df.empty:
-            quantidade_por_dia = proc.df.groupby(
-                proc.df[ProcessadorDados.COL_DATA].dt.normalize()
-            )[ProcessadorDados.COL_OS].count()
-            media_total = (
-                float(quantidade_por_dia.mean())
-                if not quantidade_por_dia.empty
-                else 0.0
-            )
+            quantidade_por_dia = proc.df.groupby(proc.df[ProcessadorDados.COL_DATA].dt.normalize())[
+                ProcessadorDados.COL_OS
+            ].count()
+            media_total = float(quantidade_por_dia.mean()) if not quantidade_por_dia.empty else 0.0
         else:
             media_total = 0.0
 
@@ -657,9 +625,7 @@ class Componentes:
                 paper_bgcolor="rgba(0,0,0,0)",
                 font=dict(family=Fontes.TEXTO),
             )
-            st.plotly_chart(
-                fig, width="stretch", config={"displayModeBar": False}
-            )
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
     @staticmethod
     def performance_tecnicos(df_tec: pd.DataFrame) -> None:
@@ -713,9 +679,7 @@ class Componentes:
                 height=450,
                 font=dict(family=Fontes.TEXTO),
             )
-            st.plotly_chart(
-                fig, width="stretch", config={"displayModeBar": False}
-            )
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
     @staticmethod
     def rodape(ultima_atualizacao: pd.Timestamp | None) -> None:
@@ -735,8 +699,7 @@ def main() -> None:
     render_hero_totale_2(
         titulo="⚡ Central de Performance | Qtde. de O.S.",
         subtitulo=(
-            "Volumetria operacional, projeções de fechamento "
-            "e metas por supervisor e projeto"
+            "Volumetria operacional, projeções de fechamento e metas por supervisor e projeto"
         ),
         badge_texto="Acompanhamento em tempo real da quantidade de O.S. executadas por supervisores e projetos",
         badge_tipo="info",

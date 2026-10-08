@@ -12,7 +12,6 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from plotly.graph_objects import Figure
 
-from components.metricas_executivas import resumo_frequencia
 from components.componentes import (
     Cores,
     Fontes,
@@ -24,6 +23,7 @@ from components.componentes import (
     render_section_header,
 )
 from components.css_paginas import aplicar_css_tabela_corporativa
+from components.metricas_executivas import resumo_frequencia
 
 st.set_page_config(
     page_title="Central de Performance",
@@ -39,12 +39,12 @@ render_page_sidebar_theme_selector()
 # (a aparência de .corp-table vive em components/css_paginas.py)
 aplicar_css_tabela_corporativa(
     fonte_px=11,
-    padding='5px 8px',
-    altura_linha='1.2',
+    padding="5px 8px",
+    altura_linha="1.2",
     fonte_celula_px=11,
-    gradiente_cabecalho='linear-gradient(180deg, #012869 0%, #1E3A8A 100%)',
-    raio_scrollbar='4px',
-    cabecalho_extra='border-right: 1px solid rgba(255,255,255,0.12) !important; padding: 6px 8px !important; position: sticky !important; top: 0 !important; z-index: 3 !important; text-align: left !important;',
+    gradiente_cabecalho="linear-gradient(180deg, #012869 0%, #1E3A8A 100%)",
+    raio_scrollbar="4px",
+    cabecalho_extra="border-right: 1px solid rgba(255,255,255,0.12) !important; padding: 6px 8px !important; position: sticky !important; top: 0 !important; z-index: 3 !important; text-align: left !important;",
 )
 
 st.markdown(
@@ -334,9 +334,7 @@ class ComponenteVisual:
         top3 = ranking_df.head(3).reset_index(drop=True)
         c2, c1, c3 = st.columns([1, 1.2, 1])
 
-        def _medalha_html(
-            nome: str, pontos: float, fundo: str, borda: str, icone: str
-        ) -> str:
+        def _medalha_html(nome: str, pontos: float, fundo: str, borda: str, icone: str) -> str:
             return (
                 f'<div style="background-color:{fundo};border:2px solid {borda};'
                 f"border-radius:10px;padding:15px;text-align:center;"
@@ -722,9 +720,7 @@ class Utilitarios:
             centro = Alignment(horizontal="center", vertical="center")
 
             cols = list(dataframe.columns)
-            col_int = [
-                i + 1 for i, c in enumerate(cols) if c.lower() in ("posição", "posicao")
-            ]
+            col_int = [i + 1 for i, c in enumerate(cols) if c.lower() in ("posição", "posicao")]
             col_dec = [
                 i + 1
                 for i, c in enumerate(cols)
@@ -823,9 +819,7 @@ class ProcessamentoDados:
         agregacoes: dict[str, Any] = {"Pontos": "sum"}
         if "CódAuxEquipe" in trabalho.columns:
             # ordena "código preenchido" primeiro para que o first() não pegue NaN
-            trabalho = trabalho.sort_values(
-                "CódAuxEquipe", key=lambda s: s.isna(), kind="stable"
-            )
+            trabalho = trabalho.sort_values("CódAuxEquipe", key=lambda s: s.isna(), kind="stable")
             agregacoes["CódAuxEquipe"] = "first"
 
         # FIX CRÍTICO: dropna=False. Com o padrão (dropna=True) TODA linha cuja
@@ -912,12 +906,8 @@ class ProcessamentoDados:
             .agg(Qtd_Equipes=("Nome Equipe", "count"), Total_Pontos=("Pontos", "sum"))
             .reset_index(drop=True)
         )
-        sup["Total_Pontos"] = pd.to_numeric(
-            sup["Total_Pontos"], errors="coerce"
-        ).fillna(0.0)
-        sup["Qtd_Equipes"] = pd.to_numeric(
-            sup["Qtd_Equipes"], errors="coerce"
-        ).fillna(1.0)
+        sup["Total_Pontos"] = pd.to_numeric(sup["Total_Pontos"], errors="coerce").fillna(0.0)
+        sup["Qtd_Equipes"] = pd.to_numeric(sup["Qtd_Equipes"], errors="coerce").fillna(1.0)
         sup["Qtd_Equipes"] = sup["Qtd_Equipes"].where(sup["Qtd_Equipes"] > 0, 1.0)
 
         sup["Supervisor"] = sup["Supervisor"].fillna("(Sem supervisor)")
@@ -952,9 +942,7 @@ class Graficos:
             color=x,
             color_continuous_scale="Tealgrn",
         )
-        fig.update_traces(
-            texttemplate="%{text:.1f}", textposition="outside", textfont_size=12
-        )
+        fig.update_traces(texttemplate="%{text:.1f}", textposition="outside", textfont_size=12)
         # FIX: com 1 supervisor só, a barra ocupava a altura toda e o rótulo
         # externo era cortado — dá um respiro no eixo.
         fig.update_yaxes(automargin=True)
@@ -979,9 +967,7 @@ class Graficos:
             paper_bgcolor="rgba(0,0,0,0)",
             margin=dict(l=0, r=0, t=0, b=0),
             showlegend=True,
-            legend=dict(
-                orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5
-            ),
+            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
         )
         return fig
 
@@ -1028,9 +1014,7 @@ df = pd.concat([prod, gpon], ignore_index=True)
 df = Utilitarios.normalizar_coluna_data(df)
 
 colunas_ausentes = [
-    c
-    for c in ("Nome Equipe", "Supervisor", "CódAuxEquipe", "Projeto")
-    if c not in df.columns
+    c for c in ("Nome Equipe", "Supervisor", "CódAuxEquipe", "Projeto") if c not in df.columns
 ]
 if colunas_ausentes:
     render_insight(
@@ -1046,9 +1030,7 @@ if colunas_ausentes:
 TOTAL_GERAL_PONTOS = float(df["Pontos"].sum())
 TOTAL_GERAL_OS = len(df)
 TOTAL_GERAL_EQUIPES = df["Nome Equipe"].nunique() if "Nome Equipe" in df.columns else 0
-MEDIA_GERAL_PONTOS = (
-    TOTAL_GERAL_PONTOS / TOTAL_GERAL_EQUIPES if TOTAL_GERAL_EQUIPES > 0 else 0.0
-)
+MEDIA_GERAL_PONTOS = TOTAL_GERAL_PONTOS / TOTAL_GERAL_EQUIPES if TOTAL_GERAL_EQUIPES > 0 else 0.0
 
 st.divider()
 
@@ -1065,9 +1047,7 @@ for col_nome, label, chave in [
     ("Nome Equipe", "Equipe:", "sel_Nome Equipe"),
 ]:
     if col_nome in df.columns:
-        opcoes = ["Todos"] + sorted(
-            df[col_nome].dropna().astype(str).unique().tolist()
-        )
+        opcoes = ["Todos"] + sorted(df[col_nome].dropna().astype(str).unique().tolist())
         sel = st.sidebar.selectbox(label, opcoes, key=chave)
         if sel != "Todos":
             df = df[df[col_nome].astype(str) == sel]
@@ -1091,9 +1071,7 @@ if df.empty:
 # ====================================================
 # BLOCO 8: CÁLCULOS + KPIs
 # ====================================================
-dias_brutos, dias_seguros, ultima_atualizacao, dias_passados = (
-    Utilitarios.calcular_dias_uteis(df)
-)
+dias_brutos, dias_seguros, ultima_atualizacao, dias_passados = Utilitarios.calcular_dias_uteis(df)
 
 total_equipes_filtro = df["Nome Equipe"].nunique() if "Nome Equipe" in df.columns else 0
 total_os_filtro = len(df)
@@ -1152,9 +1130,7 @@ render_kpi(
     sub=var_pontos[1],
     tema="azul",
 )
-render_kpi(
-    c3, "Equipes · Filtro", str(total_equipes_filtro), sub=var_equipes[1], tema="verde"
-)
+render_kpi(c3, "Equipes · Filtro", str(total_equipes_filtro), sub=var_equipes[1], tema="verde")
 render_kpi(
     c4,
     "Total O.S. · Filtro",
@@ -1229,9 +1205,7 @@ with aba_ranking:
         # virava texto na planilha).
         st.download_button(
             "📄 **Exportar CSV**",
-            data=df_exibir.to_csv(
-                index=False, decimal=",", sep=";"
-            ).encode("utf-8-sig"),
+            data=df_exibir.to_csv(index=False, decimal=",", sep=";").encode("utf-8-sig"),
             file_name=nome_arq.replace(".xlsx", ".csv"),
             mime="text/csv",
             width="stretch",
@@ -1318,9 +1292,7 @@ with aba_evolucao:
                 .sum()
                 .sort_values(col_data)
             )
-            df_ag["Pontos Acumulados"] = df_ag.groupby("Nome Equipe")[
-                "Pontos"
-            ].cumsum()
+            df_ag["Pontos Acumulados"] = df_ag.groupby("Nome Equipe")["Pontos"].cumsum()
 
             st.plotly_chart(
                 Graficos.linhas(df_ag, col_data, "Pontos Acumulados", "Nome Equipe"),
@@ -1328,8 +1300,7 @@ with aba_evolucao:
                 key="graf_linha",
             )
             st.caption(
-                "Evolução de pontos acumulados das Top 5 equipes atuais "
-                "(ordenada por data)."
+                "Evolução de pontos acumulados das Top 5 equipes atuais (ordenada por data)."
             )
     else:
         render_insight(

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import unicodedata
-from datetime import date, timedelta
+from datetime import timedelta
 from typing import Any
 
 import pandas as pd
@@ -97,18 +97,14 @@ def serie_atingimento_meta(
     if df.empty:
         return pd.Series(dtype="float64")
     coluna_data = encontrar_coluna(df, COLUNAS_DATA)
-    coluna_equipe = encontrar_coluna(
-        df, ("Nome Equipe", "Equipe", "Técnico", "Tecnico")
-    )
+    coluna_equipe = encontrar_coluna(df, ("Nome Equipe", "Equipe", "Técnico", "Tecnico"))
     coluna_pontos = encontrar_coluna(df, ("Pontos", "Pontuação", "Pontuacao"))
     if not coluna_data or not coluna_equipe or not coluna_pontos:
         return pd.Series(dtype="float64")
 
     trabalho = pd.DataFrame(
         {
-            "data": pd.to_datetime(
-                df[coluna_data], errors="coerce", dayfirst=True
-            ).dt.normalize(),
+            "data": pd.to_datetime(df[coluna_data], errors="coerce", dayfirst=True).dt.normalize(),
             "equipe": df[coluna_equipe].astype("string").str.strip(),
             "pontos": pd.to_numeric(df[coluna_pontos], errors="coerce"),
         }
@@ -121,9 +117,11 @@ def serie_atingimento_meta(
     atingimento: dict[pd.Timestamp, float] = {}
     for dia in datas:
         inicio_mes = dia.replace(day=1)
-        acumulado = trabalho.loc[
-            trabalho["data"].between(inicio_mes, dia)
-        ].groupby("equipe")["pontos"].sum()
+        acumulado = (
+            trabalho.loc[trabalho["data"].between(inicio_mes, dia)]
+            .groupby("equipe")["pontos"]
+            .sum()
+        )
         if not acumulado.empty:
             atingimento[dia] = float(acumulado.ge(meta_pontos).mean() * 100.0)
 
@@ -137,23 +135,14 @@ def serie_quebra_diaria(df: pd.DataFrame) -> pd.Series:
     if df.empty:
         return pd.Series(dtype="float64")
     coluna_data = encontrar_coluna(df, COLUNAS_DATA)
-    coluna_status = encontrar_coluna(
-        df, ("Status Contrato", "Status", "Situação", "Situacao")
-    )
+    coluna_status = encontrar_coluna(df, ("Status Contrato", "Status", "Situação", "Situacao"))
     if not coluna_data or not coluna_status:
         return pd.Series(dtype="float64")
 
     datas = pd.to_datetime(df[coluna_data], errors="coerce", dayfirst=True).dt.normalize()
-    status = (
-        df[coluna_status]
-        .astype("string")
-        .fillna("")
-        .map(_chave_coluna)
-    )
+    status = df[coluna_status].astype("string").fillna("").map(_chave_coluna)
     executadas = status.isin({"EXECUTADA", "EXECUTADO", "CONCLUIDA", "CONCLUIDO"})
-    nao_executadas = status.isin(
-        {"NAOEXECUTADA", "NAOEXECUTADO", "NAOEXEC", "QUEBRA"}
-    )
+    nao_executadas = status.isin({"NAOEXECUTADA", "NAOEXECUTADO", "NAOEXEC", "QUEBRA"})
     validas = datas.notna() & (executadas | nao_executadas)
     if not validas.any():
         return pd.Series(dtype="float64")
@@ -167,9 +156,7 @@ def serie_quebra_diaria(df: pd.DataFrame) -> pd.Series:
     dados = pd.DataFrame(
         {
             "data": datas.loc[validas],
-            "nao_executada": (
-                peso.loc[validas] * nao_executadas.loc[validas].astype(float)
-            ),
+            "nao_executada": (peso.loc[validas] * nao_executadas.loc[validas].astype(float)),
             "total": peso.loc[validas],
         }
     )
@@ -203,9 +190,7 @@ def resumo_frequencia(
     dados = pd.DataFrame(
         {
             "Equipe": df[coluna_equipe].astype("string").str.strip(),
-            "Data": pd.to_datetime(
-                df[coluna_data], errors="coerce", dayfirst=True
-            ).dt.normalize(),
+            "Data": pd.to_datetime(df[coluna_data], errors="coerce", dayfirst=True).dt.normalize(),
         }
     ).dropna(subset=["Equipe", "Data"])
     dados = dados.loc[dados["Equipe"].ne("")]

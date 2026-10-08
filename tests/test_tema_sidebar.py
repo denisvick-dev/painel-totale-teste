@@ -56,7 +56,7 @@ _CONTADOR = itertools.count()
 #   1) entrypoint (`streamlit_app.main`) aplica o tema e desenha o seletor;
 #   2) a página selecionada (`pages/*`) roda em seguida e reaplica o Design
 #      System sem informar tema — era aqui que a cor era resetada.
-_SCRIPT_FLUXO = '''
+_SCRIPT_FLUXO = """
 import streamlit as st
 
 from components.componentes import (
@@ -89,11 +89,11 @@ st.session_state["__resultado"] = {
     "tema": st.session_state.get("_totale_css_head_tema"),
     "widget": st.session_state.get("_totale_sidebar_theme_select"),
 }
-'''
+"""
 
 # Script que simula o início de uma página de `pages/*`: o entrypoint já
 # deixou o tema da sessão definido e a página aplica o Design System.
-_SCRIPT_PAGINA = '''
+_SCRIPT_PAGINA = """
 import streamlit as st
 
 from components.componentes import CSSInjector, {funcao}
@@ -106,7 +106,7 @@ st.session_state["__resultado"] = {{
     "css": CSSInjector._build_css(tema),
     "widget": st.session_state.get("_totale_sidebar_theme_select"),
 }}
-'''
+"""
 
 
 def _app_com_script(script: str) -> AppTest:
@@ -140,9 +140,7 @@ def _app_fluxo_real() -> AppTest:
 
 
 def _seletor_de_tema(app: AppTest):
-    return next(
-        w for w in app.sidebar.selectbox if w.key == "_totale_sidebar_theme_select"
-    )
+    return next(w for w in app.sidebar.selectbox if w.key == "_totale_sidebar_theme_select")
 
 
 def test_selectbox_sidebar_estiliza_markup_atual_do_streamlit() -> None:
@@ -155,15 +153,9 @@ def test_selectbox_sidebar_estiliza_markup_atual_do_streamlit() -> None:
     for tema, fundo in fundos.items():
         css = CSSInjector._build_css(tema)
         assert '[data-testid="stSelectbox"] [role="group"]' in css
-        assert (
-            '[data-testid="stSelectbox"] [role="group"] input[role="combobox"]'
-            in css
-        )
+        assert '[data-testid="stSelectbox"] [role="group"] input[role="combobox"]' in css
         assert f"--totale-sb-input-bg: {fundo};" in css
-        assert (
-            "-webkit-text-fill-color: var(--totale-sb-input-text) !important;"
-            in css
-        )
+        assert "-webkit-text-fill-color: var(--totale-sb-input-text) !important;" in css
 
 
 def test_pagina_preserva_tema_da_sessao() -> None:
@@ -171,8 +163,7 @@ def test_pagina_preserva_tema_da_sessao() -> None:
     for tema in ("claro", "azul", "laranja"):
         resultado = _rodar_pagina("aplicar_estilo", tema)
         assert resultado["tema"] == tema, (
-            f"aplicar_estilo() sem argumento trocou o tema {tema!r} por "
-            f"{resultado['tema']!r}"
+            f"aplicar_estilo() sem argumento trocou o tema {tema!r} por {resultado['tema']!r}"
         )
         assert CORES_ANCORA[tema] in resultado["css"], (
             f"O CSS injetado não é o do tema {tema!r} — a paleta não foi aplicada."
@@ -211,9 +202,7 @@ def test_troca_de_tema_estando_em_outra_pagina() -> None:
     app = _app_fluxo_real()
     for tema in ("azul", "claro", "laranja"):
         _seletor_de_tema(app).set_value(tema).run()
-        assert not list(app.exception), (
-            f"Troca para {tema!r} falhou: {list(app.exception)}"
-        )
+        assert not list(app.exception), f"Troca para {tema!r} falhou: {list(app.exception)}"
         resultado = app.session_state["__resultado"]
         assert resultado["tema"] == tema, (
             f"Sidebar não assumiu o tema {tema!r} (ficou {resultado['tema']!r}) — "

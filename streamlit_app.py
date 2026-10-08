@@ -100,9 +100,7 @@ def handle_exceptions(func: Callable[P, R]) -> Callable[P, R | None]:
     return wrapper
 
 
-def format_datetime(
-    dt: datetime | str | None, format_str: str = "%d/%m/%Y às %H:%M:%S"
-) -> str:
+def format_datetime(dt: datetime | str | None, format_str: str = "%d/%m/%Y às %H:%M:%S") -> str:
     """Formata datetime com retorno garantido em string."""
     if dt is None:
         return "Não disponível"
