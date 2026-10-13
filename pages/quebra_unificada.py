@@ -51,20 +51,18 @@ from components.componentes import (
 )
 from components.criterios import classificar_tipo_servico, render_debug_criterios
 
-# ── Importação Inteligente e Resiliente de quebra.py ──────────────────
+# ── Importação resiliente da página irmã (quebra_geral.py) ────────────
+# A página compartilha Config/Motor/Utils/DataLoader com quebra_geral.py. O
+# segundo caminho existe para execução direta do arquivo (`streamlit run
+# pages/quebra_unificada.py`), quando a raiz do projeto não está no sys.path.
 try:
     from pages.quebra_geral import Config, DataLoader, Motor, Utils, _cache_matriz
-except ImportError:
-    DataLoader = None  # type: ignore[assignment]
-    _cache_matriz = None  # type: ignore[assignment]
+except ImportError:  # pragma: no cover - caminho de execução direta
     try:
-        import quebra  # type: ignore
-
-        Config = quebra.Config
-        Motor = quebra.Motor
-        Utils = quebra.Utils
+        from quebra_geral import Config, DataLoader, Motor, Utils, _cache_matriz
     except ImportError:
-        from quebra import Config, Motor, Utils  # type: ignore
+        DataLoader = None  # type: ignore[assignment]
+        _cache_matriz = None  # type: ignore[assignment]
 
 # ── Tipos Locais para Robustez Estática ───────────────────────────────
 TemaKPIType = Literal[

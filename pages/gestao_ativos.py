@@ -6,7 +6,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
-import secrets
 import time
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
@@ -118,7 +117,6 @@ class Safe:
         return df[list(cols)].copy()
 
 
-_PBKDF2_ITERATIONS = 600_000
 _PREFIXOS_FORMULA_PERIGOSOS = ("=", "+", "-", "@", "\t", "\r")
 
 
@@ -128,17 +126,6 @@ def _sanitizar_celula_planilha(valor: Any) -> str:
     if texto and texto.startswith(_PREFIXOS_FORMULA_PERIGOSOS):
         return f"'{texto}"
     return texto
-
-
-def _hash_senha(senha: str, salt: str | None = None) -> str:
-    salt_efetivo = salt or secrets.token_hex(16)
-    dk = hashlib.pbkdf2_hmac(
-        "sha256",
-        senha.encode("utf-8"),
-        salt_efetivo.encode("utf-8"),
-        _PBKDF2_ITERATIONS,
-    )
-    return f"pbkdf2_sha256${_PBKDF2_ITERATIONS}${salt_efetivo}${dk.hex()}"
 
 
 def _verificar_senha(digitada: str, armazenada: str) -> bool:

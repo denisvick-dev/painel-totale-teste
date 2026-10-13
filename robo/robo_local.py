@@ -104,13 +104,6 @@ def _toast_dedup(mensagem: str, icon: str = "✅") -> None:
         st.toast(mensagem, icon=icon)
 
 
-def _estado_str(chave: str, padrao: str) -> str:
-    if st is None:
-        return padrao
-    valor = st.session_state.get(chave, padrao)
-    return str(valor) if valor else padrao
-
-
 def _estado_bool(chave: str, padrao: bool) -> bool:
     if st is None:
         return padrao

@@ -1,6 +1,6 @@
 """
 Central de Performance | Qtde. de O.S.
-Arquivo: pages/producao.py
+Arquivo: pages/qtde_os.py
 """
 
 from __future__ import annotations
@@ -120,15 +120,6 @@ st.markdown(
 # ====================================================
 # 2. HELPERS DE FAIXA + TABELA COLORIDA
 # ====================================================
-def _safe_float(v: Any) -> float:
-    try:
-        if pd.isna(v):
-            return float("-inf")
-        return float(v)
-    except (ValueError, TypeError):
-        return float("-inf")
-
-
 def definir_faixa_supervisor(qtd: Any) -> str:
     """Classifica OS do supervisor: F3≥3500, F2≥3000, F1≥2500."""
     try:

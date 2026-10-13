@@ -18,7 +18,7 @@ O repositório está **em bom estado geral** para um projeto corporativo de port
 | 🟠 P1-2 | **Design System duplicado dentro das páginas** (7 componentes reimplementados) | Correções aplicadas em 1 lugar não chegam às outras páginas | 2–3 dias |
 | 🟠 P1-3 | **`main()` de 1.019 linhas** em `rota_inicial.py` (+ outras 9 funções > 150 linhas) | Impossível testar, revisar ou refatorar com segurança | gradual |
 | 🟠 P1-4 | **Regras de negócio sem teste** — `indicadores.py`, `dashboard_meta`, rotas e volumetria não têm cobertura | Regressão silenciosa em fechamento de mês | 1 semana |
-| 🟡 P2-1 | **11 dependências não usadas** (duckdb, matplotlib, pydeck, pytz, gspread-dataframe…) | Build lento no Streamlit Cloud, superfície de CVE | 2 h |
+| 🟡 P2-1 | **13 dependências não usadas** (duckdb, fastapi, starlette, matplotlib, pydeck, pytz, gspread-dataframe…) | Build lento no Streamlit Cloud, superfície de CVE | 2 h |
 | 🟡 P2-2 | **Camada de dados inexistente** — cada página baixa/parseia/cacheia do seu jeito | TTLs inconsistentes, chamadas duplicadas ao Sheets | 1 semana |
 | 🟡 P2-3 | **Sem `pyproject.toml`, `config.toml`, pre-commit ou lockfile** | Reproducibilidade e padronização dependem de memória | 1 dia |
 | 🟡 P2-4 | **README com imagens quebradas** (`docs/screenshots/*.png` inexistentes) | Perda de credibilidade na primeira impressão do repo | 1 h |
@@ -39,7 +39,7 @@ Métricas levantadas: **24.030 linhas** em `pages/` (19 arquivos), 5.251 em `com
 
 1. **Design System de verdade** — `components/componentes.py` + `dashboard_kit.py` com fábricas de gráficos, filtros persistentes, exportação formatada e insights automáticos. Isso é raro em projeto interno e é o maior ativo do repo.
 2. **Guardas estáticas de higiene** (`tests/test_higiene_repositorio.py`) — asset órfão, diretório vazio, caminho de máquina e árvore do README são verificados por teste. Excelente prática.
-3. **Motor de datas isolado e documentado** (`pages/datas_dashboard.py`) — ISO × BR sem inversão, sem depender de Streamlit. É exatamente o padrão a repetir para outras regras.
+3. **Motor de datas isolado e documentado** (`services/datas_dashboard.py`) — ISO × BR sem inversão, sem depender de Streamlit. É exatamente o padrão a repetir para outras regras.
 4. **Robô de ingestão separado da UI** — `robo/robo_engine.py` não importa Streamlit (só a camada de apresentação `robo_local.py` importa), tem `ArquivoBloqueadoError` e verificação de estabilidade de arquivo. É exatamente a separação domínio × interface que falta em `pages/`.
 5. **Resiliência de rede considerada** — retries, tratamento da página HTML de confirmação do Drive (`confirm=t`), inferência de separador/encoding de CSV, fontes independentes com degradação parcial.
 6. **Saúde de dados e alertas já modelados** (`components/saude_dados.py`, `components/alertas_automaticos.py`) — frescor de 15/60 min com estados ok/alerta/crítico. Falta apenas virar relatório visível (ver §4.E).
@@ -316,9 +316,9 @@ Regra prática: se o trecho não chama `st.`, ele não pertence a `pages/`. Um `
 
 ### 🟡 P2-1 — Dependências sem uso
 
-Declaradas em `requirements.txt` e **sem nenhuma importação** no código: `duckdb`, `pydeck`, `matplotlib`, `chardet`, `streamlit-carousel`, `pytz`, `gspread-dataframe`, `gspread-formatting`, `gspread-pandas`, `google-api-python-client`, `google-auth-oauthlib`. Além disso, `google-auth` **é usado** (`gestao_ativos.py:20`) mas **não está declarado** — depende de vir junto com `gspread`/`google-auth-oauthlib`, o que quebra se alguém remover um deles.
+Declaradas em `requirements.txt` e **sem nenhuma importação** no código: `duckdb`, `pydeck`, `matplotlib`, `chardet`, `streamlit-carousel`, `pytz`, `gspread-dataframe`, `gspread-formatting`, `gspread-pandas`, `google-api-python-client`, `google-auth-oauthlib`, `fastapi`, `starlette` (**13 pacotes**). `pyarrow` não é importado diretamente, mas é o motor de Parquet do pandas/geopandas (`.read_parquet` em `rota_inicial.py:935`) — **é usado e deve ficar**, com comentário explicando isso.
 
-**Ação:** remover as 11 não usadas; declarar `google-auth>=2.28,<3.0` explicitamente. Ganho: deploy mais rápido no Community Cloud, menos CVEs para monitorar. Se `duckdb` foi previsto para joins pesados, decida: **usar** (ver P2-2) ou remover.
+**Ação:** remover os 13; manter as demais. Ganho: deploy mais rápido no Community Cloud, menos CVEs para monitorar. Se `duckdb` foi previsto para joins pesados, decida: **usar** (ver P2-2) ou deixar fora — hoje ele não é importado em nenhum ponto.
 
 ---
 
@@ -521,6 +521,69 @@ Os relatórios abaixo foram desenhados em cima do que o repo **já coleta** (pro
 Verificação após as mudanças: `ruff check .` → *All checks passed*; `pytest -q` → **66 passed**; `python tests/test_sintaxe.py` com o venv renomeado → 6/6.
 
 > O `.gitignore` do projeto já era abrangente — inclusive para `usuarios.db`, caches de teste e ambientes virtuais. Não havia vazamento de banco ou credencial na árvore versionada.
+
+### 5.1 Limpeza estrutural aplicada em 13/10/2026
+
+**Arquivos e estrutura**
+
+| Ação | Item | Motivo |
+|---|---|---|
+| 🗑️ Removido | `pages/login.py` | Página órfã (fora de `st.navigation`) com cadastro aberto e segundo sistema de senhas — ver P0-4 |
+| ➡️ Movido | `pages/datas_dashboard.py` → `services/datas_dashboard.py` | Domínio puro (sem Streamlit) não pertence a `pages/`; reexportado em `services/__init__.py` e import atualizado em `dashboard_meta.py` |
+| ➡️ Movido | `SIDEBAR_DOCUMENTATION.md` → `docs/sidebar.md` | Toda documentação em um só lugar; README agora tem índice em **📚 Documentação** |
+| 🧹 README | Bloco de screenshots quebrados removido (com instruções para reativar em `docs/screenshots/`) e árvore do projeto atualizada com `docs/` | As três imagens apontavam para arquivos inexistentes |
+| 🗑️ Removido | `robo/dados/` (pasta vazia criada em tempo de execução) | Diretório vazio é sobra para o guarda `test_sem_diretorios_vazios`; agora o `.gitignore` também cobre `robo/dados/`, impedindo que arquivos operacionais do robô entrem no repositório |
+
+**Código morto removido** (detectado por AST: definido e nunca referenciado em código, teste, doc ou string de dispatch):
+
+| Arquivo | Removido |
+|---|---|
+| `pages/consultivo.py` | `calcular_meta_acumulada_monitor`, `preparar_resumo_diario_monitor` |
+| `pages/p_atendimento.py` | `fmt_hora`, `render_sidebar_kpi` |
+| `pages/rota_inicial.py` | `filtrar_geometria_por_municipios` |
+| `pages/rota_geral.py` | `LinhaResultado` (TypedDict nunca usado) |
+| `pages/qtde_os.py` | `_safe_float` |
+| `pages/gestao_ativos.py` | `_hash_senha` e a constante órfã `_PBKDF2_ITERATIONS` |
+| `components/componentes.py` | `StreamlitContainer`, `_resolver_cor_tema`, `_markdown_inline_para_html` |
+| `robo/robo_local.py` | `_estado_str` |
+| `pages/quebra_unificada.py` | Cadeia de `except ImportError` que tentava importar o módulo `quebra` **inexistente** desde a renomeação para `quebra_geral.py` — trocada por fallback válido para a página irmã |
+
+> **Se for usar senhas com hash nos secrets** (recomendado no P0-1), gere o valor com:
+> ```bash
+> python -c "import hashlib,secrets; s=secrets.token_hex(16); print('pbkdf2_sha256$600000$'+s+'$'+hashlib.pbkdf2_hmac('sha256', b'SUA_SENHA', s.encode(), 600000).hex())"
+> ```
+> `_verificar_senha` já aceita esse formato (lê as iterações do próprio hash).
+
+**Dependências** (`requirements.txt` reorganizado em seções com comentário de uso)
+
+- **13 pacotes sem nenhum uso removidos:** `duckdb`, `fastapi`, `starlette`, `pydeck`, `matplotlib`, `chardet`, `pytz`, `streamlit-carousel`, `gspread-dataframe`, `gspread-formatting`, `gspread-pandas`, `google-api-python-client`, `google-auth-oauthlib`.
+- **1 dependência usada e não declarada adicionada:** `urllib3` (importada em `services/google_drive_client.py` para o `Retry`). Achado da nova guarda automática.
+- `pyarrow` mantida com comentário: não é importada diretamente, mas é o motor de Parquet do cache geoespacial.
+
+**Novas guardas** (`tests/test_estrutura_projeto.py` — 3 testes, validados com caso negativo)
+
+1. `pages/` contém apenas páginas navegáveis: todo `.py` de `pages/` está em `st.navigation` e vice-versa (hoje **17 arquivos = 17 rotas**). É o que impede o retorno de uma `pages/login.py` da vida.
+2. Todo import de terceiro está declarado em `requirements*.txt` (dependência transitiva não conta).
+3. `services/` e `robo/robo_engine.py` não importam Streamlit no topo do módulo (uso lazy dentro de função continua permitido, como em `google_drive_client.py`).
+
+**🔴 Conflito de dependências corrigido (achado da limpeza):** `pip install -r requirements.txt` **falhava** em ambiente limpo com `ResolutionImpossible`, porque o projeto exigia `gspread>=6.0,<7.0` enquanto `st-gsheets-connection 0.1.0` exige `gspread>=5.8,<6`. Ou seja: **um deploy novo (ou um `pip install` do zero) não subia**. Correção aplicada: `gspread>=5.8,<6.0`, com comentário explicando que o teto vem do pacote upstream. Validação: `pip install -r requirements.txt` passa a concluir com sucesso em ambiente limpo (com `gspread 5.12.4`).
+
+> Nota: `gspread-dataframe`, `gspread-formatting`, `gspread-pandas` e `duckdb` **continuam instalados** como dependências transitivas de `st-gsheets-connection` — apenas deixaram de estar declarados como se fossem nossos, que era o caso.
+
+**Verificação de que a limpeza não quebrou nenhuma página:** rodei as 17 páginas no runtime de teste do Streamlit (`AppTest`) e comparei com um worktree limpo do commit anterior — **mesmo resultado antes e depois**, sem regressão:
+
+| Resultado | Antes | Depois |
+|---|---|---|
+| Páginas que executam sem exceção | 14/17 | **14/17** |
+| Falhas (idênticas) | `alertas` (page_link fora da navegação), `consultivo` e `pontos` (abrem sem dados sincronizados) | iguais |
+| Arquivos em `pages/` que não são páginas | `datas_dashboard.py`, `login.py` | 0 |
+
+**Resultado:** `ruff check .` limpo · `pytest -q` = **69 passed** (era 66) · zero definições mortas fora de `tests/` · `pages/` com 17 arquivos = 17 rotas.
+
+### 5.2 Achados colaterais (não corrigidos — exigem decisão de produto)
+
+- **`pontos.py` e `consultivo.py` quebram quando abertas sem dados sincronizados** (`'NoneType' object is not subscriptable` e `argument of type 'NoneType' is not iterable`). O design system já tem `render_empty_state`: essas páginas deveriam exibir estado vazio com CTA para a Central de Atualização, como a Home faz.
+- **`alertas.py` usa `st.page_link("pages/envio_excel.py")`**, que depende do `st.navigation` do entrypoint — não é bug em produção, mas impede a página de ser testada isoladamente com `AppTest`.
 
 ---
 

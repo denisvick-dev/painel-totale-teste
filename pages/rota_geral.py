@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import unicodedata
 from io import BytesIO, StringIO
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pandas as pd
 import plotly.express as px
@@ -46,22 +46,6 @@ if TYPE_CHECKING:
 # ============================================================
 # TIPOS
 # ============================================================
-class LinhaResultado(TypedDict, total=False):
-    BASE: str
-    WO: int
-    OS: int
-    ND: int
-    RC: int
-    MESH: int
-    MIGRAÇÃO: int
-    GPON: int
-    PME: int
-    Rotas: int
-    Montados: int
-    Media_OS: float
-    Media_Montados: float
-
-
 TipoInsight = Literal["ok", "alerta", "critico", "info"]
 
 

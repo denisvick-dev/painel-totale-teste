@@ -165,6 +165,9 @@ dmypy.json
 # ruff
 .ruff_cache/
 
+# Pasta de entrada do robô local (arquivos operacionais em tempo de execução)
+robo/dados/
+
 # Pyre type checker
 .pyre/
 

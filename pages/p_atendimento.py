@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import logging
 import unicodedata
-from datetime import datetime, time
+from datetime import datetime
 from io import BytesIO
 from typing import Any
 
@@ -304,16 +304,6 @@ def render_kpi(
     )
 
 
-def render_sidebar_kpi(label: str, valor: str, cor: str = "#012869") -> None:
-    st.sidebar.markdown(
-        f'<div class="sidebar-kpi" style="border-left-color:{cor};">'
-        f'<div class="sidebar-kpi-label">{label}</div>'
-        f'<div class="sidebar-kpi-value" style="color:{cor};">{valor}</div>'
-        f"</div>",
-        unsafe_allow_html=True,
-    )
-
-
 def render_section(icon: str, titulo: str, badge: str = "") -> None:
     badge_html = f'<span class="section-badge">{badge}</span>' if badge else ""
     st.markdown(
@@ -410,29 +400,6 @@ def gerar_excel(df: pd.DataFrame, aba: str = "Dados") -> bytes:
 
 def fmt_int(v: int) -> str:
     return f"{v:,}".replace(",", ".")
-
-
-def fmt_hora(t: time) -> str:
-    """Formata datetime.time como HH:MM:SS."""
-    if t is None:
-        return "-"
-    if isinstance(t, str):
-        return t
-    try:
-        import math
-
-        import numpy as np
-
-        if t is getattr(pd, "NaT", None):
-            return "-"
-        if isinstance(t, float) and math.isnan(t):
-            return "-"
-        if isinstance(t, (np.floating,)) and np.isnan(t):
-            return "-"
-    except Exception:
-        pass
-
-    return t.strftime("%H:%M:%S")
 
 
 # ═══════════════════════════════════════════════════════

@@ -22,7 +22,7 @@ from collections.abc import Callable, Sequence
 from datetime import datetime
 from enum import Enum
 from functools import lru_cache
-from typing import Any, Literal, Protocol, TypeAlias, runtime_checkable
+from typing import Any, Literal, TypeAlias
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
@@ -66,13 +66,6 @@ def _agora_br() -> datetime:
 # =============================================================================
 # PROTOCOLOS E TIPOS ESTRITOS
 # =============================================================================
-@runtime_checkable
-class StreamlitContainer(Protocol):
-    def markdown(
-        self, body: str, unsafe_allow_html: bool = False, **kwargs: Any
-    ) -> Any: ...
-
-
 TemaKPIType: TypeAlias = Literal[
     "azul", "verde", "vermelho", "laranja", "cinza", "roxo", "gradiente"
 ]
@@ -330,26 +323,11 @@ class ConfigCores:
     ]
 
 
-def _resolver_cor_tema(tema: str) -> str:
-    cor = ConfigCores.TEMA.get(tema)
-    if cor is None:
-        logger.warning("Tema desconhecido: '%s'. Usando 'azul'.", tema)
-        return Cores.PRIMARIA
-    return cor
-
-
 def _resolver_gradiente(tema: str) -> tuple[str, str]:
     grad = ConfigCores.GRADIENTES.get(tema)
     if grad is None:
         return ConfigCores.GRADIENTES["azul"]
     return grad
-
-
-def _markdown_inline_para_html(texto: str) -> str:
-    texto = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", texto)
-    texto = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<em>\1</em>", texto)
-    texto = re.sub(r"`([^`]+)`", r"<code>\1</code>", texto)
-    return texto
 
 
 def formatar_numero_br(valor: Any, casas: int = 0) -> str:

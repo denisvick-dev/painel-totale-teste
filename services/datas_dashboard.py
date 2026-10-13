@@ -1,4 +1,7 @@
-"""Motor de datas para dashboard_meta.py (sem dependência de Streamlit).
+"""Motor de datas compartilhado pelas páginas (sem dependência de Streamlit).
+
+Vive em `services/` porque é domínio puro e reutilizável: `pages/` guarda apenas
+páginas registradas em `st.navigation` (guarda em `tests/test_estrutura_projeto.py`).
 
 Política:
 - ISO: ano/mês/dia; BR: dia/mês/ano, com ano de quatro dígitos.

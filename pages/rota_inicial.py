@@ -1055,23 +1055,6 @@ def detectar_municipios_presentes(df: pd.DataFrame) -> list[str]:
     return sorted(municipios_encontrados)
 
 
-def filtrar_geometria_por_municipios(df_geo: pd.DataFrame, municipios: list[str]) -> pd.DataFrame:
-    """
-    Filtra as geometrias apenas para os municípios detectados.
-    """
-    if df_geo is None or df_geo.empty or not municipios:
-        return pd.DataFrame()
-
-    # Normaliza nomes dos municípios para filtro
-    municipios_norm = [
-        unicodedata.normalize("NFKD", m).encode("ASCII", errors="ignore").decode().title()
-        for m in municipios
-    ]
-
-    df_filtrado = df_geo[df_geo["name_muni_norm"].isin(municipios_norm)].copy()
-    return df_filtrado
-
-
 def calcular_centroide_municipios(df_geo: pd.DataFrame | None) -> tuple[float, float]:
     """
     Calcula o centroide aproximado dos municípios para centralizar o mapa.

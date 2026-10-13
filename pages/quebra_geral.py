@@ -1,6 +1,6 @@
 """
-quebra.py
-=========
+quebra_geral.py
+===============
 Super Relatório Corporativo Unificado | Quebra Operacional TOTALE
 
 Versão: 5.4.0 (Busca Avançada no Google Sheets + Conversão Login -> Nome do Técnico/Monitor)

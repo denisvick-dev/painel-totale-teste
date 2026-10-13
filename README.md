@@ -84,28 +84,18 @@ O **Painel TOTALE** é uma plataforma corporativa completa desenvolvida em [Stre
 
 ## 🚀 Demonstração
 
-### Screenshots
+A versão publicada roda no Streamlit Community Cloud (link no topo do README). Para
+exibir capturas de tela aqui, coloque os arquivos em `docs/screenshots/` e reative o
+bloco abaixo:
 
+<!--
 <details>
 <summary>📊 Dashboard Principal</summary>
 
 ![Dashboard](docs/screenshots/dashboard.png)
 
 </details>
-
-<details>
-<summary>🗂️ Hierarquia</summary>
-
-![Hierarquia](docs/screenshots/hierarquia.png)
-
-</details>
-
-<details>
-<summary>✉️ Gerador de Assinatura</summary>
-
-![Assinatura](docs/screenshots/assinatura.png)
-
-</details>
+-->
 
 ---
 
@@ -231,6 +221,16 @@ pytest -q
 
 ---
 
+## 📚 Documentação
+
+| Documento | Conteúdo |
+|-----------|----------|
+| [`docs/sidebar.md`](docs/sidebar.md) | Guia da sidebar corporativa (`components/sidebar.py`): temas, seletor persistente e componentes |
+| [`docs/analise-tecnica-e-relatorios.md`](docs/analise-tecnica-e-relatorios.md) | Análise técnica do repositório: melhorias priorizadas (P0–P2) e catálogo de relatórios propostos |
+| [`docs/ideias-dashboards-streamlit-portfolio.md`](docs/ideias-dashboards-streamlit-portfolio.md) | Ideias de dashboards em Streamlit com KPIs e fontes de dados públicas |
+
+---
+
 ## 📁 Estrutura do Projeto
 
 ```
@@ -254,10 +254,16 @@ painel-totale/
 │   ├── saude_dados.py            # Frescor e consistência das fontes
 │   └── css_paginas.py            # Estilos reutilizáveis das páginas
 ├── config/                       # IDs, URLs e parâmetros centralizados
-├── services/                     # Clientes externos (Google Drive/Sheets)
-├── pages/                        # Páginas do aplicativo Streamlit
+├── services/                     # Google Drive/Sheets + motor de datas (domínio puro)
+│   ├── google_drive_client.py    # Download e parse de planilhas/CSV do Drive
+│   └── datas_dashboard.py        # Motor de datas ISO/BR, fuso e janelas
+├── pages/                        # Páginas do aplicativo Streamlit (só páginas navegáveis)
 ├── robo/                         # Leitura e monitoramento de arquivos locais
 ├── tests/                        # Testes de regressão e guardas estáticas
+├── docs/                         # Documentação do projeto
+│   ├── analise-tecnica-e-relatorios.md
+│   ├── ideias-dashboards-streamlit-portfolio.md
+│   └── sidebar.md                # Guia da sidebar corporativa
 ├── assets/                       # Ícones, imagens e marca usados pelo app
 ├── fonts/                        # Fontes corporativas
 └── .streamlit_cache/             # Cache geoespacial versionado (Parquet)

@@ -122,9 +122,13 @@ def test_exemplo_de_secrets_e_seguro_e_valido() -> None:
     config = tomllib.loads(caminho.read_text(encoding="utf-8"))
 
     assert config["usuarios"]["admin"]["senha"] == ""
-    for pagina in ("gestao_ativos.py", "login.py"):
-        codigo = (RAIZ / "pages" / pagina).read_text(encoding="utf-8")
-        assert "admin123" not in codigo, f"Senha padrão insegura encontrada em {pagina}."
+    # Toda página que valida credenciais precisa estar livre de senha padrão.
+    for pagina in sorted((RAIZ / "pages").glob("*.py")):
+        codigo = pagina.read_text(encoding="utf-8")
+        if any(termo in codigo for termo in ("senha", "password", "autentic")):
+            assert "admin123" not in codigo, (
+                f"Senha padrão insegura encontrada em {pagina.relative_to(RAIZ)}."
+            )
 
 
 def test_todos_modulos_compilam() -> None:

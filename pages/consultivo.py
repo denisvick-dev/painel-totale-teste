@@ -208,53 +208,6 @@ def preparar_ranking(
     return res[nova_ordem]
 
 
-def preparar_resumo_diario_monitor(df: pd.DataFrame, data_referencia: pd.Timestamp) -> pd.DataFrame:
-    """Agrega os consultivos do dia e preserva monitores sem movimentação."""
-    monitores = pd.DataFrame(
-        df[["Base", "Monitor"]]
-        .dropna()
-        .astype(str)
-        .drop_duplicates()
-        .sort_values(["Base", "Monitor"])
-    )
-    mascara_dia = df["DATA"].notna() & df["DATA"].dt.normalize().eq(data_referencia.normalize())
-    resumo = (
-        df.loc[mascara_dia]
-        .groupby(["Base", "Monitor"], dropna=False)["Qtde. Cons."]
-        .sum()
-        .rename("Total Consultivos")
-        .reset_index()
-    )
-    resumo = monitores.merge(resumo, on=["Base", "Monitor"], how="left")
-    resumo["Total Consultivos"] = resumo["Total Consultivos"].fillna(0).astype(int)
-    return resumo.sort_values("Total Consultivos", ascending=False).reset_index(drop=True)
-
-
-def calcular_meta_acumulada_monitor(
-    df: pd.DataFrame, data_referencia: pd.Timestamp
-) -> pd.DataFrame:
-    """Calcula a meta de hoje compensando apenas o déficit de ontem."""
-    ontem = data_referencia.normalize() - pd.Timedelta(days=1)
-    mascara_anterior = df["DATA"].notna() & df["DATA"].dt.normalize().eq(ontem)
-    realizado_anterior = (
-        df.loc[mascara_anterior]
-        .groupby(["Base", "Monitor"], dropna=False)["Qtde. Cons."]
-        .sum()
-        .rename("Realizado Anterior")
-        .reset_index()
-    )
-    monitores = df[["Base", "Monitor"]].dropna().astype(str).drop_duplicates()
-    resumo = monitores.merge(realizado_anterior, on=["Base", "Monitor"], how="left")
-    resumo["Realizado Anterior"] = resumo["Realizado Anterior"].fillna(0).astype(int)
-    resumo["Saldo Anterior"] = (
-        Configuracoes.meta_diaria_consultivos - resumo["Realizado Anterior"]
-    ).clip(lower=0)
-    resumo["Meta Ajustada"] = (
-        Configuracoes.meta_diaria_consultivos + resumo["Saldo Anterior"]
-    ).astype(int)
-    return resumo[["Base", "Monitor", "Saldo Anterior", "Meta Ajustada"]]
-
-
 def render_tabela_cons(
     df: pd.DataFrame,
     height: int = 450,

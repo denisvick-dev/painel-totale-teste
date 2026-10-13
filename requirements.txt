@@ -1,38 +1,52 @@
+# Dependências de execução do Portal TOTALE.
+#
+# Política: declarar apenas o que o aplicativo importa (ou usa de forma indireta
+# e documentada) e sempre com piso de versão (test_refatoracao_arquitetura.py
+# exige `>=` em toda linha). Ao remover um pacote, remova também o uso no código.
+#
 # Piso 1.52: primeiro release em que `width="stretch"` (substituto de
 # use_container_width, removido após 2025-12-31) existe em st.plotly_chart,
 # st.altair_chart, st.button, st.download_button, st.form_submit_button,
 # st.page_link, st.dataframe e st.image — validado com AppTest.
+
+# ── Framework e base ────────────────────────────────────────────────
 streamlit>=1.52,<2.0
-pandas>=2.2,<4.0
-openpyxl>=3.1,<4.0
-plotly>=5.24,<8.0
-streamlit-carousel>=1.1,<2.0
-numpy>=1.26,<3.0
-st-gsheets-connection>=0.1,<1.0
-chardet>=5.2,<6.0
-pytz>=2024.1
-duckdb>=1.1,<2.0
 streamlit-autorefresh>=1.0,<2.0
-gspread>=6.0,<7.0
-gspread-dataframe>=4.0,<5.0
-gspread-formatting>=1.2,<2.0
-gspread-pandas>=3.3,<4.0
-google-api-python-client>=2.100,<3.0
-google-auth>=2.28,<3.0
-google-auth-oauthlib>=1.2,<2.0
-altair>=5.0,<7.0,!=5.4.0,!=5.4.1
-pydeck>=0.8,<1.0
+
+# ── Dados ───────────────────────────────────────────────────────────
+pandas>=2.2,<4.0
+numpy>=1.26,<3.0
+# pyarrow não é importado diretamente: é o motor de Parquet do pandas/geopandas
+# (cache geoespacial em .streamlit_cache/geo_sp_2022.parquet).
 pyarrow>=16.0,<27.0
-pillow>=10.0,<13.0
-matplotlib>=3.8,<4.0
-reportlab>=4.1,<5.0
-xlsxwriter>=3.2,<4.0
-fastapi>=0.110,<1.0
-starlette>=0.46.0,<1.4.0
+
+# ── Visualização ────────────────────────────────────────────────────
+plotly>=5.24,<8.0
+altair>=5.0,<7.0,!=5.4.0,!=5.4.1
+
+# ── Integrações Google (Sheets/Drive são o backend do portal) ───────
+# st-gsheets-connection 0.1.0 exige gspread>=5.8,<6 — o teto vem de lá, não
+# daqui. Fixar gspread em 6.x torna o conjunto irreconciliável e derruba
+# `pip install -r requirements.txt` (ResolutionImpossible).
+st-gsheets-connection>=0.1,<1.0
+gspread>=5.8,<6.0
+google-auth>=2.28,<3.0
 gdown>=5.1,<6.0
-holidays>=0.45,<1.0
+
+# ── Planilhas e relatórios ──────────────────────────────────────────
+openpyxl>=3.1,<4.0
+xlsxwriter>=3.2,<4.0
+reportlab>=4.1,<5.0
+
+# ── Geolocalização e mapas (rota_inicial) ───────────────────────────
 geobr>=0.2,<1.0
 geopandas>=1.0,<2.0
 folium>=0.16,<1.0
 streamlit_folium>=0.20,<1.0
+
+# ── Utilitários ─────────────────────────────────────────────────────
 requests>=2.31,<3.0
+# urllib3 é importado diretamente por services/google_drive_client.py (Retry).
+urllib3>=2.0,<3.0
+holidays>=0.45,<1.0
+pillow>=10.0,<13.0
