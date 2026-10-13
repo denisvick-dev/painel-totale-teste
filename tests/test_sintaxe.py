@@ -27,7 +27,22 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 
 # Diretórios ignorados: `old/` guarda scripts legados que não fazem parte do app.
-IGNORADOS = {"old", "__pycache__", ".venv", ".git", "build", "dist"}
+# A lista precisa acompanhar os demais guardas (higiene/refatoração/depreciados):
+# ambientes e caches de ferramentas ficam fora da varredura, senão o teste falha
+# por arquivos de `site-packages` sempre que o venv tem outro nome (ex.: `.venv-check`).
+IGNORADOS = {
+    "old",
+    "__pycache__",
+    ".venv",
+    ".venv-check",
+    ".git",
+    "build",
+    "dist",
+    "node_modules",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache",
+}
 
 
 def _arquivos_python() -> list[Path]:
