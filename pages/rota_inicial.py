@@ -37,6 +37,11 @@ from components.componentes import (
     render_metric,
     render_section_header,
 )
+from components.escalas_graficos import (
+    aplicar_escala,
+    estender_limites,
+    limites_escala,
+)
 from components.sidebar import render_page_sidebar_theme_selector
 
 logger = logging.getLogger(__name__)
@@ -1448,6 +1453,8 @@ def main() -> None:
                 Cores.NEUTRO,
             ],
         )
+        # Régua unificada do portal: zero na base e teto "arredondado".
+        aplicar_escala(fig_per, df_per["TOTAL_TAREFAS"])
         fig_per.update_layout(
             showlegend=False,
             margin=dict(t=30, b=0, l=0, r=0),
@@ -1481,6 +1488,8 @@ def main() -> None:
                 text_auto=True,
                 color_discrete_sequence=[Cores.SUCESSO],
             )
+            # Barras horizontais: a régua unificada vai no eixo X (quantidade).
+            aplicar_escala(fig_prem, df_prem["Qtd"], eixo="x")
             fig_prem.update_layout(
                 showlegend=False,
                 margin=dict(t=30, b=0, l=0, r=0),
@@ -1524,6 +1533,8 @@ def main() -> None:
             color_continuous_scale="Blues",
             text_auto=True,
         )
+        # Barras horizontais: a régua unificada vai no eixo X (tarefas do técnico).
+        aplicar_escala(fig_tec, prod_df["TOTAL_TAREFAS"], eixo="x")
         fig_tec.update_layout(
             yaxis={"categoryorder": "total ascending"},
             height=500,
@@ -1598,6 +1609,8 @@ def main() -> None:
                     color_continuous_scale="Blues",
                     labels={"x": "Quantidade", "y": "Cidade"},
                 )
+                # Barras horizontais: a régua unificada vai no eixo X (pontos por cidade).
+                aplicar_escala(fig, cidades_count.values, eixo="x")
                 fig.update_layout(height=500, yaxis_title="", xaxis_title="Quantidade")
                 st.plotly_chart(fig, width="stretch")
             else:
@@ -1910,6 +1923,12 @@ def main() -> None:
             # ============================================================
             st.subheader("📊 Distribuição de O.S. — Atual vs Ideal")
 
+            # Régua única do O.S. por monitor: Atual × Ideal e, mais abaixo,
+            # Atual × Simulada compartilham teto e passo de grade.
+            escala_os_monitor = limites_escala(
+                df_eq_mon["OS_Atual"], df_eq_mon["OS Ideal"]
+            )
+
             fig = go.Figure()
 
             fig.add_trace(
@@ -1965,6 +1984,7 @@ def main() -> None:
                     x=1,
                 ),
             )
+            aplicar_escala(fig, limites=escala_os_monitor)
             fig.update_xaxes(
                 tickfont=dict(family="Inter", size=12, color="#374151"),
             )
@@ -2238,6 +2258,16 @@ def main() -> None:
                     y=1.02,
                     xanchor="right",
                     x=1,
+                ),
+            )
+            # Mesma régua do gráfico Atual × Ideal; se a simulação passar do teto,
+            # ele sobe em múltiplos do mesmo passo (números seguem comparáveis).
+            aplicar_escala(
+                fig_sim,
+                df_sim["OS_Atual"],
+                df_sim["OS Simulada"],
+                limites=estender_limites(
+                    escala_os_monitor, df_sim["OS_Atual"], df_sim["OS Simulada"]
                 ),
             )
             fig_sim.update_xaxes(

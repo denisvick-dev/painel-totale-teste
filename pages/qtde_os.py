@@ -33,6 +33,7 @@ from components.componentes import (
     render_section_header,
 )
 from components.css_paginas import aplicar_css_tabela_corporativa
+from components.escalas_graficos import aplicar_escala
 from components.sidebar import render_page_sidebar_theme_selector
 
 # ====================================================
@@ -541,6 +542,8 @@ class Componentes:
             markers=True,
             color_discrete_sequence=["#F97316"],
         )
+        # Régua unificada do portal: zero na base e teto "arredondado".
+        aplicar_escala(fig, df_tend["Quantidade"])
         fig.update_layout(
             xaxis_title="",
             yaxis_title="",
@@ -669,6 +672,8 @@ class Componentes:
                     top10["Qtde. de O.S."].max(),
                 ],
             )
+            # Barras horizontais: a régua unificada vai no eixo X (quantidade).
+            aplicar_escala(fig, top10["Qtde. de O.S."], eixo="x")
             fig.update_layout(
                 xaxis_title="",
                 yaxis_title="",

@@ -17,6 +17,7 @@ from components.componentes import (
     render_section_header,
 )
 from components.css_paginas import aplicar_css_tabela_corporativa
+from components.escalas_graficos import aplicar_escala, limites_escala
 from components.sidebar import render_page_sidebar_theme_selector
 
 logger = logging.getLogger(__name__)
@@ -708,32 +709,45 @@ aba1, aba2 = st.tabs(["📈 Desempenho e Matriz", "🚫 Equipes sem Consultivos"
 
 with aba1:
     g1, g2 = st.columns(2)
+    # Escala unificada: o Top 10 (eixo Y) e a matriz (eixo X) medem o mesmo
+    # indicador (consultivos por monitor) e passam a dividir a mesma régua.
+    escala_consultivos = limites_escala(
+        df_exibir["Total Consultivos"]
+        if "Total Consultivos" in df_exibir.columns
+        else []
+    )
     with g1:
         if not df_exibir.empty:
-            st.plotly_chart(
-                px.bar(
-                    df_exibir.head(10),
-                    x=grupo[1] if detalhar_tec else "Monitor",
-                    y="Total Consultivos",
-                    title="Top 10 Consultivos (Real)",
-                    color_discrete_sequence=["#0EA5E9"],
-                ),
-                width="stretch",
+            fig_top10 = px.bar(
+                df_exibir.head(10),
+                x=grupo[1] if detalhar_tec else "Monitor",
+                y="Total Consultivos",
+                title="Top 10 Consultivos (Real)",
+                color_discrete_sequence=["#0EA5E9"],
             )
+            aplicar_escala(
+                fig_top10, df_exibir["Total Consultivos"], limites=escala_consultivos
+            )
+            st.plotly_chart(fig_top10, width="stretch")
     with g2:
         df_disp = df_exibir[df_exibir["Total Consultivos"] > 0]
         if not df_disp.empty:
-            st.plotly_chart(
-                px.scatter(
-                    df_disp,
-                    x="Total Consultivos",
-                    y="Total Produtos",
-                    color="Monitor",
-                    title="Matriz: Consultivos x Produtos",
-                    color_discrete_sequence=px.colors.qualitative.Prism,
-                ),
-                width="stretch",
+            fig_matriz = px.scatter(
+                df_disp,
+                x="Total Consultivos",
+                y="Total Produtos",
+                color="Monitor",
+                title="Matriz: Consultivos x Produtos",
+                color_discrete_sequence=px.colors.qualitative.Prism,
             )
+            aplicar_escala(
+                fig_matriz,
+                df_disp["Total Consultivos"],
+                eixo="x",
+                limites=escala_consultivos,
+            )
+            aplicar_escala(fig_matriz, df_disp["Total Produtos"], eixo="y")
+            st.plotly_chart(fig_matriz, width="stretch")
 
 with aba2:
     render_section_header(titulo="Equipes que ainda não fizeram Consultivos", icone="🚫")

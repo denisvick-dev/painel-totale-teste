@@ -50,7 +50,38 @@ Funções puras (testáveis sem runtime): `calcular_variacao_pct`, `direcao_delt
 
 ---
 
-## 2. Gráficos — `components/graficos.py`
+## 2. Escalas numéricas — `components/escalas_graficos.py`
+
+Régua única dos gráficos Plotly montados direto nas páginas (`consultivo.py`,
+`qtde_os.py`, `rota_inicial.py`). Sem isso cada eixo ficava com a escala
+automática: bases diferentes de zero e tetos/passos arbitrários deixavam dois
+painéis da mesma métrica incomparáveis.
+
+```python
+from components.escalas_graficos import aplicar_escala, estender_limites, limites_escala
+
+# régua do próprio gráfico (zero na base + teto "bonito")
+fig = px.bar(df, x="Monitor", y="Total Consultivos")
+aplicar_escala(fig, df["Total Consultivos"])
+
+# régua compartilhada: Top 10 (Y) e matriz (X) medem a mesma coisa
+escala = limites_escala(df["Total Consultivos"])
+aplicar_escala(fig_top10, df["Total Consultivos"], limites=escala)
+aplicar_escala(fig_matriz, df["Total Consultivos"], eixo="x", limites=escala)
+
+# barras horizontais → eixo X; simulação que pode estourar o teto
+aplicar_escala(fig, valores, eixo="x", limites=estender_limites(escala, simulados))
+```
+
+Regras: base em zero (barras/áreas), teto múltiplo do passo (1/2/2.5/5/10 × 10^n)
+com 6% de folga, 4–6 divisões de grade e números em pt-BR (`1.000`). Números vêm
+da série informada; texto com separador de milhar é ignorado de propósito. Sem
+dados, a régua é neutra `(0, 1, 1)` e a figura continua válida.
+
+Guardas em `tests/test_escalas_graficos.py` (16 testes): impedem que as páginas
+voltem a definir `range=`/`dtick=` inline.
+
+## 3. Gráficos — `components/graficos.py`
 
 24 tipos prontos, tema minimalista `totale_min` aplicado automaticamente
 (colorway liderado por `#012869` e `#F37C04`, fundo transparente, legenda
@@ -89,7 +120,7 @@ Regras do módulo:
 
 ---
 
-## 3. CSS global — `components/css_global.py`
+## 4. CSS global — `components/css_global.py`
 
 Padroniza os componentes **nativos** do Streamlit (botões, inputs, selects, abas,
 tabelas, alertas, upload, progresso, tooltips, diálogos).
@@ -111,7 +142,7 @@ injetar_css_global()          # chamado uma única vez por sessão
 
 ---
 
-## 4. Organização da página — `components/layout_pagina.py`
+## 5. Organização da página — `components/layout_pagina.py`
 
 Ordem canônica (`ORDEM_PADRAO`), usada como referência em `pages/home.py`:
 
@@ -157,7 +188,7 @@ Detalhes que evitam bugs:
 
 ---
 
-## 5. Desempenho de dados — `services/cache_dados.py`
+## 6. Desempenho de dados — `services/cache_dados.py`
 
 ```python
 from services.cache_dados import (
@@ -204,7 +235,7 @@ Regras:
 
 ---
 
-## 6. Checklist para nova página
+## 7. Checklist para nova página
 
 1. `render_cabecalho_pagina` + `render_sumario` (ou o hero do Design System).
 2. `barra_filtros` para o recorte (fixa no topo).

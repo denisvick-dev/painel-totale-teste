@@ -49,6 +49,7 @@ Versão atual: **3.6.0** — veja [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) para o 
 - **Cartões de KPI avançados** (`components/kpi_cards.py`): variação D-1/W-1 com seta e cor semântica, sparkline SVG inline, barra de progresso contra meta, ícone Material, 6 temas e 3 densidades. `render_metric` é *drop-in replacement* de `st.metric` (nenhuma página usa mais o widget nativo)
 - **Fábrica de gráficos minimalista** (`components/graficos.py`): 24 tipos (`criar_grafico("linha"|"ranking"|"cascata"|"gauge"|…)`) sobre Plotly Express com o tema `totale_min` — sem chrome, grade só no eixo Y, legenda horizontal e menu enxuto. A fábrica nunca levanta exceção: dado inválido vira figura com aviso
 - **Cores oficiais em todos os gráficos**: azul `#012869` e laranja `#F37C04` lideram a paleta de 10 cores, as escalas contínuas e as faixas de gauge/bullet
+- **Régua numérica unificada** (`components/escalas_graficos.py`): barras e áreas começam em zero, teto arredondado (1/2/2.5/5/10 × 10^n) com passo de grade único e números em pt-BR. Gráficos que medem a mesma métrica (`consultivo.py` Top 10 × matriz, `rota_inicial.py` Atual × Ideal × Simulada) dividem a mesma escala — inclusive quando a simulação estoura o teto, que sobe em degraus do mesmo passo
 - **CSS global dos componentes nativos** (`components/css_global.py`): botões, inputs, selects, abas, tabelas, alertas, upload, progresso e tooltips padronizados — injeção única por sessão (~40 KB a menos por rerun)
 - **Organização de página** (`components/layout_pagina.py`): cabeçalho com contexto, sumário de âncoras, filtros fixos no topo ao rolar, seções, painéis com altura controlada, barra de ações e rodapé — ordem canônica em `ORDEM_PADRAO`
 - **Carga de dados até 3× mais rápida** (`services/cache_dados.py`): requisições condicionais (ETag/`If-Modified-Since` → `304` sem reparse), cache Parquet em disco fora do repositório, downloads paralelos por fonte, sessão HTTP com pool e retry, leitura de CSV com detecção de separador/encoding
@@ -263,6 +264,7 @@ painel-totale/
 │   ├── componentes.py            # Design System (KPI, gráficos, CSS global)
 │   ├── kpi_cards.py              # Cartões de KPI avançados (delta, sparkline, progresso)
 │   ├── graficos.py               # Fábrica de 24 gráficos minimalistas + tema totale_min
+│   ├── escalas_graficos.py       # Régua numérica unificada (zero, teto e passo por métrica)
 │   ├── css_global.py             # CSS global dos componentes nativos do Streamlit
 │   ├── layout_pagina.py          # Primitivas de organização de página (âncoras, filtros fixos)
 │   ├── dashboard_kit.py          # Kit v2 de dashboards: CSS global, gráficos, filtros e exportação
