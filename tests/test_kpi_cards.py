@@ -162,6 +162,38 @@ def test_render_metric_e_substituto_direto_do_st_metric() -> None:
     assert len(app.metric) == 0
 
 
+def test_render_metric_aceita_ajuda_como_alias_de_help() -> None:
+    """Páginas antigas passam ``ajuda``; o cartão deve renderizar, não estourar.
+
+    (Regressão encontrada em 2026-10-14: `login.py`, `indicadores.py` e
+    `rota_inicial.py` chamavam ``render_metric(..., ajuda=...)`` e recebiam
+    ``TypeError``, derrubando a aba Mapa do rota_inicial.)
+    """
+    app = _rodar(
+        """
+        from components.kpi_cards import render_metric
+        render_metric("Pontos no Mapa", 42, icone="place", ajuda="Pontos georreferenciados")
+        """  # noqa: E501
+    )
+    assert not list(app.exception), list(app.exception)
+    corpo = _html(app)
+    assert "Pontos no Mapa" in corpo
+    assert "Pontos georreferenciados" in corpo
+
+
+def test_render_metric_prefere_help_quando_os_dois_vem() -> None:
+    """Se as duas grafias aparecerem, ``help`` (paridade com st.metric) vence."""
+    app = _rodar(
+        """
+        from components.kpi_cards import render_metric
+        render_metric("Métrica", 7, help="texto oficial", ajuda="texto legado")
+        """
+    )
+    corpo = _html(app)
+    assert "texto oficial" in corpo
+    assert "texto legado" not in corpo
+
+
 def test_cartao_avancado_traz_sparkline_progresso_e_cores_da_marca() -> None:
     app = _rodar(
         """

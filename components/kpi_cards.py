@@ -498,6 +498,7 @@ def render_metric(
     delta_color: TipoDeltaColorType = "normal",
     help: str | None = None,  # noqa: A002 - paridade com st.metric
     *,
+    ajuda: str | None = None,  # alias legado (mesmo sentido de ``help``)
     container: Any = None,
     tema: TemaKPIType = "azul",
     icone: str = "",
@@ -522,7 +523,12 @@ def render_metric(
     Os parâmetros extras (``sparkline``, ``progresso``, ``meta_rotulo``,
     ``rodape``, ``tamanho``, ``sub``) são opcionais e ativam os recursos dos
     cartões avançados sem mudar a chamada mínima.
+
+    ``ajuda`` continua aceito como sinônimo de ``help``: páginas escritas antes da
+    unificação dos KPIs usavam esse nome e quebravam com ``TypeError``
+    (`login.py`, `indicadores.py` e `rota_inicial.py` chamavam assim).
     """
+    ajuda = help if help is not None else ajuda
     if isinstance(value, bool):
         valor_txt = "Sim" if value else "Não"
     elif isinstance(value, float):
@@ -539,7 +545,7 @@ def render_metric(
         valor=valor_txt,
         delta=delta,
         delta_color=delta_color,
-        ajuda=str(help or ""),
+        ajuda=str(ajuda or ""),
         tema=tema,
         icone=icone,
         colorida=colorida,
