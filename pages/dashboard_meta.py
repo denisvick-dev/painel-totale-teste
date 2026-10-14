@@ -3,6 +3,10 @@ dashboard_meta.py
 =================
 Dashboard de Metas Operacionais - TOTALE (v4.7.0)
 
+Metas mensais de O.S. (revisão de 2026-10-14):
+- NET-ABCDM: 11.800 | NET-LESTE: 12.200 | NET-GUARULHOS: 12.200
+- Consolidado (soma das três bases): 36.200
+
 Leitura do painel:
 1. Faixa executiva: realizado, projeção e se o fechamento cabe na meta.
 2. Abas operacionais: produção, consultivos, agrupamento, monitores e projeção por base.
@@ -278,9 +282,24 @@ class Configuracoes:
 CFG = Configuracoes()
 BASES_PRIORITARIAS = ("NET-ABCDM", "NET-LESTE", "NET-GUARULHOS")
 PROJETOS_NET = ("NET-ABCDM", "NET-LESTE", "NET-LESTE VT", "NET-GUARULHOS", "NET-GRU VT")
-METAS_PRODUCAO_OS_BASE = {"minima": 10_000, "meta_base": 11_000, "alta_perf": 12_000}
+# --- Metas mensais de O.S. (revisão de 2026-10-14) -------------------------
+# Base             Mínima    Meta    Alta performance
+# NET-ABCDM        10.700   11.800   12.900
+# NET-LESTE        11.100   12.200   13.300
+# NET-GUARULHOS    11.100   12.200   13.300
+# Consolidado      32.900   36.200   39.500   (= soma das três bases)
+# As faixas de mínima/alta performance mantêm a distância de 1.100 O.S. em
+# torno da meta de cada base, preservando o semáforo original (±10%).
+METAS_PRODUCAO_OS_POR_BASE: dict[str, dict[str, int]] = {
+    "NET-ABCDM": {"minima": 10_700, "meta_base": 11_800, "alta_perf": 12_900},
+    "NET-LESTE": {"minima": 11_100, "meta_base": 12_200, "alta_perf": 13_300},
+    "NET-GUARULHOS": {"minima": 11_100, "meta_base": 12_200, "alta_perf": 13_300},
+}
+# Fallback para agrupamentos sem meta própria (ex.: NET-LESTE VT / NET-GRU VT):
+# média das três bases acompanhadas.
+METAS_PRODUCAO_OS_BASE = {"minima": 11_000, "meta_base": 12_100, "alta_perf": 13_200}
 METAS_CONSULTIVO_BASE = {"minima": 400, "meta_base": 525, "alta_perf": 600}
-METAS_PRODUCAO_OS_GERAL = {"minima": 30_000, "meta_base": 33_000, "alta_perf": 36_000}
+METAS_PRODUCAO_OS_GERAL = {"minima": 32_900, "meta_base": 36_200, "alta_perf": 39_500}
 METAS_CONSULTIVO_GERAL = {"minima": 1_200, "meta_base": 1_575, "alta_perf": 1_800}
 
 
@@ -335,6 +354,17 @@ def normalizar_texto(texto: Any) -> str:
     return "".join(
         c for c in unicodedata.normalize("NFD", txt) if unicodedata.category(c) != "Mn"
     ).upper()
+
+
+def metas_os_do_agrupamento(nome: Any) -> dict[str, int]:
+    """Metas de O.S. da base/agrupamento (fallback: média das bases acompanhadas).
+
+    Aceita tanto os nomes oficiais (NET-ABCDM / NET-LESTE / NET-GUARULHOS) quanto
+    os apelidos já mapeados em ``MAPA_ALIAS_PROJETO`` (ABCDM, SP, GUARULHOS…).
+    """
+    chave = normalizar_texto(nome)
+    chave = normalizar_texto(MAPA_ALIAS_PROJETO.get(chave, chave))
+    return METAS_PRODUCAO_OS_POR_BASE.get(chave, METAS_PRODUCAO_OS_BASE)
 
 
 def _to_float_safe(value: Any, default: float = 0.0) -> float:
@@ -1303,8 +1333,9 @@ def coletar_alertas(
             nome = str(row.get("Agrupamento", "—"))
             if normalizar_texto(nome) not in acompanhados:
                 continue
+            metas_os_agrupamento = metas_os_do_agrupamento(nome)
             for real_col, proj_col, metas, indicador in (
-                ("OS_Volume", "O.S. Projetadas", METAS_PRODUCAO_OS_BASE, "O.S."),
+                ("OS_Volume", "O.S. Projetadas", metas_os_agrupamento, "O.S."),
                 (
                     "Cons_Volume",
                     "Consultivos Projetados",
@@ -1864,24 +1895,40 @@ def processar_resumo_agrupado(
         )
     m["O.S. Projetadas"] = (m["OS_Volume"] * ft_os).astype(int)
     m["Consultivos Projetados"] = (m["Cons_Volume"] * ft_cons).astype(int)
-    m["O.S. Faltantes"] = np.where(
-        m["OS_Volume"] > 0,
-        (METAS_PRODUCAO_OS_BASE["meta_base"] - m["OS_Volume"]).clip(lower=0),
-        0,
-    ).astype(int)
+    # Cada base tem meta própria de O.S.; agrupamentos sem meta específica
+    # (ex.: NET-LESTE VT / NET-GRU VT) caem no fallback METAS_PRODUCAO_OS_BASE.
+    metas_os_linha = [metas_os_do_agrupamento(nome) for nome in m["Agrupamento"]]
+    m["O.S. Faltantes"] = pd.Series(
+        [
+            int(max(metas["meta_base"] - realizado, 0)) if realizado > 0 else 0
+            for realizado, metas in zip(m["OS_Volume"], metas_os_linha)
+        ],
+        index=m.index,
+        dtype="int64",
+    )
     m["Cons. Faltantes"] = np.where(
         m["Cons_Volume"] > 0,
         (METAS_CONSULTIVO_BASE["meta_base"] - m["Cons_Volume"]).clip(lower=0),
         0,
     ).astype(int)
-    m["% Meta O.S. (Proj)"] = calcular_atingimento_series(
-        m["O.S. Projetadas"], float(METAS_PRODUCAO_OS_BASE["meta_base"])
-    ).round(1)
+    m["% Meta O.S. (Proj)"] = pd.Series(
+        [
+            round(calcular_atingimento_float(projetado, metas["meta_base"]), 1)
+            for projetado, metas in zip(m["O.S. Projetadas"], metas_os_linha)
+        ],
+        index=m.index,
+        dtype="float64",
+    )
     m["% Meta Cons. (Proj)"] = calcular_atingimento_series(
         m["Consultivos Projetados"], float(METAS_CONSULTIVO_BASE["meta_base"])
     ).round(1)
-    m["Status O.S."] = m["O.S. Projetadas"].apply(
-        lambda v: classificar_semaforo(v, METAS_PRODUCAO_OS_BASE)
+    m["Status O.S."] = pd.Series(
+        [
+            classificar_semaforo(projetado, metas)
+            for projetado, metas in zip(m["O.S. Projetadas"], metas_os_linha)
+        ],
+        index=m.index,
+        dtype="object",
     )
     m["Status Consultivos"] = m["Consultivos Projetados"].apply(
         lambda v: classificar_semaforo(v, METAS_CONSULTIVO_BASE)
@@ -2031,8 +2078,15 @@ with tab_bases:
     render_chips(
         [
             (
-                "Meta O.S. / Base",
-                _fmt_int(METAS_PRODUCAO_OS_BASE["meta_base"]),
+                "Metas O.S. por Base",
+                " · ".join(
+                    f"{base.removeprefix('NET-')} {_fmt_int(metas['meta_base'])}"
+                    for base, metas in METAS_PRODUCAO_OS_POR_BASE.items()
+                ),
+            ),
+            (
+                "Meta O.S. Consolidada",
+                _fmt_int(METAS_PRODUCAO_OS_GERAL["meta_base"]),
             ),
             (
                 "Meta Consultivos / Base",
@@ -2179,7 +2233,8 @@ def render_aba_projecao_base(tab: DeltaGenerator, base_nome: str) -> None:
         except (IndexError, KeyError, ValueError, TypeError) as exc:
             render_insight(f"Erro: {exc}", tipo="critico")
             return
-        meta_os = float(METAS_PRODUCAO_OS_BASE["meta_base"])
+        metas_os_base = metas_os_do_agrupamento(base_nome)
+        meta_os = float(metas_os_base["meta_base"])
         meta_cons_base = float(METAS_CONSULTIVO_BASE["meta_base"])
         c1, c2 = st.columns([1, 2], gap="large")
         with c1:
@@ -2225,9 +2280,9 @@ def render_aba_projecao_base(tab: DeltaGenerator, base_nome: str) -> None:
                 tema_progresso="azul",
                 label_realizado="O.S. REALIZADAS",
                 label_projetado="O.S. PROJETADAS",
-                label_meta="META DE O.S.",
+                label_meta=f"META DE O.S. — {base_nome}",
                 label_faltantes="O.S. FALTANTES",
-                metas=METAS_PRODUCAO_OS_BASE,
+                metas=metas_os_base,
                 tecnico_dia=(
                     os_media_diaria / tecnicos_ativos if tecnicos_ativos > 0 else 0
                 ),
