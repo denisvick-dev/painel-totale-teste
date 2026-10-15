@@ -150,8 +150,8 @@ Versão atual: **3.6.0** — veja [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) para o 
 
 ### 1. Clone o Repositório
 ```bash
-git clone https://github.com/denisvick-dev/painel-totale.git
-cd painel-totale
+git clone https://github.com/denisvick-dev/painel-totale-teste.git
+cd painel-totale-teste
 ```
 
 ### 2. Crie o Ambiente Virtual
